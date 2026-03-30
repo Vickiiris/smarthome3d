@@ -116,11 +116,11 @@
                 <span class="section-tag ok"><span class="ok-dot"></span>全部正常</span>
               </div>
               <div class="security-grid">
-                <div v-for="item in securityItems" :key="item.label" class="security-item">
-                  <div class="s-icon" :class="item.cls">{{ item.icon }}</div>
+                <div v-for="item in securityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }">
+                  <div class="s-icon" :style="{ color: item.color }">{{ item.icon }}</div>
                   <div class="s-info">
                     <span class="s-label">{{ item.label }}</span>
-                    <span class="s-val" :class="item.cls">{{ item.value }}</span>
+                    <span class="s-val" :style="{ color: item.color }">{{ item.value }}</span>
                   </div>
                 </div>
               </div>
@@ -606,24 +606,79 @@ function toggleFullscreen() {
   }, 100)
 }
 
-const envItems = computed(() => [
-  { icon: '🌡', label: '室外温度', value: `${homeStore.stats.outdoorTemp ?? 38}°C`,    pct: 76, color: '#ff6b6b' },
-  { icon: '💧', label: '室外湿度', value: `${homeStore.stats.outdoorHumidity ?? 40}%`, pct: 40, color: '#4fc3f7' },
-  { icon: '🏠', label: '室内温度', value: `${homeStore.stats.temperature}°C`,          pct: 52, color: '#00d4aa' },
-  { icon: '🌫', label: '室内湿度', value: `${homeStore.stats.humidity}%`,              pct: 45, color: '#26c6da' },
-  { icon: '🫁', label: 'CO₂浓度',  value: `${homeStore.stats.co2 ?? 450}ppm`,          pct: 45, color: '#66bb6a' },
-  { icon: '🌿', label: 'PM2.5',    value: `${homeStore.stats.pm25 ?? 12}μg/m³`,        pct: 20, color: '#81c784' },
-  { icon: '☀️', label: '光照',     value: `${homeStore.stats.light ?? 320}lux`,        pct: 64, color: '#ffd54f' },
-  { icon: '💨', label: '空气质量', value: '优',                                         pct: 90, color: '#4cd964' },
-])
+// 环境参数颜色计算
+function getEnvColor(label: string, value: number): string {
+  switch (label) {
+    case '室外温度':
+      if (value < 15) return '#4fc3f7'
+      if (value < 20) return '#26c6da'
+      if (value <= 26) return '#00d4aa'
+      if (value <= 32) return '#ffd54f'
+      if (value <= 38) return '#ff9800'
+      return '#ff6b6b'
+    case '室外湿度':
+      if (value < 30) return '#ff6b6b'
+      if (value <= 70) return '#00d4aa'
+      return '#4fc3f7'
+    case '室内温度':
+      if (value < 16) return '#4fc3f7'
+      if (value < 18) return '#26c6da'
+      if (value <= 26) return '#00d4aa'
+      if (value <= 30) return '#ffd54f'
+      return '#ff6b6b'
+    case '室内湿度':
+      if (value < 30) return '#ff6b6b'
+      if (value <= 70) return '#00d4aa'
+      return '#4fc3f7'
+    case 'CO₂浓度':
+      if (value <= 600) return '#4cd964'
+      if (value <= 800) return '#00d4aa'
+      if (value <= 1000) return '#ffd54f'
+      if (value <= 1500) return '#ff9800'
+      return '#ff6b6b'
+    case 'PM2.5':
+      if (value <= 35) return '#4cd964'
+      if (value <= 75) return '#00d4aa'
+      if (value <= 115) return '#ffd54f'
+      if (value <= 150) return '#ff9800'
+      return '#ff6b6b'
+    case '光照':
+      if (value < 50) return '#ff9800'
+      if (value <= 300) return '#00d4aa'
+      if (value <= 500) return '#ffd54f'
+      return '#ff9800'
+    case '空气质量':
+      if (value <= 50) return '#4cd964'
+      if (value <= 100) return '#00d4aa'
+      if (value <= 150) return '#ffd54f'
+      if (value <= 200) return '#ff9800'
+      return '#ff6b6b'
+    default:
+      return '#00d4aa'
+  }
+}
+
+const envItems = computed(() => {
+  const v = homeStore.stats
+  return [
+    { icon: '🌡', label: '室外温度', value: `${v.outdoorTemp ?? 38}°C`,    pct: Math.min(100, Math.max(0, v.outdoorTemp ?? 38)), color: getEnvColor('室外温度', v.outdoorTemp ?? 38) },
+    { icon: '💧', label: '室外湿度', value: `${v.outdoorHumidity ?? 40}%`, pct: Math.min(100, Math.max(0, v.outdoorHumidity ?? 40)), color: getEnvColor('室外湿度', v.outdoorHumidity ?? 40) },
+    { icon: '🏠', label: '室内温度', value: `${v.temperature ?? 24}°C`,     pct: Math.min(100, Math.max(0, v.temperature ?? 24)), color: getEnvColor('室内温度', v.temperature ?? 24) },
+    { icon: '🌫', label: '室内湿度', value: `${v.humidity ?? 50}%`,         pct: Math.min(100, Math.max(0, v.humidity ?? 50)), color: getEnvColor('室内湿度', v.humidity ?? 50) },
+    { icon: '🫁', label: 'CO₂浓度',  value: `${v.co2 ?? 450}ppm`,          pct: Math.min(100, Math.max(0, (v.co2 ?? 450) / 20)), color: getEnvColor('CO₂浓度', v.co2 ?? 450) },
+    { icon: '🌿', label: 'PM2.5',    value: `${v.pm25 ?? 12}μg/m³`,        pct: Math.min(100, Math.max(0, (v.pm25 ?? 12) * 2)), color: getEnvColor('PM2.5', v.pm25 ?? 12) },
+    { icon: '☀️', label: '光照',     value: `${v.light ?? 320}lux`,         pct: Math.min(100, Math.max(0, (v.light ?? 320) / 5)), color: getEnvColor('光照', v.light ?? 320) },
+    { icon: '💨', label: '空气质量', value: '优', pct: 90, color: '#4cd964' },
+  ]
+})
 
 const securityItems = [
-  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok' },      // 正常-绿色
-  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok' },      // 正常-绿色
-  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok' },      // 正常-绿色
-  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok' },      // 正常-绿色
-  { icon: '🚨', label: '安防状态', value: '在家', cls: 'ok' },      // 正常-绿色
-  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok' },      // 正常-绿色
+  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok', color: '#22c55e' },
+  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok', color: '#22c55e' },
+  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok', color: '#22c55e' },
+  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok', color: '#22c55e' },
+  { icon: '🚨', label: '安防状态', value: '在家', cls: 'ok', color: '#22c55e' },
+  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok', color: '#22c55e' },
 ]
 
 // 传感器类型图标
