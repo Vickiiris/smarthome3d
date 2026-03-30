@@ -93,7 +93,7 @@
               </div>
               <div class="device-list">
                 <div v-for="device in envDevices" :key="device.id" class="device-item" @click="flyToDeviceRoom(device)">
-                  <div class="device-icon" :style="{ background: getDeviceColor(device) }">{{ device.icon }}</div>
+                  <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
                   <div class="device-info">
                     <span class="d-name">{{ device.name }}</span>
                     <span class="d-room">{{ device.room }}</span>
@@ -116,7 +116,7 @@
                 <span class="section-tag ok"><span class="ok-dot"></span>全部正常</span>
               </div>
               <div class="security-grid">
-                <div v-for="item in securityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }">
+                <div v-for="item in linkedSecurityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }">
                   <div class="s-icon" :style="{ color: item.color }">{{ item.icon }}</div>
                   <div class="s-info">
                     <span class="s-label">{{ item.label }}</span>
@@ -673,13 +673,27 @@ const envItems = computed(() => {
 })
 
 const securityItems = [
-  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok', color: '#22c55e' },
-  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok', color: '#22c55e' },
-  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok', color: '#22c55e' },
-  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok', color: '#22c55e' },
-  { icon: '🚨', label: '安防状态', value: '在家', cls: 'ok', color: '#22c55e' },
-  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok', color: '#22c55e' },
+  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-2'] },
+  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-3'] },
+  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-3'] },
+  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-1'] },
+  { icon: '🚨', label: '安防状态', value: '在家', cls: 'ok', color: '#22c55e', sensorIds: [] },
+  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-4'] },
 ]
+
+// 根据传感器状态更新安防监控
+const linkedSecurityItems = computed(() => {
+  return securityItems.map(item => {
+    if (item.sensorIds && item.sensorIds.length > 0) {
+      const sensors = allDevices.value.filter(d => item.sensorIds.includes(d.id))
+      const allOffline = sensors.length > 0 && sensors.every(s => !s.status)
+      if (allOffline) {
+        return { ...item, value: '离线', cls: 'offline', color: '#6b7280' }
+      }
+    }
+    return item
+  })
+})
 
 // 传感器类型图标
 const activeDeviceTab = ref('light')
@@ -688,21 +702,21 @@ const activeDeviceTab = ref('light')
 const allDevices = ref([
   // 照明设备
   { id: 'light-1', name: '客厅灯开关', icon: '💡', type: 'light', status: true, room: '客厅' },
-  { id: 'light-2', name: '主卧灯开关', icon: '💡', type: 'light', status: false, room: '主卧' },
-  { id: 'light-3', name: '次卧灯开关', icon: '💡', type: 'light', status: false, room: '次卧' },
-  { id: 'light-4', name: '厨房灯开关', icon: '💡', type: 'light', status: true, room: '厨房' },
-  { id: 'light-5', name: '卫生间灯开关', icon: '💡', type: 'light', status: false, room: '卫生间' },
-  { id: 'light-6', name: '阳台灯开关', icon: '💡', type: 'light', status: false, room: '阳台' },
+  { id: 'light-2', name: '主卧灯开关', icon: '🛋️', type: 'light', status: false, room: '主卧' },
+  { id: 'light-3', name: '次卧灯开关', icon: '🌙', type: 'light', status: false, room: '次卧' },
+  { id: 'light-4', name: '厨房灯开关', icon: '🍳', type: 'light', status: true, room: '厨房' },
+  { id: 'light-5', name: '卫生间灯开关', icon: '🚿', type: 'light', status: false, room: '卫生间' },
+  { id: 'light-6', name: '阳台灯开关', icon: '☀️', type: 'light', status: false, room: '阳台' },
   // 空调设备
   { id: 'ac-1', name: '客厅空调', icon: '❄️', type: 'ac', status: true, value: 24, room: '客厅' },
-  { id: 'ac-2', name: '主卧空调', icon: '❄️', type: 'ac', status: false, value: 26, room: '主卧' },
-  { id: 'ac-3', name: '次卧空调', icon: '❄️', type: 'ac', status: false, value: 26, room: '次卧' },
+  { id: 'ac-2', name: '主卧空调', icon: '🌬️', type: 'ac', status: false, value: 26, room: '主卧' },
+  { id: 'ac-3', name: '次卧空调', icon: '🌡️', type: 'ac', status: false, value: 26, room: '次卧' },
   { id: 'ac-4', name: '新风系统', icon: '🌀', type: 'ac', status: true, room: '全屋' },
-  // 监控设备
-  { id: 'sensor-1', name: '人体存在感应器', icon: '👤', type: 'sensor', status: true, room: '客厅' },
-  { id: 'sensor-2', name: '门磁感应器', icon: '🚪', type: 'sensor', status: true, room: '玄关' },
-  { id: 'sensor-3', name: '烟雾/燃气传感器', icon: '💨', type: 'sensor', status: true, room: '厨房' },
-  { id: 'sensor-4', name: '水淹传感器', icon: '💧', type: 'sensor', status: true, room: '卫生间' },
+  // 传感器设备
+  { id: 'sensor-1', name: '人体存在感应器', icon: '👤', type: 'sensor', status: true, room: '客厅', linkedSecurity: '摄像头' },
+  { id: 'sensor-2', name: '门磁感应器', icon: '🚪', type: 'sensor', status: true, room: '玄关', linkedSecurity: '门禁' },
+  { id: 'sensor-3', name: '烟雾/燃气传感器', icon: '🔥', type: 'sensor', status: true, room: '厨房', linkedSecurity: '烟雾' },
+  { id: 'sensor-4', name: '水淹传感器', icon: '💧', type: 'sensor', status: true, room: '卫生间', linkedSecurity: '漏水' },
 ])
 
 // 根据Tab筛选设备（环境监控页面）
@@ -710,14 +724,27 @@ const envDevices = computed(() => {
   return allDevices.value.filter(d => d.type === activeDeviceTab.value)
 })
 
-// 获取设备图标背景色
-function getDeviceColor(device: any) {
-  const colors: Record<string, string> = {
+// 根据设备区域和状态获取图标样式
+function getDeviceColor(device: any): string {
+  const typeColors: Record<string, string> = {
     light: 'rgba(255, 213, 79, 0.15)',
     ac: 'rgba(79, 195, 247, 0.15)',
     sensor: 'rgba(34, 197, 94, 0.15)',
   }
-  return colors[device.type] || 'rgba(255,255,255,0.04)'
+  const roomColors: Record<string, string> = {
+    '客厅': 'rgba(79, 195, 247, 0.25)',
+    '主卧': 'rgba(167, 139, 250, 0.25)',
+    '次卧': 'rgba(251, 146, 60, 0.25)',
+    '厨房': 'rgba(239, 68, 68, 0.25)',
+    '卫生间': 'rgba(6, 182, 212, 0.25)',
+    '阳台': 'rgba(253, 224, 71, 0.25)',
+    '玄关': 'rgba(251, 113, 133, 0.25)',
+    '全屋': 'rgba(34, 197, 94, 0.25)',
+  }
+  const baseColor = typeColors[device.type] || 'rgba(255,255,255,0.04)'
+  const roomColor = roomColors[device.room] || 'rgba(255,255,255,0.08)'
+  if (device.status) return `linear-gradient(135deg, ${baseColor}, ${roomColor})`
+  return 'rgba(255,255,255,0.04)'
 }
 
 function toggleDevice(device: any) {
