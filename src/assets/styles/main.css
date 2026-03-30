@@ -468,10 +468,13 @@ input, select, textarea, button {
   margin-bottom: 10px;
 }
 .env-card .env-value {
-  font-family: var(--font-mono);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--accent);
+}
+.env-card .env-value .num {
+  font-family: var(--font-mono);
+  font-weight: 700;
 }
 .env-card .env-label {
   font-size: 11px;
@@ -1007,9 +1010,9 @@ input, select, textarea, button {
   font-size: 18px;
 }
 .metric-card .metric-label {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
 }
 .metric-card .metric-body {
   display: flex;
@@ -1018,10 +1021,13 @@ input, select, textarea, button {
   margin-bottom: 8px;
 }
 .metric-card .metric-value {
-  font-family: var(--font-mono);
   font-size: 16px;
+  font-weight: 400;
+  color: var(--accent, var(--text));
+}
+.metric-card .metric-value .num {
+  font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--text);
 }
 .metric-card .metric-trend {
   font-size: 10px;
@@ -1039,8 +1045,12 @@ input, select, textarea, button {
   border-radius: 2px;
 }
 .metric-card .metric-range {
-  font-size: 10px;
-  color: var(--text-3);
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 400;
+}
+.metric-card .metric-range .num {
+  font-family: var(--font-mono);
 }
 
 .health-charts-2col {
@@ -1803,15 +1813,18 @@ input, select, textarea, button {
 }
 
 .env-detail-title h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
   margin-bottom: 4px;
 }
 
 .env-detail-value {
-  font-family: var(--font-mono);
   font-size: 20px;
+  font-weight: 400;
+}
+.env-detail-value .num {
+  font-family: var(--font-mono);
   font-weight: 700;
 }
 
@@ -1888,4 +1901,10 @@ input, select, textarea, button {
   height: 100%;
   border-radius: 2px;
   transition: width 0.6s ease;
+}
+
+.env-detail-range {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 6px;
 }

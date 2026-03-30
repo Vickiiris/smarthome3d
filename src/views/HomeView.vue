@@ -73,7 +73,7 @@
             <div v-for="item in envItems" :key="item.label" class="env-card" :style="{ '--accent': item.color }" @click="showEnvDetail(item)">
               <div class="env-icon">{{ item.icon }}</div>
               <div class="env-info">
-                <span class="env-value">{{ item.value }}</span>
+                <span class="env-value" v-html="formatMetricValue(item.value)"></span>
                 <span class="env-label">{{ item.label }}</span>
               </div>
               <div class="env-bar"><div class="env-bar-fill" :style="{ width: item.pct + '%' }"></div></div>
@@ -213,19 +213,19 @@
             <span class="section-tag live"><span class="live-dot"></span>实时监测</span>
           </div>
           <div class="health-metrics">
-            <div v-for="item in healthItems" :key="item.label" class="metric-card" :style="{ '--accent': item.color }">
+            <div v-for="item in healthItems" :key="item.label" class="metric-card" :style="{ '--accent': item.color }" @click="openHealthDetail(item)">
               <div class="metric-header">
                 <span class="metric-icon">{{ item.icon }}</span>
                 <span class="metric-label">{{ item.label }}</span>
               </div>
               <div class="metric-body">
-                <span class="metric-value">{{ item.value }}</span>
+                <span class="metric-value" v-html="formatMetricValue(item.value)"></span>
                 <span class="metric-trend" :class="item.trend >= 0 ? 'up' : 'dn'">{{ item.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(item.trend) }}</span>
               </div>
               <div class="metric-bar">
-                <div class="metric-bar-fill" :style="{ width: '70%', background: item.color }"></div>
+                <div class="metric-bar-fill" :style="{ width: item.pct + '%', background: item.color }"></div>
               </div>
-              <div class="metric-range">{{ item.range }}</div>
+              <div class="metric-range" v-html="formatMetricValue(item.range)"></div>
             </div>
           </div>
 
@@ -442,7 +442,7 @@
           <div class="env-detail-icon">{{ envDetailItem?.icon }}</div>
           <div class="env-detail-title">
             <h3>{{ envDetailItem?.label }}</h3>
-            <span class="env-detail-value" :style="{ color: envDetailItem?.color }">{{ envDetailItem?.value }}</span>
+            <span class="env-detail-value" :style="{ color: envDetailItem?.color }" v-html="formatMetricValue(envDetailItem?.value)"></span>
           </div>
           <button class="env-detail-close" @click="closeEnvDetail">✕</button>
         </div>
@@ -467,6 +467,46 @@
             <div class="env-detail-bar">
               <div class="env-detail-bar-fill" :style="{ width: envDetailItem.pct + '%', background: envDetailItem.color }"></div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- 健康指标详情弹窗 -->
+  <Teleport to="body">
+    <div v-if="healthDetailVisible" class="env-detail-overlay" @click.self="closeHealthDetail">
+      <div class="env-detail-modal">
+        <div class="env-detail-header">
+          <div class="env-detail-icon">{{ healthDetailItem?.icon }}</div>
+          <div class="env-detail-title">
+            <h3>{{ healthDetailItem?.label }}</h3>
+            <span class="env-detail-value" :style="{ color: healthDetailItem?.color }" v-html="formatMetricValue(healthDetailItem?.value)"></span>
+          </div>
+          <button class="env-detail-close" @click="closeHealthDetail">✕</button>
+        </div>
+        <div class="env-detail-body" v-if="healthDetailItem">
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">📖 参数说明</div>
+            <p>{{ healthDetailMap[healthDetailItem.label]?.desc || '暂无说明' }}</p>
+          </div>
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">📋 国家标准</div>
+            <p>{{ healthDetailMap[healthDetailItem.label]?.standard || '暂无标准' }}</p>
+          </div>
+          <div class="env-detail-section tips">
+            <div class="env-detail-section-title">💡 健康建议</div>
+            <p>{{ getHealthTips(healthDetailItem.label, healthDetailItem.raw ?? healthDetailItem.value) }}</p>
+          </div>
+          <div class="env-detail-bar-wrap">
+            <div class="env-detail-bar-label">
+              <span>当前水平</span>
+              <span :style="{ color: healthDetailItem.color }">{{ healthDetailItem.pct ?? 70 }}%</span>
+            </div>
+            <div class="env-detail-bar">
+              <div class="env-detail-bar-fill" :style="{ width: (healthDetailItem.pct ?? 70) + '%', background: healthDetailItem.color }"></div>
+            </div>
+            <div class="env-detail-range">{{ healthDetailItem.range }}</div>
           </div>
         </div>
       </div>
@@ -507,6 +547,18 @@ const envDetailMap = {
   'PM2.5':   { desc: '细颗粒物浓度，直径 ≤2.5μm，可深入肺部，影响呼吸健康。', standard: '国标 GB 3095：年均浓度 ≤35μg/m³（优良），日均 ≤75μg/m³。', tips: '室内 PM2.5 超标时建议开启空气净化器，减少室内燃烧活动。' },
   '光照':    { desc: '室内光照强度，影响视觉舒适度和生物节律。', standard: '国标 GB 50034：办公室照度 300~500lux，卧室 75~150lux，客厅 100~300lux。', tips: '光照不足时建议补充人工照明，避免长时间在昏暗环境中用眼。' },
   '空气质量': { desc: '综合空气质量指数（AQI），综合评估室内空气污染程度。', standard: '国标 HJ 633：AQI 0~50 优，51~100 良，101~150 轻度污染，>150 中度及以上污染。', tips: '空气质量差时建议关闭门窗，开启净化器，减少剧烈运动。' },
+  '心率':     { desc: '心脏每分钟跳动的次数，反映心血管系统功能状态。', standard: '国标 WS/T 323：成人静息心率正常范围 60~100次/分；运动员可达 40~60次/分。', tips: '心率持续偏高需警惕心血管风险，建议减少咖啡因摄入，保持规律作息。' },
+  '血压':     { desc: '血液对血管壁的侧压力，分为收缩压（高压）和舒张压（低压）。', standard: '国标 WS/T 324：正常血压收缩压 <120mmHg 且舒张压 <80mmHg；正常高值需关注生活方式。', tips: '血压偏高者建议减少盐分摄入，适量运动，保持充足睡眠，定期监测。' },
+  '体温':     { desc: '人体核心体温，反映基础代谢和免疫状态。', standard: '国标 GBZ 189：正常人体温范围 36.0~37.2°C；超过 37.3°C 属发热。', tips: '体温异常需关注是否感染或过度劳累；建议规律作息，适度锻炼增强免疫。' },
+  '血氧':     { desc: '血液中血红蛋白与氧气结合的比例，反映呼吸系统氧合能力。', standard: '国标 GB 9801：正常人血氧饱和度 ≥95%；低于 94% 需关注，低于 90% 属低氧血症。', tips: '血氧偏低建议增加室内通风，避免剧烈运动；持续偏低需就医排查呼吸系统问题。' },
+  '睡眠':     { desc: '每日睡眠时长和质量，影响身体修复、记忆巩固和免疫功能。', standard: '国标 GB/T 18883：中国成人建议每日睡眠 7~9小时；儿童青少年需 8~10小时。', tips: '睡眠不足会影响认知和免疫力，建议固定作息时间，睡前减少电子设备使用。' },
+}
+const healthDetailMap = {
+  '心率': { desc: '心脏每分钟跳动的次数，反映心血管系统功能状态。', standard: '国标 WS/T 323：成人静息心率正常范围 60~100次/分；运动员可达 40~60次/分。', tips: '心率持续偏高需警惕心血管风险，建议减少咖啡因摄入，保持规律作息。' },
+  '血压': { desc: '血液对血管壁的侧压力，分为收缩压（高压）和舒张压（低压）。', standard: '国标 WS/T 324：正常血压收缩压 <120mmHg 且舒张压 <80mmHg；正常高值需关注生活方式。', tips: '血压偏高者建议减少盐分摄入，适量运动，保持充足睡眠，定期监测。' },
+  '体温': { desc: '人体核心体温，反映基础代谢和免疫状态。', standard: '国标 GBZ 189：正常人体温范围 36.0~37.2°C；超过 37.3°C 属发热。', tips: '体温异常需关注是否感染或过度劳累；建议规律作息，适度锻炼增强免疫。' },
+  '血氧': { desc: '血液中血红蛋白与氧气结合的比例，反映呼吸系统氧合能力。', standard: '国标 GB 9801：正常人血氧饱和度 ≥95%；低于 94% 需关注，低于 90% 属低氧血症。', tips: '血氧偏低建议增加室内通风，避免剧烈运动；持续偏低需就医排查呼吸系统问题。' },
+  '睡眠': { desc: '每日睡眠时长和质量，影响身体修复、记忆巩固和免疫功能。', standard: '国标 GB/T 18883：中国成人建议每日睡眠 7~9小时；儿童青少年需 8~10小时。', tips: '睡眠不足会影响认知和免疫力，建议固定作息时间，睡前减少电子设备使用。' },
 }
 
 function showEnvDetail(item) {
@@ -566,13 +618,51 @@ function getHealthTips(label, value) {
       if (value <= 115) return '空气质量轻度污染，PM2.5=' + value + 'ug/m3，敏感人群应减少户外活动。'
       if (value <= 150) return '空气质量中度污染，PM2.5=' + value + 'ug/m3，建议减少户外活动。'
       return '空气质量重度污染，PM2.5=' + value + 'ug/m3，请避免户外活动。'
+    case '心率':
+      if (value < 60) return '心率偏低，如无不适可正常生活；运动员属正常范围。'
+      if (value <= 100) return '心率正常，心血管状态良好，继续保持规律运动。'
+      if (value <= 120) return '心率略高，建议休息放松，减少咖啡因摄入。'
+      return '心率偏高，建议立即休息，如持续偏高请就医检查。'
+    case '血压':
+      if (value < 90) return '血压偏低，建议适量增加盐分和水分摄入。'
+      if (value <= 120) return '血压理想，心血管健康，继续保持良好生活习惯。'
+      if (value <= 139) return '血压正常偏高，建议减少盐分摄入，加强运动。'
+      return '血压偏高，建议就医评估，必要时遵医嘱服药控制。'
+    case '体温':
+      if (value < 36.0) return '体温偏低，注意保暖，如持续偏低请就医检查。'
+      if (value <= 37.2) return '体温正常，身体状态良好。'
+      if (value <= 38.0) return '低热状态，建议多喝水休息，密切观察。'
+      return '体温偏高，请及时就医检查是否感染。'
+    case '血氧':
+      if (value >= 98) return '血氧优秀，呼吸功能状态极佳。'
+      if (value >= 95) return '血氧正常，呼吸系统功能良好。'
+      if (value >= 90) return '血氧偏低，建议增加通风，避免剧烈运动。'
+      return '血氧过低，请立即就医或吸氧治疗。'
+    case '睡眠':
+      if (value < 5) return '睡眠严重不足，建议调整作息，避免熬夜。'
+      if (value < 7) return '睡眠不足，建议提前就寝，保证 7~9 小时睡眠。'
+      if (value <= 9) return '睡眠充足，继续保持良好的作息习惯。'
+      return '睡眠时间过长，可能与疲劳或健康问题有关，建议关注。'
     default:
-      return '保持当前环境。'
+      return '保持当前状态，定期监测健康指标。'
   }
 }
 
 function closeEnvDetail() {
   envDetailVisible.value = false
+}
+
+// 健康指标详情弹窗
+const healthDetailVisible = ref(false)
+const healthDetailItem = ref(null)
+
+function openHealthDetail(item) {
+  healthDetailItem.value = item
+  healthDetailVisible.value = true
+}
+
+function closeHealthDetail() {
+  healthDetailVisible.value = false
 }
 
 // 设备控制面板
@@ -891,12 +981,19 @@ const filteredDevices = computed(() =>
 )
 
 const healthItems = [
-  { icon: '❤',  label: '心率',   value: '72次/分',    trend: 2,   color: '#ff6b6b', range: '正常: 60-100次/分' },
-  { icon: '🩸', label: '血压',   value: '118/75mmHg', trend: 0,   color: '#8b5cf6', range: '正常: 90-139/60-89' },
-  { icon: '🌡', label: '体温',   value: '36.5°C',     trend: 0.1, color: '#ff9800', range: '正常: 36.0-37.2°C' },
-  { icon: '🫁', label: '血氧',   value: '98%',         trend: 1,   color: '#4fc3f7', range: '正常: 95-100%' },
-  { icon: '😴', label: '睡眠',   value: '7.5小时',     trend: 0,   color: '#4cd964', range: '正常: 7-9小时' },
+  { icon: '❤',  label: '心率',   value: '72次/分',   trend: 2,   color: '#ff6b6b', range: '正常: 60-100次/分',   pct: 72,  raw: 72 },
+  { icon: '🩸', label: '血压',   value: '118/75mmHg', trend: 0,   color: '#8b5cf6', range: '正常: 90-139/60-89', pct: 85,  raw: 118 },
+  { icon: '🌡', label: '体温',   value: '36.5°C',     trend: 0.1, color: '#ff9800', range: '正常: 36.0-37.2°C',  pct: 50,  raw: 36.5 },
+  { icon: '🫁', label: '血氧',   value: '98%',        trend: 1,   color: '#4fc3f7', range: '正常: 95-100%',      pct: 98,  raw: 98 },
+  { icon: '😴', label: '睡眠',   value: '7.5小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.5 },
 ]
+
+// 格式化指标值：数字+英文单位用 mono 粗体，中文用默认字体
+function formatMetricValue(str) {
+  if (!str) return ''
+  // 按中文字符分割，非中文部分（数字+英文单位）用 mono 字体
+  return str.replace(/([^\u4e00-\u9fa5\u3000-\u303f]+)/g, '<span class="num">$1</span>')
+}
 
 const alarms = [
   { time: '08:30', content: '心率偏高提醒', level: 'warn', levelText: '警告', status: 'done',    statusText: '已处理' },
