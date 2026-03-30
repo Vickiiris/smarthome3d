@@ -88,7 +88,6 @@
                 <div class="panel-tabs">
                   <button class="panel-tab" :class="{ active: activeDeviceTab === 'light' }" @click="activeDeviceTab = 'light'">💡 照明</button>
                   <button class="panel-tab" :class="{ active: activeDeviceTab === 'ac' }" @click="activeDeviceTab = 'ac'">❄️ 空调</button>
-                  <button class="panel-tab" :class="{ active: activeDeviceTab === 'sensor' }" @click="activeDeviceTab = 'sensor'">📡 传感器</button>
                 </div>
               </div>
               <div class="device-list">
@@ -116,7 +115,7 @@
                 <span class="section-tag ok"><span class="ok-dot"></span>全部正常</span>
               </div>
               <div class="security-grid">
-                <div v-for="item in linkedSecurityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }">
+                <div v-for="item in linkedSecurityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }" @click="openSecurityControl(item)">
                   <div class="s-icon" :style="{ color: item.color }">{{ item.icon }}</div>
                   <div class="s-info">
                     <span class="s-label">{{ item.label }}</span>
@@ -447,18 +446,18 @@
           </div>
           <button class="env-detail-close" @click="closeEnvDetail">✕</button>
         </div>
-        <div class="env-detail-body" v-if="envDetailItem && envDetailMap[envDetailItem.label]">
+        <div class="env-detail-body" v-if="envDetailItem">
           <div class="env-detail-section">
             <div class="env-detail-section-title">📖 参数说明</div>
-            <p>{{ envDetailMap[envDetailItem.label].desc }}</p>
+            <p>{{ envDetailMap[envDetailItem.label]?.desc }}</p>
           </div>
           <div class="env-detail-section">
             <div class="env-detail-section-title">📋 国家标准</div>
-            <p>{{ envDetailMap[envDetailItem.label].standard }}</p>
+            <p>{{ envDetailMap[envDetailItem.label]?.standard }}</p>
           </div>
           <div class="env-detail-section tips">
             <div class="env-detail-section-title">💡 健康建议</div>
-            <p>{{ envDetailMap[envDetailItem.label].tips }}</p>
+            <p>{{ getHealthTips(envDetailItem.label, parseInt(envDetailItem.value)) }}</p>
           </div>
           <div class="env-detail-bar-wrap">
             <div class="env-detail-bar-label">
@@ -514,6 +513,64 @@ function showEnvDetail(item: any) {
   envDetailItem.value = item
   envDetailVisible.value = true
 }
+
+// 根据当前数值获取动态健康建议
+function getHealthTips(label: string, value: number): string {
+  switch (label) {
+    case '室外温度':
+      if (value < 0) return '气温极低，请做好防寒保暖，避免长时间户外活动。'
+      if (value < 15) return '气温较低，建议穿着厚重衣物，适度户外活动。'
+      if (value <= 26) return '气温舒适，是户外活动的好时机。'
+      if (value <= 32) return '气温较高，建议多喝水，避免长时间暴晒。'
+      if (value <= 38) return '气温很高，请做好防暑降温，减少户外活动。'
+      return '气温极高，请立即采取防暑措施，避免中暑。'
+    case '室外湿度':
+      if (value < 20) return '空气干燥，建议多喝水，使用加湿器。'
+      if (value < 30) return '空气较干，可能引起皮肤干燥和呼吸道不适。'
+      if (value <= 70) return '湿度舒适，空气质量良好。'
+      if (value <= 85) return '空气潮湿，易滋生霉菌，建议开启除湿。'
+      return '空气非常潮湿，请立即开启除湿设备。'
+    case '室内温度':
+      if (value < 16) return '室内过冷，建议调高温度，避免感冒。'
+      if (value < 18) return '室内温度偏低，建议增加供暖。'
+      if (value <= 26) return '室内温度舒适，保持当前设置。'
+      if (value <= 30) return '室内温度偏高，建议开启空调降温。'
+      return '室内温度过高，请立即开启空调。'
+    case '室内湿度':
+      if (value < 20) return '室内过干，建议开启加湿器，多喝水。'
+      if (value < 30) return '室内较干，易引起呼吸道不适。'
+      if (value <= 70) return '室内湿度舒适，保持当前环境。'
+      if (value <= 85) return '室内较潮，建议开启除湿或通风。'
+      return '室内过潮，请立即开启除湿设备。'
+    case 'CO₂浓度':
+      if (value <= 600) return '空气质量优秀，通风效果很好。'
+      if (value <= 800) return '空气质量良好，可继续保持。'
+      if (value <= 1000) return '空气质量一般，建议开窗通风。'
+      if (value <= 1500) return '空气质量较差，请立即开窗通风。'
+      return '空气质量很差，请立即打开所有窗户通风。'
+    case 'PM2.5':
+      if (value <= 35) return 'PM2.5 优秀，空气质量很好，可放心户外活动。'
+      if (value <= 75) return 'PM2.5 良好，空气质量不错。'
+      if (value <= 115) return 'PM2.5 轻度污染，敏感人群应减少户外活动。'
+      if (value <= 150) return 'PM2.5 中度污染，建议开启空气净化器。'
+      return 'PM2.5 重度污染，请立即开启净化器并关闭门窗。'
+    case '光照':
+      if (value < 50) return '光照不足，建议补充人工照明，保护视力。'
+      if (value <= 100) return '光照较暗，建议增加照明。'
+      if (value <= 300) return '光照舒适，保持当前照度。'
+      if (value <= 500) return '光照充足，可适度降低照度。'
+      return '光照过强，建议降低照度或关闭部分灯光。'
+    case '空气质量':
+      if (value <= 50) return '空气质量优秀，非常适合户外活动。'
+      if (value <= 100) return '空气质量良好，可正常户外活动。'
+      if (value <= 150) return '空气质量轻度污染，敏感人群应减少户外活动。'
+      if (value <= 200) return '空气质量中度污染，建议减少户外活动。'
+      return '空气质量重度污染，请避免户外活动。'
+    default:
+      return '保持当前环境。'
+  }
+}
+
 function closeEnvDetail() {
   envDetailVisible.value = false
 }
@@ -763,6 +820,28 @@ function openDeviceControl(device: any) {
     room: device.room,
   }
   showControlPanel.value = true
+}
+
+// 打开安防监控控制面板
+function openSecurityControl(item: any) {
+  // 找到关联的传感器
+  const sensorIds = item.sensorIds || []
+  const linkedSensors = allDevices.value.filter(d => sensorIds.includes(d.id))
+  
+  if (linkedSensors.length > 0) {
+    // 如果有传感器，显示第一个传感器的控制面板
+    const sensor = linkedSensors[0]
+    selectedDevice.value = {
+      id: sensor.id,
+      name: item.label + '控制',
+      icon: item.icon,
+      type: 'sensor',
+      status: sensor.status,
+      value: sensor.value,
+      room: sensor.room,
+    }
+    showControlPanel.value = true
+  }
 }
 
 // 切换选中设备状态
