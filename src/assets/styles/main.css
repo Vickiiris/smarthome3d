@@ -523,6 +523,12 @@ input, select, textarea, button {
   color: var(--text);
 }
 
+.time-range {
+  font-size: 13px;
+  color: var(--text-3);
+  margin-left: auto;
+}
+
 .panel-tabs {
   display: flex;
   gap: 6px;
