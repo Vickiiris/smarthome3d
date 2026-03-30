@@ -70,7 +70,7 @@
             <span class="section-tag live"><span class="live-dot"></span>实时监测</span>
           </div>
           <div class="env-grid">
-            <div v-for="item in envItems" :key="item.label" class="env-card" :style="{ '--accent': item.color }">
+            <div v-for="item in envItems" :key="item.label" class="env-card" :style="{ '--accent': item.color }" @click="showEnvDetail(item)">
               <div class="env-icon">{{ item.icon }}</div>
               <div class="env-info">
                 <span class="env-value">{{ item.value }}</span>
@@ -113,7 +113,7 @@
             <div class="panel-card">
               <div class="panel-header">
                 <h3 class="panel-title">安防监控</h3>
-                <span class="status-ok">● 全部正常</span>
+                <span class="section-tag ok"><span class="ok-dot"></span>全部正常</span>
               </div>
               <div class="security-grid">
                 <div v-for="item in securityItems" :key="item.label" class="security-item">
@@ -435,6 +435,45 @@
     </main>
   </div>
 
+  <!-- 环境详情弹窗 -->
+  <Teleport to="body">
+    <div v-if="envDetailVisible" class="env-detail-overlay" @click.self="closeEnvDetail">
+      <div class="env-detail-modal">
+        <div class="env-detail-header">
+          <div class="env-detail-icon">{{ envDetailItem?.icon }}</div>
+          <div class="env-detail-title">
+            <h3>{{ envDetailItem?.label }}</h3>
+            <span class="env-detail-value" :style="{ color: envDetailItem?.color }">{{ envDetailItem?.value }}</span>
+          </div>
+          <button class="env-detail-close" @click="closeEnvDetail">✕</button>
+        </div>
+        <div class="env-detail-body" v-if="envDetailItem && envDetailMap[envDetailItem.label]">
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">📖 参数说明</div>
+            <p>{{ envDetailMap[envDetailItem.label].desc }}</p>
+          </div>
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">📋 国家标准</div>
+            <p>{{ envDetailMap[envDetailItem.label].standard }}</p>
+          </div>
+          <div class="env-detail-section tips">
+            <div class="env-detail-section-title">💡 健康建议</div>
+            <p>{{ envDetailMap[envDetailItem.label].tips }}</p>
+          </div>
+          <div class="env-detail-bar-wrap">
+            <div class="env-detail-bar-label">
+              <span>当前水平</span>
+              <span :style="{ color: envDetailItem.color }">{{ envDetailItem.pct }}%</span>
+            </div>
+            <div class="env-detail-bar">
+              <div class="env-detail-bar-fill" :style="{ width: envDetailItem.pct + '%', background: envDetailItem.color }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- 设备控制弹窗 -->
   <DeviceControlModal
     :visible="showControlPanel"
@@ -455,6 +494,29 @@ const currentPage = ref('env')
 const deviceSearch = ref('')
 const activeRoom = ref('all')
 const isFullscreen = ref(false)
+
+// 环境详情弹窗
+const envDetailVisible = ref(false)
+const envDetailItem = ref<any>(null)
+
+const envDetailMap: Record<string, { desc: string; standard: string; tips: string }> = {
+  '室外温度': { desc: '室外大气温度，反映当前户外热环境。', standard: '国标 GB/T 18883：室内温度舒适范围 18~26°C（冬季 16~24°C，夏季 24~28°C）。', tips: '室外温度过高时建议减少户外活动，注意防暑。' },
+  '室外湿度': { desc: '室外空气相对湿度，影响体感温度和舒适度。', standard: '国标 GB/T 18883：室内相对湿度舒适范围 30%~70%。', tips: '湿度过高易滋生霉菌，过低易引起呼吸道不适。' },
+  '室内温度': { desc: '室内空气温度，直接影响居住舒适度和健康。', standard: '国标 GB/T 18883：夏季 24~28°C，冬季 18~24°C 为舒适范围。', tips: '建议保持室内温度稳定，避免与室外温差过大。' },
+  '室内湿度': { desc: '室内空气相对湿度，影响人体舒适感和建筑材料。', standard: '国标 GB/T 18883：室内相对湿度 40%~70% 为舒适范围。', tips: '湿度低于 30% 时建议使用加湿器，高于 70% 时开启除湿。' },
+  'CO₂浓度': { desc: '室内二氧化碳浓度，反映空气新鲜程度和通风状况。', standard: '国标 GB/T 18883：室内 CO₂ 浓度应 ≤1000ppm；>2000ppm 会引起头晕不适。', tips: '建议定期开窗通风，保持 CO₂ 浓度低于 1000ppm。' },
+  'PM2.5':   { desc: '细颗粒物浓度，直径 ≤2.5μm，可深入肺部，影响呼吸健康。', standard: '国标 GB 3095：年均浓度 ≤35μg/m³（优良），日均 ≤75μg/m³。', tips: '室内 PM2.5 超标时建议开启空气净化器，减少室内燃烧活动。' },
+  '光照':    { desc: '室内光照强度，影响视觉舒适度和生物节律。', standard: '国标 GB 50034：办公室照度 300~500lux，卧室 75~150lux，客厅 100~300lux。', tips: '光照不足时建议补充人工照明，避免长时间在昏暗环境中用眼。' },
+  '空气质量': { desc: '综合空气质量指数（AQI），综合评估室内空气污染程度。', standard: '国标 HJ 633：AQI 0~50 优，51~100 良，101~150 轻度污染，>150 中度及以上污染。', tips: '空气质量差时建议关闭门窗，开启净化器，减少剧烈运动。' },
+}
+
+function showEnvDetail(item: any) {
+  envDetailItem.value = item
+  envDetailVisible.value = true
+}
+function closeEnvDetail() {
+  envDetailVisible.value = false
+}
 
 // 设备控制面板
 const showControlPanel = ref(false)

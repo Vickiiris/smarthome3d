@@ -73,7 +73,7 @@ input, select, textarea, button { font-family: inherit; }
 .panel-tabs { display: flex; gap: 6px; }
 .panel-tab { padding: 5px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-2); font-size: 11px; font-weight: 500; cursor: pointer; transition: all var(--transition); &:hover { background: var(--surface-hover); color: var(--text); } &.active { background: var(--primary-dim); border-color: rgba(0,212,170,0.25); color: var(--primary); } }
 .panel-count { font-size: 11px; color: var(--text-3); background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px; }
-.status-ok { font-size: 12px; color: var(--success); }
+.section-tag.ok { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); color: var(--success); } .ok-dot { width: 5px; height: 5px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
 .device-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
 .device-item { padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all var(--transition); &:hover { background: rgba(0,212,170,0.06); border-color: var(--border-bright); } .device-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); font-size: 16px; } .device-info { flex: 1; display: flex; flex-direction: column; gap: 2px; } .d-name { font-size: 12px; font-weight: 600; color: var(--text); } .d-room { font-size: 10px; color: var(--text-3); } .device-right { display: flex; align-items: center; gap: 8px; } }
 .toggle { width: 38px; height: 22px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; padding: 2px; cursor: pointer; transition: all var(--transition); position: relative; &.on { background: var(--primary-dim); border-color: rgba(0,212,170,0.35); box-shadow: 0 0 10px rgba(0,212,170,0.2); .toggle-thumb { transform: translateX(16px); background: var(--primary); } } .toggle-track { width: 100%; height: 100%; display: flex; align-items: center; } .toggle-thumb { width: 16px; height: 16px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: all var(--transition); } }
@@ -222,3 +222,22 @@ input, select, textarea, button { font-family: inherit; }
 
 
 
+
+
+// 环境详情弹窗
+.env-detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.env-detail-modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 420px; max-width: 90vw; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.env-detail-header { display: flex; align-items: center; gap: 14px; padding: 20px; background: linear-gradient(135deg, rgba(5,13,24,0.9), rgba(10,18,35,0.8)); border-bottom: 1px solid var(--border); }
+.env-detail-icon { font-size: 36px; }
+.env-detail-title h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.env-detail-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; }
+.env-detail-close { margin-left: auto; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 50%; color: var(--text-2); cursor: pointer; font-size: 12px; &:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: var(--danger); } }
+.env-detail-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.env-detail-section { padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.env-detail-section-title { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.env-detail-section p { font-size: 12px; color: var(--text-2); line-height: 1.7; }
+.env-detail-section.tips { background: rgba(0,212,170,0.05); border-color: rgba(0,212,170,0.15); }
+.env-detail-bar-wrap { }
+.env-detail-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); margin-bottom: 6px; }
+.env-detail-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.env-detail-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
