@@ -2087,6 +2087,18 @@ input, select, textarea, button {
   width: 480px !important;
 }
 
+.product-detail-modal {
+  width: 520px !important;
+}
+.product-detail-modal .env-detail-section p,
+.product-detail-modal .env-detail-section ol,
+.product-detail-modal .env-detail-section ul {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
+}
+
 .device-detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

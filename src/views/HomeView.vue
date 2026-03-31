@@ -493,7 +493,7 @@
                   'tag-offline': p.tag === '未接入'
                 }">{{ p.tag }}</span>
               </div>
-              <button class="btn btn-sm btn-ghost">查看</button>
+              <button class="btn btn-sm btn-ghost" @click="openProductDetail(p)">查看</button>
             </div>
           </div>
           <div class="pagination">
@@ -836,6 +836,110 @@
                 <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).month }} kWh</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- 产品详情弹窗 -->
+  <Teleport to="body">
+    <div v-if="showProductDetail" class="env-detail-overlay" @click.self="showProductDetail = false">
+      <div class="env-detail-modal product-detail-modal">
+        <div class="env-detail-header">
+          <div class="env-detail-icon">{{ productDetailItem?.icon }}</div>
+          <div class="env-detail-title">
+            <h3>{{ productDetailItem?.name }}</h3>
+            <span class="product-tag" :class="{
+              'tag-connected': productDetailItem?.tag === '已接入',
+              'tag-pending':   productDetailItem?.tag === '待接入',
+              'tag-offline':   productDetailItem?.tag === '未接入'
+            }">{{ productDetailItem?.tag }}</span>
+          </div>
+          <button class="env-detail-close" @click="showProductDetail = false">✕</button>
+        </div>
+        <div class="env-detail-body" v-if="productDetailItem">
+          <!-- 基础信息 -->
+          <div class="device-detail-grid">
+            <div class="dd-item">
+              <span class="dd-label">产品名称</span>
+              <span class="dd-value">{{ productDetailItem.name }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">产品分类</span>
+              <span class="dd-value">{{ productDetailItem.sub }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">厂商</span>
+              <span class="dd-value">{{ productDetailItem.vendor }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">接入状态</span>
+              <span class="dd-value" :style="{ color: productStatusColor(productDetailItem.tag) }">{{ productDetailItem.tag }}</span>
+            </div>
+          </div>
+          <!-- 根据接入状态显示不同描述 -->
+          <div class="env-detail-section" v-if="productDetailItem.tag === '已接入'">
+            <div class="env-detail-section-title">✅ 已接入</div>
+            <p>该产品已成功接入智能家居系统，当前运行正常。您可以通过设备管理页面对其进行实时监控与控制，也可在3D场景中直接点击对应顶牌进行操作。</p>
+          </div>
+          <div class="env-detail-section" v-if="productDetailItem.tag === '已接入'">
+            <div class="env-detail-section-title">📊 运行数据</div>
+            <div class="device-detail-grid" style="margin-top:10px">
+              <div class="dd-item">
+                <span class="dd-label">接入时间</span>
+                <span class="dd-value mono">{{ productDetailItem.connectedAt || '2024-08-15' }}</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">固件版本</span>
+                <span class="dd-value mono">{{ productDetailItem.firmware || 'v2.1.4' }}</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">协议类型</span>
+                <span class="dd-value">{{ productDetailItem.protocol || 'Zigbee 3.0' }}</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">信号强度</span>
+                <span class="dd-value" style="color:#22c55e">{{ productDetailItem.signal || '强 (-42dBm)' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="env-detail-section" v-if="productDetailItem.tag === '待接入'">
+            <div class="env-detail-section-title">⏳ 待接入</div>
+            <p>该产品已完成采购，正在等待配置接入。请按照以下步骤完成接入：</p>
+            <ol style="margin-top:10px; padding-left:18px; color:var(--text-2); font-size:13px; line-height:2">
+              <li>确保设备已通电并处于配网模式</li>
+              <li>在设备管理页点击「新增设备」→「扫描网络」</li>
+              <li>选中发现的设备并点击「添加选中」</li>
+              <li>完成后在设备列表中确认设备在线状态</li>
+            </ol>
+          </div>
+          <div class="env-detail-section" v-if="productDetailItem.tag === '待接入'">
+            <div class="env-detail-section-title">📋 产品规格</div>
+            <div class="device-detail-grid" style="margin-top:10px">
+              <div class="dd-item">
+                <span class="dd-label">通信协议</span>
+                <span class="dd-value">{{ productDetailItem.protocol || 'Wi-Fi / Zigbee' }}</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">供电方式</span>
+                <span class="dd-value">{{ productDetailItem.power || '220V AC' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="env-detail-section" v-if="productDetailItem.tag === '未接入'">
+            <div class="env-detail-section-title">❌ 未接入</div>
+            <p>该产品当前未接入系统，可能原因如下：</p>
+            <ul style="margin-top:10px; padding-left:18px; color:var(--text-2); font-size:13px; line-height:2">
+              <li>设备未通电或已损坏</li>
+              <li>网关信号覆盖不足，设备超出范围</li>
+              <li>固件版本不兼容，需要升级</li>
+              <li>设备已被手动移除或重置</li>
+            </ul>
+          </div>
+          <div class="env-detail-section" v-if="productDetailItem.tag === '未接入'">
+            <div class="env-detail-section-title">🔧 排查建议</div>
+            <p style="color:var(--text-2); font-size:13px; line-height:1.8">检查设备电源和网络连接，尝试重置设备后重新配网。如问题持续，请联系厂商 <strong style="color:var(--primary)">{{ productDetailItem.vendor }}</strong> 技术支持获取帮助。</p>
           </div>
         </div>
       </div>
@@ -1531,6 +1635,22 @@ function closeDeviceDetail() {
   showDeviceDetail.value = false
 }
 
+// 产品详情弹窗
+const showProductDetail = ref(false)
+const productDetailItem = ref(null)
+
+function openProductDetail(product) {
+  productDetailItem.value = product
+  showProductDetail.value = true
+}
+
+function productStatusColor(tag) {
+  if (tag === '已接入') return '#00d4aa'
+  if (tag === '待接入') return '#0ea5e9'
+  if (tag === '未接入') return '#ef4444'
+  return 'var(--text-2)'
+}
+
 // 设备使用时长（根据设备ID生成固定值）
 function deviceUsageTime(device) {
   if (!device) return '0小时'
@@ -1767,43 +1887,34 @@ const energyRank = [
 
 const products = [
   // 环境控制
-  { id: 1,  icon: '❄️', name: '变频空调 KFR-35',    sub: '环境控制', vendor: '美的',     tag: '已接入'   },
-  { id: 2,  icon: '🌀', name: '新风系统 FX-200',     sub: '环境控制', vendor: '海尔',     tag: '已接入'   },
-  { id: 3,  icon: '🌡', name: '空气净化器 KJ-500',  sub: '环境控制', vendor: '飞利浦',   tag: '待接入'   },
-  { id: 4,  icon: '💨', name: '除湿机 D1-10L',      sub: '环境控制', vendor: '德业',     tag: '未接入'   },
-  { id: 5,  icon: '🌡', name: '温湿度传感器 TH-01', sub: '环境控制', vendor: '小米',     tag: '已接入'   },
+  { id: 1,  icon: '❄️', name: '变频空调 KFR-35',    sub: '环境控制', vendor: '美的',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.2.1', connectedAt: '2024-06-10', signal: '强 (-38dBm)' },
+  { id: 2,  icon: '🌀', name: '新风系统 FX-200',     sub: '环境控制', vendor: '海尔',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.0.8', connectedAt: '2024-07-22', signal: '中 (-65dBm)' },
+  { id: 3,  icon: '🌡', name: '温湿度传感器 TH-01', sub: '环境控制', vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '电池', firmware: 'v1.4.2', connectedAt: '2024-08-05', signal: '强 (-44dBm)' },
+  { id: 4,  icon: '🌡', name: '空气净化器 KJ-500',  sub: '环境控制', vendor: '飞利浦',   tag: '待接入', protocol: 'Wi-Fi', power: '220V AC' },
+  { id: 5,  icon: '💨', name: '除湿机 D1-10L',      sub: '环境控制', vendor: '德业',     tag: '未接入', protocol: 'Wi-Fi', power: '220V AC' },
   // 照明控制
-  { id: 6,  icon: '💡', name: '智能照明套件',        sub: '照明控制', vendor: '小米',     tag: '已接入'   },
-  { id: 7,  icon: '💡', name: 'RGB 智能灯泡',        sub: '照明控制', vendor: 'Yeelight', tag: '已接入'   },
-  { id: 8,  icon: '💡', name: '智能开关面板',        sub: '照明控制', vendor: '公牛',     tag: '待接入'   },
-  { id: 9,  icon: '💡', name: '调光驱动器',          sub: '照明控制', vendor: '欧瑞博',   tag: '未接入'   },
+  { id: 6,  icon: '💡', name: '智能照明套件',        sub: '照明控制', vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.1.4', connectedAt: '2024-08-15', signal: '强 (-42dBm)' },
+  { id: 7,  icon: '🌈', name: 'RGB 智能灯泡',        sub: '照明控制', vendor: 'Yeelight', tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v1.9.3', connectedAt: '2024-09-01', signal: '强 (-40dBm)' },
+  { id: 8,  icon: '🔲', name: '智能开关面板',        sub: '照明控制', vendor: '公牛',     tag: '待接入', protocol: 'Zigbee 3.0', power: '220V AC' },
   // 安防系统
-  { id: 10, icon: '🔒', name: '智能门锁 S1',         sub: '安防系统', vendor: '德施曼',   tag: '已接入'   },
-  { id: 11, icon: '📹', name: '智能摄像头 C3W',      sub: '安防系统', vendor: '萤石',     tag: '已接入'   },
-  { id: 12, icon: '🔥', name: '烟雾报警器',          sub: '安防系统', vendor: '海曼',     tag: '已接入'   },
-  { id: 13, icon: '💧', name: '水浸传感器',          sub: '安防系统', vendor: '小米',     tag: '待接入'   },
-  { id: 14, icon: '🚪', name: '门磁感应器',          sub: '安防系统', vendor: '小米',     tag: '未接入'   },
-  { id: 15, icon: '🔔', name: '智能门铃 D1',         sub: '安防系统', vendor: '叮零',     tag: '未接入'   },
-  // 家电控制
-  { id: 16, icon: '📺', name: '智能电视 65Q7',      sub: '家电控制', vendor: '海信',     tag: '已接入'   },
-  { id: 17, icon: '🔊', name: '智能音箱 Pro',        sub: '家电控制', vendor: '小米',     tag: '已接入'   },
-  { id: 18, icon: '🍽️', name: '智能洗碗机',          sub: '家电控制', vendor: '西门子',   tag: '待接入'   },
-  { id: 19, icon: '🚿', name: '燃气热水器',          sub: '家电控制', vendor: '林内',     tag: '未接入'   },
-  { id: 20, icon: '🧹', name: '扫地机器人 S1',       sub: '家电控制', vendor: '石头',     tag: '未接入'   },
-  { id: 21, icon: '👕', name: '智能洗衣机',          sub: '家电控制', vendor: '小天鹅',   tag: '待接入'   },
-  { id: 22, icon: '🍶', name: '智能冰箱',            sub: '家电控制', vendor: '海尔',     tag: '未接入'   },
+  { id: 9,  icon: '🔒', name: '智能门锁 S1',         sub: '安防系统', vendor: '德施曼',   tag: '已接入', protocol: 'Zigbee 3.0', power: '电池', firmware: 'v4.0.1', connectedAt: '2024-05-20', signal: '强 (-36dBm)' },
+  { id: 10, icon: '📹', name: '智能摄像头 C3W',      sub: '安防系统', vendor: '萤石',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.1.0', connectedAt: '2024-06-30', signal: '强 (-41dBm)' },
+  { id: 11, icon: '🔔', name: '智能门铃 D1',         sub: '安防系统', vendor: '叮零',     tag: '待接入', protocol: 'Wi-Fi', power: '220V AC' },
   // 传感器
-  { id: 23, icon: '🌡', name: '温湿度传感器',        sub: '传感器',   vendor: '小米',     tag: '已接入'   },
-  { id: 24, icon: '💧', name: '水浸传感器',          sub: '传感器',   vendor: '小米',     tag: '已接入'   },
-  { id: 25, icon: '🔥', name: '烟雾传感器',          sub: '传感器',   vendor: '海曼',     tag: '已接入'   },
-  { id: 26, icon: '🚪', name: '门磁传感器',          sub: '传感器',   vendor: '小米',     tag: '待接入'   },
-  { id: 27, icon: '👤', name: '人体存在传感器',      sub: '传感器',   vendor: '领普',     tag: '未接入'   },
-  { id: 28, icon: '☀️', name: '光照传感器',          sub: '传感器',   vendor: '小米',     tag: '未接入'   },
-  { id: 29, icon: '📶', name: '空气质量传感器',      sub: '传感器',   vendor: '霍尼韦尔', tag: '已接入'   },
-  { id: 30, icon: '🔌', name: '智能插座',            sub: '传感器',   vendor: '小米',     tag: '待接入'   },
+  { id: 12, icon: '🔥', name: '烟雾/燃气传感器',    sub: '传感器',   vendor: '海曼',     tag: '已接入', protocol: 'Zigbee 3.0', power: '电池', firmware: 'v2.3.0', connectedAt: '2024-07-10', signal: '中 (-58dBm)' },
+  { id: 13, icon: '💧', name: '水浸传感器',          sub: '传感器',   vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '电池', firmware: 'v1.2.1', connectedAt: '2024-08-20', signal: '强 (-45dBm)' },
+  { id: 14, icon: '📶', name: '空气质量传感器',      sub: '传感器',   vendor: '霍尼韦尔', tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v1.8.5', connectedAt: '2024-09-12', signal: '强 (-39dBm)' },
+  { id: 15, icon: '🚪', name: '门磁感应器',          sub: '传感器',   vendor: '小米',     tag: '待接入', protocol: 'Zigbee 3.0', power: '电池' },
+  { id: 16, icon: '👤', name: '人体存在传感器',      sub: '传感器',   vendor: '领普',     tag: '未接入', protocol: 'Zigbee 3.0', power: '电池' },
+  // 家电控制
+  { id: 17, icon: '📺', name: '智能电视 65Q7',       sub: '家电控制', vendor: 'SONY',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v5.0.2', connectedAt: '2024-07-05', signal: '强 (-37dBm)' },
+  { id: 18, icon: '🔊', name: '智能音箱 Pro',        sub: '家电控制', vendor: '小米',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.4.1', connectedAt: '2024-08-01', signal: '强 (-43dBm)' },
+  { id: 19, icon: '🍽️', name: '智能洗碗机',          sub: '家电控制', vendor: '西门子',   tag: '待接入', protocol: 'Wi-Fi', power: '220V AC' },
+  { id: 20, icon: '🚿', name: '燃气热水器',          sub: '家电控制', vendor: '林内',     tag: '待接入', protocol: 'Wi-Fi', power: '燃气' },
+  { id: 21, icon: '🧹', name: '扫地机器人 S1',       sub: '家电控制', vendor: '石头',     tag: '未接入', protocol: 'Wi-Fi', power: '充电' },
   // 能源管理
-  { id: 31, icon: '⚡', name: '智能电表',             sub: '能源管理', vendor: '正泰',     tag: '待接入'   },
-  { id: 32, icon: '🔌', name: '计量插座',            sub: '能源管理', vendor: '小米',     tag: '未接入'   },
+  { id: 22, icon: '🔌', name: '智能插座',            sub: '能源管理', vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.0.3', connectedAt: '2024-09-18', signal: '强 (-46dBm)' },
+  { id: 23, icon: '⚡', name: '智能电表',             sub: '能源管理', vendor: '正泰',     tag: '待接入', protocol: 'RS-485', power: '220V AC' },
 ]
 
 // 产品筛选 & 分页
