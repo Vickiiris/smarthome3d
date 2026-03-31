@@ -264,7 +264,20 @@
                     </div>
                   </div>
                   <div class="wave-bars">
-                    <div class="wave-bar" v-for="(h, i) in [65,72,68,75,70,78,72,80,74,82,76,72,68,75,71,78,73,80,75,72]" :key="i" :style="{ height: h / 100 * 60 + 'px', animationDelay: i * 0.1 + 's' }"></div>
+                    <div 
+                      class="wave-bar" 
+                      v-for="(h, i) in heartRateData" 
+                      :key="i" 
+                      :style="{ height: h.value / 100 * 60 + 'px', animationDelay: i * 0.1 + 's' }"
+                      @mouseenter="showHeartTooltip($event, h, i)"
+                      @mouseleave="hideHeartTooltip"
+                    ></div>
+                  </div>
+                  <!-- 心率 Tooltip -->
+                  <div v-if="heartTooltip.visible" class="chart-tooltip heart-tooltip" :style="{ left: heartTooltip.x + 'px', top: heartTooltip.y + 'px' }">
+                    <div class="tooltip-time">{{ heartTooltip.time }}</div>
+                    <div class="tooltip-value"><span class="tooltip-icon">💓</span> 心率: <strong>{{ heartTooltip.value }}</strong> 次/分</div>
+                    <div class="tooltip-status" :class="getHeartStatus(heartTooltip.value).class">{{ getHeartStatus(heartTooltip.value).text }}</div>
                   </div>
                   <div class="heart-time">
                     <span>0时</span><span>6时</span><span>12时</span><span>18时</span><span>24时</span>
@@ -305,13 +318,26 @@
                     </div>
                   </div>
                   <div class="trend-bars">
-                    <div v-for="(v, i) in [115,120,118,122,116,119,118]" :key="i" class="trend-bar-wrap">
+                    <div 
+                      v-for="(v, i) in bpWeekData" 
+                      :key="i" 
+                      class="trend-bar-wrap"
+                      @mouseenter="showBpTooltip($event, v, i)"
+                      @mouseleave="hideBpTooltip"
+                    >
                       <div class="trend-bar-pair">
-                        <div class="trend-bar sys" :style="{ height: v / 130 * 60 + 'px' }"></div>
-                        <div class="trend-bar dia" :style="{ height: (v - 40) / 90 * 60 + 'px' }"></div>
+                        <div class="trend-bar sys" :style="{ height: v.sys / 140 * 70 + 'px' }"></div>
+                        <div class="trend-bar dia" :style="{ height: v.dia / 100 * 70 + 'px' }"></div>
                       </div>
                       <span class="bp-day">{{ ['一','二','三','四','五','六','日'][i] }}</span>
                     </div>
+                  </div>
+                  <!-- 血压 Tooltip -->
+                  <div v-if="bpTooltip.visible" class="chart-tooltip bp-tooltip" :style="{ left: bpTooltip.x + 'px', top: bpTooltip.y + 'px' }">
+                    <div class="tooltip-time">周{{ ['一','二','三','四','五','六','日'][bpTooltip.dayIndex] }}</div>
+                    <div class="tooltip-row"><span class="tooltip-dot sys"></span> 收缩压: <strong>{{ bpTooltip.sys }}</strong> mmHg</div>
+                    <div class="tooltip-row"><span class="tooltip-dot dia"></span> 舒张压: <strong>{{ bpTooltip.dia }}</strong> mmHg</div>
+                    <div class="tooltip-status" :class="getBpStatus(bpTooltip.sys, bpTooltip.dia).class">{{ getBpStatus(bpTooltip.sys, bpTooltip.dia).text }}</div>
                   </div>
                 </div>
               </div>
@@ -364,7 +390,7 @@
             <input class="filter-in" placeholder="搜索设备..." v-model="deviceSearch" />
             <button class="btn btn-primary">查询</button>
             <button class="btn btn-ghost" @click="deviceSearch = ''">重置</button>
-            <button class="btn btn-accent">+ 新增</button>
+            <button class="btn btn-accent" @click="openAddDevice">+ 新增</button>
           </div>
           <div class="panel-card">
             <div class="panel-header"><h3 class="panel-title">设备列表</h3><span class="panel-count">{{ filteredDevices.length }} 台</span></div>
@@ -380,7 +406,7 @@
                   <td><span class="stag" :class="d.online ? 'on' : 'off'">{{ d.online ? '在线' : '离线' }}</span></td>
                   <td>
                     <button class="btn btn-sm btn-primary" @click="openDeviceControlFromTable(d)">控制</button>
-                    <button class="btn btn-sm btn-ghost">详情</button>
+                    <button class="btn btn-sm btn-ghost" @click="openDeviceDetail(d)">详情</button>
                   </td>
                 </tr>
               </tbody>
@@ -520,6 +546,233 @@
     @close="showControlPanel = false"
     @toggle="toggleSelectedDevice"
   />
+
+  <!-- ===== 新增设备弹窗 ===== -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="addDeviceVisible" class="env-detail-overlay" @click.self="closeAddDevice">
+        <div class="add-device-modal">
+
+          <!-- 方式选择页 -->
+          <template v-if="addStep === 'choose'">
+            <div class="env-detail-header">
+              <div class="env-detail-icon">📱</div>
+              <div class="env-detail-title">
+                <h3>新增设备</h3>
+                <span style="font-size:12px;color:var(--text-3)">选择添加方式</span>
+              </div>
+              <button class="env-detail-close" @click="closeAddDevice">✕</button>
+            </div>
+            <div class="add-choose-body">
+              <div class="add-method-card" @click="addStep = 'manual'">
+                <div class="amc-icon">✏️</div>
+                <div class="amc-info">
+                  <h4>自定义添加</h4>
+                  <p>手动填写设备名称、位置、厂商等信息</p>
+                </div>
+                <span class="amc-arrow">›</span>
+              </div>
+              <div class="add-method-card" @click="startScan">
+                <div class="amc-icon">📡</div>
+                <div class="amc-info">
+                  <h4>扫描当前网络</h4>
+                  <p>自动发现局域网内的智能设备</p>
+                </div>
+                <span class="amc-arrow">›</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- 自定义添加表单 -->
+          <template v-if="addStep === 'manual'">
+            <div class="env-detail-header">
+              <button class="add-back-btn" @click="addStep = 'choose'">‹</button>
+              <div class="env-detail-icon">✏️</div>
+              <div class="env-detail-title">
+                <h3>自定义添加</h3>
+                <span style="font-size:12px;color:var(--text-3)">填写设备信息</span>
+              </div>
+              <button class="env-detail-close" @click="closeAddDevice">✕</button>
+            </div>
+            <div class="add-form-body">
+              <div class="add-form-grid">
+                <div class="add-form-item">
+                  <label class="add-form-label">设备名称 <span class="required">*</span></label>
+                  <input class="add-form-input" v-model="newDevice.name" placeholder="如：客厅空调" />
+                </div>
+                <div class="add-form-item">
+                  <label class="add-form-label">安装位置 <span class="required">*</span></label>
+                  <select class="add-form-input" v-model="newDevice.room">
+                    <option value="">请选择</option>
+                    <option v-for="r in roomOptions" :key="r" :value="r">{{ r }}</option>
+                  </select>
+                </div>
+                <div class="add-form-item">
+                  <label class="add-form-label">设备厂商</label>
+                  <input class="add-form-input" v-model="newDevice.vendor" placeholder="如：小米" />
+                </div>
+                <div class="add-form-item">
+                  <label class="add-form-label">设备类型 <span class="required">*</span></label>
+                  <select class="add-form-input" v-model="newDevice.type">
+                    <option value="">请选择</option>
+                    <option v-for="t in deviceTypeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+                  </select>
+                </div>
+                <div class="add-form-item">
+                  <label class="add-form-label">IP 地址</label>
+                  <input class="add-form-input mono" v-model="newDevice.ip" placeholder="192.168.1.x" />
+                </div>
+                <div class="add-form-item">
+                  <label class="add-form-label">初始状态</label>
+                  <div class="add-toggle-row">
+                    <div class="toggle" :class="{ on: newDevice.status }" @click="newDevice.status = !newDevice.status">
+                      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </div>
+                    <span style="font-size:12px;color:var(--text-2)">{{ newDevice.status ? '开启' : '关闭' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="addFormError" class="add-form-error">{{ addFormError }}</div>
+              <div class="add-form-actions">
+                <button class="btn btn-ghost" @click="addStep = 'choose'">取消</button>
+                <button class="btn btn-primary" @click="submitManualAdd">确认添加</button>
+              </div>
+            </div>
+          </template>
+
+          <!-- 扫描网络 -->
+          <template v-if="addStep === 'scan'">
+            <div class="env-detail-header">
+              <button class="add-back-btn" @click="addStep = 'choose'">‹</button>
+              <div class="env-detail-icon">📡</div>
+              <div class="env-detail-title">
+                <h3>扫描当前网络</h3>
+                <span style="font-size:12px;color:var(--text-3)">{{ scanStatus }}</span>
+              </div>
+              <button class="env-detail-close" @click="closeAddDevice">✕</button>
+            </div>
+            <div class="add-scan-body">
+              <!-- 扫描动画 -->
+              <div v-if="scanning" class="scan-anim-wrap">
+                <div class="scan-ring">
+                  <div class="scan-pulse"></div>
+                  <div class="scan-icon">📡</div>
+                </div>
+                <p class="scan-tip">正在扫描 192.168.1.0/24 网段…</p>
+                <div class="scan-progress">
+                  <div class="scan-progress-fill" :style="{ width: scanProgress + '%' }"></div>
+                </div>
+                <span class="scan-pct">{{ scanProgress }}%</span>
+              </div>
+              <!-- 扫描结果 -->
+              <div v-else>
+                <div class="scan-result-header">
+                  <span class="scan-found">发现 {{ scanResults.length }} 台设备</span>
+                  <button class="btn btn-ghost btn-sm" @click="startScan">重新扫描</button>
+                </div>
+                <div class="scan-list">
+                  <div
+                    v-for="d in scanResults"
+                    :key="d.ip"
+                    class="scan-item"
+                    :class="{ selected: scanSelected.includes(d.ip), added: d.alreadyAdded }"
+                    @click="!d.alreadyAdded && toggleScanSelect(d.ip)"
+                  >
+                    <div class="scan-item-icon">{{ d.icon }}</div>
+                    <div class="scan-item-info">
+                      <span class="scan-item-name">{{ d.name }}</span>
+                      <span class="scan-item-meta">{{ d.ip }} · {{ d.vendor }}</span>
+                    </div>
+                    <div class="scan-item-right">
+                      <span v-if="d.alreadyAdded" class="scan-tag added">已添加</span>
+                      <div v-else class="scan-checkbox" :class="{ checked: scanSelected.includes(d.ip) }">
+                        <span v-if="scanSelected.includes(d.ip)">✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="add-form-actions">
+                  <button class="btn btn-ghost" @click="closeAddDevice">取消</button>
+                  <button
+                    class="btn btn-primary"
+                    :disabled="scanSelected.length === 0"
+                    @click="submitScanAdd"
+                  >添加选中 ({{ scanSelected.length }})</button>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 添加成功 -->
+          <template v-if="addStep === 'success'">
+            <div class="add-success-body">
+              <div class="success-icon">✅</div>
+              <h3 class="success-title">添加成功</h3>
+              <p class="success-desc">{{ successMsg }}</p>
+              <button class="btn btn-primary" style="margin-top:16px" @click="closeAddDevice">完成</button>
+            </div>
+          </template>
+
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- 设备详情弹窗 -->
+  <Teleport to="body">
+    <div v-if="showDeviceDetail" class="env-detail-overlay" @click.self="closeDeviceDetail">
+      <div class="env-detail-modal device-detail-modal">
+        <div class="env-detail-header">
+          <div class="env-detail-icon">{{ deviceDetailItem?.icon }}</div>
+          <div class="env-detail-title">
+            <h3>{{ deviceDetailItem?.name }}</h3>
+            <span class="env-detail-value dd-online-status" :style="{ color: deviceDetailItem?.online ? '#22c55e' : '#6b7280' }">
+              {{ deviceDetailItem?.online ? '● 在线' : '● 离线' }}
+            </span>
+          </div>
+          <button class="env-detail-close" @click="closeDeviceDetail">✕</button>
+        </div>
+        <div class="env-detail-body" v-if="deviceDetailItem">
+          <div class="device-detail-grid">
+            <div class="dd-item">
+              <span class="dd-label">设备名称</span>
+              <span class="dd-value">{{ deviceDetailItem.name }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">安装位置</span>
+              <span class="dd-value">{{ deviceDetailItem.room }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">设备厂商</span>
+              <span class="dd-value">{{ deviceDetailItem.vendor }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">设备类型</span>
+              <span class="dd-value">{{ deviceTypeLabel(deviceDetailItem.type) }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">IP 地址</span>
+              <span class="dd-value mono">{{ deviceDetailItem.ip }}</span>
+            </div>
+            <div class="dd-item">
+              <span class="dd-label">运行状态</span>
+              <span class="dd-value" :style="{ color: deviceDetailItem.status ? '#22c55e' : '#94a3b8' }">
+                {{ deviceDetailItem.status ? '运行中' : '已关闭' }}
+              </span>
+            </div>
+          </div>
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">📋 设备说明</div>
+            <p>{{ deviceTypeDesc(deviceDetailItem.type) }}</p>
+          </div>
+          <div class="env-detail-section tips">
+            <div class="env-detail-section-title">💡 使用建议</div>
+            <p>{{ deviceTypeTips(deviceDetailItem.type) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -945,35 +1198,220 @@ function toggleSelectedDevice() {
   }
 }
 
-// 设备管理表格 - 打开设备控制面板
+// ===== 新增设备 =====
+const addDeviceVisible = ref(false)
+const addStep = ref('choose') // choose | manual | scan | success
+const addFormError = ref('')
+const successMsg = ref('')
+
+const roomOptions = ['客厅', '主卧', '次卧', '厨房', '卫生间', '阳台', '玄关', '全屋']
+const deviceTypeOptions = [
+  { value: 'ac',       label: '空调' },
+  { value: 'light',    label: '照明' },
+  { value: 'tv',       label: '电视' },
+  { value: 'speaker',  label: '音箱' },
+  { value: 'ventil',   label: '新风系统' },
+  { value: 'washer',   label: '洗碗机' },
+  { value: 'heater',   label: '热水器' },
+  { value: 'security', label: '安防设备' },
+]
+
+const newDevice = ref({ name: '', room: '', vendor: '', type: '', ip: '', status: false })
+
+function openAddDevice() {
+  addStep.value = 'choose'
+  addFormError.value = ''
+  newDevice.value = { name: '', room: '', vendor: '', type: '', ip: '', status: false }
+  addDeviceVisible.value = true
+}
+
+function closeAddDevice() {
+  addDeviceVisible.value = false
+}
+
+function submitManualAdd() {
+  if (!newDevice.value.name.trim()) { addFormError.value = '请填写设备名称'; return }
+  if (!newDevice.value.room) { addFormError.value = '请选择安装位置'; return }
+  if (!newDevice.value.type) { addFormError.value = '请选择设备类型'; return }
+  addFormError.value = ''
+  const nextId = 'dev' + (deviceList.value.length + 100)
+  const nextIp = newDevice.value.ip.trim() || autoNextIp()
+  const iconMap = { ac:'❄️', light:'💡', tv:'📺', speaker:'🔊', security:'🔒', ventil:'🌀', washer:'🍽️', heater:'🚿' }
+  deviceList.value.push({
+    id: nextId,
+    name: newDevice.value.name.trim(),
+    room: newDevice.value.room,
+    vendor: newDevice.value.vendor.trim() || '未知',
+    ip: nextIp,
+    online: true,
+    status: newDevice.value.status,
+    type: newDevice.value.type,
+    value: 0,
+  })
+  successMsg.value = `「${newDevice.value.name}」已成功添加到设备列表`
+  addStep.value = 'success'
+}
+
+function autoNextIp() {
+  const ips = deviceList.value.map(d => parseInt(d.ip?.split('.').pop() || '0'))
+  const max = Math.max(...ips, 10)
+  return `192.168.1.${max + 1}`
+}
+
+// 扫描网络
+const scanning = ref(false)
+const scanProgress = ref(0)
+const scanStatus = ref('准备扫描')
+const scanResults = ref([])
+const scanSelected = ref([])
+let scanTimer = null
+
+const mockScanDevices = [
+  { ip: '192.168.1.20', name: '智能门锁 Pro', vendor: '德施曼', icon: '🔒', type: 'security' },
+  { ip: '192.168.1.21', name: '卧室照明',     vendor: '飞利浦', icon: '💡', type: 'light'    },
+  { ip: '192.168.1.22', name: '扫地机器人',   vendor: '石头',   icon: '🤖', type: 'sensor'   },
+  { ip: '192.168.1.23', name: '智能窗帘',     vendor: '欧瑞博', icon: '🪟', type: 'ventil'   },
+  { ip: '192.168.1.24', name: '厨房烟机',     vendor: '方太',   icon: '💨', type: 'ventil'   },
+  { ip: '192.168.1.25', name: '浴室暖风机',   vendor: '奥普',   icon: '🌡️', type: 'heater'   },
+]
+
+function startScan() {
+  addStep.value = 'scan'
+  scanning.value = true
+  scanProgress.value = 0
+  scanStatus.value = '正在扫描网络…'
+  scanResults.value = []
+  scanSelected.value = []
+  clearInterval(scanTimer)
+  scanTimer = setInterval(() => {
+    scanProgress.value = Math.min(scanProgress.value + Math.random() * 12 + 4, 100)
+    if (scanProgress.value >= 100) {
+      clearInterval(scanTimer)
+      scanning.value = false
+      scanStatus.value = '扫描完成'
+      const existingIps = new Set(deviceList.value.map(d => d.ip))
+      scanResults.value = mockScanDevices.map(d => ({
+        ...d,
+        alreadyAdded: existingIps.has(d.ip),
+      }))
+    }
+  }, 200)
+}
+
+function toggleScanSelect(ip) {
+  const idx = scanSelected.value.indexOf(ip)
+  if (idx === -1) scanSelected.value.push(ip)
+  else scanSelected.value.splice(idx, 1)
+}
+
+function submitScanAdd() {
+  const toAdd = scanResults.value.filter(d => scanSelected.value.includes(d.ip))
+  toAdd.forEach(d => {
+    deviceList.value.push({
+      id: 'dev' + (deviceList.value.length + 100),
+      name: d.name,
+      room: '未分配',
+      vendor: d.vendor,
+      ip: d.ip,
+      online: true,
+      status: false,
+      type: d.type,
+      value: 0,
+    })
+  })
+  successMsg.value = `已成功添加 ${toAdd.length} 台设备`
+  addStep.value = 'success'
+}
 function openDeviceControlFromTable(device) {
-  const typeMap= {
-    ac: 'ac',
-    light: 'light',
-    curtain: 'ac',
-    tv: 'ac',
-    speaker: 'light',
-    security: 'sensor',
+  const iconMap = {
+    ac: '❄️', light: '💡', tv: '📺', speaker: '🔊',
+    security: '🔒', ventil: '🌀', washer: '🍽️', heater: '🚿',
+  }
+  const typeMap = {
+    ac: 'ac', light: 'light', tv: 'tv', speaker: 'speaker',
+    security: 'sensor', ventil: 'ventil', washer: 'washer', heater: 'heater',
   }
   selectedDevice.value = {
     id: device.id,
     name: device.name,
-    icon: device.type === 'ac' ? '❄️' : device.type === 'light' ? '💡' : device.type === 'security' ? '🔒' : '📺',
+    icon: iconMap[device.type] || '📱',
     type: typeMap[device.type] || 'sensor',
     status: device.status,
     value: device.value,
     room: device.room,
+    vendor: device.vendor,
+    ip: device.ip,
+    online: device.online,
   }
   showControlPanel.value = true
 }
 
+// 设备详情弹窗
+const showDeviceDetail = ref(false)
+const deviceDetailItem = ref(null)
+
+function openDeviceDetail(device) {
+  const iconMap = {
+    ac: '❄️', light: '💡', tv: '📺', speaker: '🔊',
+    security: '🔒', ventil: '🌀', washer: '🍽️', heater: '🚿',
+  }
+  deviceDetailItem.value = {
+    ...device,
+    icon: iconMap[device.type] || '📱',
+  }
+  showDeviceDetail.value = true
+}
+
+function closeDeviceDetail() {
+  showDeviceDetail.value = false
+}
+
+function deviceTypeLabel(type) {
+  const map = {
+    ac: '空调', light: '照明', tv: '电视', speaker: '音箱',
+    security: '安防', ventil: '新风系统', washer: '洗碗机', heater: '热水器',
+  }
+  return map[type] || '智能设备'
+}
+
+function deviceTypeDesc(type) {
+  const map = {
+    ac:       '变频空调，支持制冷/制热/送风多种模式，可精确调节室内温度，配合新风系统使用效果更佳。',
+    light:    '智能照明设备，支持亮度调节与场景联动，可通过语音或 App 远程控制。',
+    tv:       '智能电视，支持 4K 超高清显示，内置流媒体应用，可与音箱联动实现家庭影院效果。',
+    speaker:  '智能音箱，支持语音控制全屋设备，内置高品质扬声器，可播放音乐和接收通知。',
+    security: '安防设备，实时监测门窗状态，异常时自动推送告警通知，保障家庭安全。',
+    ventil:   '新风系统，持续引入室外新鲜空气并过滤 PM2.5，保持室内空气清新健康。',
+    washer:   '智能洗碗机，支持多种洗涤程序，高温消毒杀菌，节水节能，保护餐具。',
+    heater:   '燃气热水器，即开即热，恒温出水，支持预约和远程控制，安全节能。',
+  }
+  return map[type] || '智能家居设备，支持远程控制与状态监测。'
+}
+
+function deviceTypeTips(type) {
+  const map = {
+    ac:       '建议夏季设定 26°C，冬季 20°C，配合定时功能节省电费；定期清洗滤网保持制冷效果。',
+    light:    '建议根据时段设置不同亮度场景，睡前调低亮度有助于改善睡眠质量。',
+    tv:       '建议开启护眼模式，观看时间不宜过长；定期清理缓存保持系统流畅。',
+    speaker:  '可设置唤醒词快速控制设备；建议定期更新固件以获取最新功能。',
+    security: '建议定期检查设备电量，确保传感器正常工作；异常告警请及时处理。',
+    ventil:   '建议全天候开启低速模式保持空气流通；每季度清洗过滤网一次。',
+    washer:   '建议使用专用洗碗机洗涤剂；定期清洁过滤网和喷臂，保持洗涤效果。',
+    heater:   '建议设定 50-55°C 兼顾舒适与节能；定期除垢延长使用寿命。',
+  }
+  return map[type] || '定期检查设备状态，如有异常请及时联系售后服务。'
+}
+
 const deviceList = ref([
-  { id: 'dev1', name: '客厅空调',   room: '客厅',  vendor: '美的',   ip: '192.168.1.11', online: true,  status: true,  type: 'ac',      value: 24 },
-  { id: 'dev2', name: '主卧照明',   room: '主卧',  vendor: '小米',   ip: '192.168.1.12', online: true,  status: false, type: 'light',   value: 80 },
-  { id: 'dev3', name: '新风系统',   room: '全屋',  vendor: '海尔',   ip: '192.168.1.13', online: true,  status: true,  type: 'curtain', value: 50 },
-  { id: 'dev4', name: '次卧电视',   room: '次卧',  vendor: 'TCL',    ip: '192.168.1.14', online: true,  status: false, type: 'tv',      value: 30 },
-  { id: 'dev5', name: '智能音箱',   room: '客厅',  vendor: '小米',   ip: '192.168.1.15', online: true,  status: true,  type: 'speaker', value: 60 },
-  { id: 'dev6', name: '门禁系统',   room: '玄关',  vendor: '德施曼', ip: '192.168.1.16', online: false, status: false, type: 'security',value: 0   },
+  { id: 'dev1', name: '客厅空调',   room: '客厅',  vendor: '三星',   ip: '192.168.1.11', online: true,  status: true,  type: 'ac',       value: 24 },
+  { id: 'dev3', name: '新风系统',   room: '全屋',  vendor: '海尔',   ip: '192.168.1.12', online: true,  status: true,  type: 'ventil',   value: 50 },
+  { id: 'dev4', name: '客厅电视',   room: '客厅',  vendor: 'SONY',   ip: '192.168.1.13', online: true,  status: false, type: 'tv',       value: 30 },
+  { id: 'dev5', name: '智能音箱',   room: '客厅',  vendor: '小米',   ip: '192.168.1.14', online: true,  status: true,  type: 'speaker',  value: 60 },
+  { id: 'dev6', name: '门禁系统',   room: '玄关',  vendor: '德施曼', ip: '192.168.1.15', online: false, status: false, type: 'security', value: 0  },
+  { id: 'dev7', name: '主卧空调',   room: '主卧',  vendor: '三星',   ip: '192.168.1.16', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev8', name: '次卧空调',   room: '次卧',  vendor: '三星',   ip: '192.168.1.17', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev9', name: '洗碗机',     room: '厨房',  vendor: '西门子', ip: '192.168.1.18', online: true,  status: false, type: 'washer',   value: 0  },
+  { id: 'dev10',name: '热水器',     room: '厨房',  vendor: '林内',   ip: '192.168.1.19', online: true,  status: false, type: 'heater',   value: 55 },
 ])
 
 const filteredDevices = computed(() =>
@@ -987,6 +1425,78 @@ const healthItems = [
   { icon: '🫁', label: '血氧',   value: '98%',        trend: 1,   color: '#4fc3f7', range: '正常: 95-100%',      pct: 98,  raw: 98 },
   { icon: '😴', label: '睡眠',   value: '7.5小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.5 },
 ]
+
+// 心率趋势数据 (24小时)
+const heartRateData = [
+  { time: '00:00', value: 65 }, { time: '01:00', value: 62 }, { time: '02:00', value: 58 },
+  { time: '03:00', value: 55 }, { time: '04:00', value: 58 }, { time: '05:00', value: 62 },
+  { time: '06:00', value: 72 }, { time: '07:00', value: 68 }, { time: '08:00', value: 75 },
+  { time: '09:00', value: 70 }, { time: '10:00', value: 78 }, { time: '11:00', value: 72 },
+  { time: '12:00', value: 80 }, { time: '13:00', value: 74 }, { time: '14:00', value: 82 },
+  { time: '15:00', value: 76 }, { time: '16:00', value: 72 }, { time: '17:00', value: 68 },
+  { time: '18:00', value: 75 }, { time: '19:00', value: 71 }, { time: '20:00', value: 78 },
+  { time: '21:00', value: 73 }, { time: '22:00', value: 80 }, { time: '23:00', value: 75 },
+]
+
+// 血压周数据
+const bpWeekData = [
+  { sys: 115, dia: 75 }, { sys: 120, dia: 78 }, { sys: 118, dia: 76 },
+  { sys: 122, dia: 80 }, { sys: 116, dia: 74 }, { sys: 119, dia: 77 },
+  { sys: 118, dia: 78 },
+]
+
+// 心率 Tooltip
+const heartTooltip = ref({ visible: false, x: 0, y: 0, time: '', value: 0 })
+
+function showHeartTooltip(event, data, index) {
+  const rect = event.target.getBoundingClientRect()
+  const parentRect = event.target.closest('.heart-wave').getBoundingClientRect()
+  heartTooltip.value = {
+    visible: true,
+    x: rect.left - parentRect.left + rect.width / 2,
+    y: rect.top - parentRect.top - 70,
+    time: data.time,
+    value: data.value,
+  }
+}
+
+function hideHeartTooltip() {
+  heartTooltip.value.visible = false
+}
+
+function getHeartStatus(value) {
+  if (value < 60) return { text: '偏低', class: 'warning' }
+  if (value <= 100) return { text: '正常', class: 'normal' }
+  if (value <= 120) return { text: '略高', class: 'warning' }
+  return { text: '偏高', class: 'danger' }
+}
+
+// 血压 Tooltip
+const bpTooltip = ref({ visible: false, x: 0, y: 0, dayIndex: 0, sys: 0, dia: 0 })
+
+function showBpTooltip(event, data, index) {
+  const rect = event.target.getBoundingClientRect()
+  const parentRect = event.target.closest('.bp-trend').getBoundingClientRect()
+  bpTooltip.value = {
+    visible: true,
+    x: rect.left - parentRect.left + rect.width / 2,
+    y: rect.top - parentRect.top - 90,
+    dayIndex: index,
+    sys: data.sys,
+    dia: data.dia,
+  }
+}
+
+function hideBpTooltip() {
+  bpTooltip.value.visible = false
+}
+
+function getBpStatus(sys, dia) {
+  if (sys < 90 || dia < 60) return { text: '偏低', class: 'warning' }
+  if (sys <= 120 && dia <= 80) return { text: '理想', class: 'normal' }
+  if (sys <= 139 || dia <= 89) return { text: '正常高值', class: 'warning' }
+  return { text: '偏高', class: 'danger' }
+}
 
 // 格式化指标值：数字+英文单位用 mono 粗体，中文用默认字体
 function formatMetricValue(str) {

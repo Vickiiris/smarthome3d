@@ -73,6 +73,100 @@
                 </div>
               </div>
             </template>
+
+            <!-- 电视 -->
+            <template v-if="device?.type === 'tv'">
+              <div class="ms">
+                <span class="ml">音量</span>
+                <span class="mv active">{{ tvVolume }}%</span>
+              </div>
+              <div class="prog-wrap">
+                <div class="prog-bar">
+                  <div class="prog-fill tv" :style="{ width: tvVolume + '%' }"></div>
+                </div>
+                <input type="range" min="0" max="100" v-model="tvVolume" />
+              </div>
+              <div class="qb">
+                <button v-for="v in [25, 50, 75, 100]" :key="v" class="qb-btn" :class="{ act: tvVolume === v }" @click="tvVolume = v">{{ v }}%</button>
+              </div>
+              <div class="modes">
+                <button v-for="m in ['标准', '电影', '游戏', '运动']" :key="m" class="mode-btn" :class="{ act: tvMode === m }" @click="tvMode = m">{{ m }}</button>
+              </div>
+            </template>
+
+            <!-- 音箱 -->
+            <template v-if="device?.type === 'speaker'">
+              <div class="ms">
+                <span class="ml">音量</span>
+                <span class="mv active">{{ speakerVolume }}%</span>
+              </div>
+              <div class="prog-wrap">
+                <div class="prog-bar">
+                  <div class="prog-fill speaker" :style="{ width: speakerVolume + '%' }"></div>
+                </div>
+                <input type="range" min="0" max="100" v-model="speakerVolume" />
+              </div>
+              <div class="qb">
+                <button v-for="v in [25, 50, 75, 100]" :key="v" class="qb-btn" :class="{ act: speakerVolume === v }" @click="speakerVolume = v">{{ v }}%</button>
+              </div>
+            </template>
+
+            <!-- 新风系统 -->
+            <template v-if="device?.type === 'ventil'">
+              <div class="ms">
+                <span class="ml">风速</span>
+                <span class="mv active">{{ ventilSpeed }}%</span>
+              </div>
+              <div class="prog-wrap">
+                <div class="prog-bar">
+                  <div class="prog-fill ventil" :style="{ width: ventilSpeed + '%' }"></div>
+                </div>
+                <input type="range" min="0" max="100" v-model="ventilSpeed" />
+              </div>
+              <div class="modes">
+                <button v-for="m in ['自动', '低速', '中速', '高速']" :key="m" class="mode-btn" :class="{ act: ventilMode === m }" @click="ventilMode = m">{{ m }}</button>
+              </div>
+            </template>
+
+            <!-- 洗碗机 -->
+            <template v-if="device?.type === 'washer'">
+              <div class="sensor-status">
+                <div class="ss-item">
+                  <span class="ss-icon">🍽️</span>
+                  <span class="ss-val" :class="localStatus ? 'ok' : ''">{{ localStatus ? '运行中' : '待机' }}</span>
+                  <span class="ss-label">状态</span>
+                </div>
+                <div class="ss-item">
+                  <span class="ss-icon">⏱️</span>
+                  <span class="ss-val ok">45 min</span>
+                  <span class="ss-label">剩余时间</span>
+                </div>
+              </div>
+              <div class="modes">
+                <button v-for="m in ['标准洗', '快速洗', '强力洗', '消毒']" :key="m" class="mode-btn" :class="{ act: washerMode === m }" @click="washerMode = m">{{ m }}</button>
+              </div>
+            </template>
+
+            <!-- 热水器 -->
+            <template v-if="device?.type === 'heater'">
+              <div class="tctrl">
+                <button class="tbtn" @click="heaterTemp = Math.max(35, heaterTemp - 1)">−</button>
+                <div class="tcenter">
+                  <span class="tn" style="color:#ff9800">{{ heaterTemp }}</span>
+                  <span class="tu">°C</span>
+                </div>
+                <button class="tbtn" @click="heaterTemp = Math.min(75, heaterTemp + 1)">+</button>
+              </div>
+              <div class="prog-wrap">
+                <div class="prog-bar">
+                  <div class="prog-fill heater" :style="{ width: ((heaterTemp - 35) / 40 * 100) + '%' }"></div>
+                </div>
+                <input type="range" min="35" max="75" v-model="heaterTemp" />
+              </div>
+              <div class="modes">
+                <button v-for="m in ['速热', '保温', '预约', '节能']" :key="m" class="mode-btn" :class="{ act: heaterMode === m }" @click="heaterMode = m">{{ m }}</button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -94,20 +188,37 @@ const localStatus = ref(true)
 const brightness = ref(80)
 const temperature = ref(24)
 const acMode = ref('制冷')
+const tvVolume = ref(30)
+const tvMode = ref('标准')
+const speakerVolume = ref(60)
+const ventilSpeed = ref(50)
+const ventilMode = ref('自动')
+const washerMode = ref('标准洗')
+const heaterTemp = ref(55)
+const heaterMode = ref('速热')
 
 watch(() => props.device, (d) => {
   if (d) {
     localStatus.value = d.status
     brightness.value = d.value ?? 80
-    temperature.value = d.value ?? 24
+    temperature.value = d.type === 'ac' ? (d.value ?? 24) : 24
+    tvVolume.value = d.type === 'tv' ? (d.value ?? 30) : 30
+    speakerVolume.value = d.type === 'speaker' ? (d.value ?? 60) : 60
+    ventilSpeed.value = d.type === 'ventil' ? (d.value ?? 50) : 50
+    heaterTemp.value = d.type === 'heater' ? (d.value ?? 55) : 55
   }
 }, { immediate: true })
 
 const iconBg = computed(() => {
   const map = {
-    light: 'rgba(255, 213, 79, 0.12)',
-    ac: 'rgba(79, 195, 247, 0.12)',
-    sensor: 'rgba(34, 197, 94, 0.12)',
+    light:   'rgba(255, 213, 79, 0.12)',
+    ac:      'rgba(79, 195, 247, 0.12)',
+    sensor:  'rgba(34, 197, 94, 0.12)',
+    tv:      'rgba(167, 139, 250, 0.12)',
+    speaker: 'rgba(251, 146, 60, 0.12)',
+    ventil:  'rgba(0, 212, 170, 0.12)',
+    washer:  'rgba(14, 165, 233, 0.12)',
+    heater:  'rgba(239, 68, 68, 0.12)',
   }
   return map[props.device?.type] || 'var(--primary-dim)'
 })
@@ -290,6 +401,22 @@ function toggleStatus() {
 
 .prog-bar.ac .prog-fill {
   background: linear-gradient(90deg, #4fc3f7, #00d4aa);
+}
+
+.prog-fill.tv {
+  background: linear-gradient(90deg, #a78bfa, #818cf8);
+}
+
+.prog-fill.speaker {
+  background: linear-gradient(90deg, #fb923c, #f97316);
+}
+
+.prog-fill.ventil {
+  background: linear-gradient(90deg, #00d4aa, #0ea5e9);
+}
+
+.prog-fill.heater {
+  background: linear-gradient(90deg, #ff9800, #ef4444);
 }
 
 .prog-fill {
