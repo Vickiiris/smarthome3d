@@ -9,17 +9,23 @@
             <div class="dcp-header-icon">{{ deviceIcon }}</div>
             <div class="dcp-header-info">
               <h3 class="dcp-name">{{ device?.name }}</h3>
-              <span class="dcp-online" :style="{ color: '#22c55e' }">● 在线</span>
+              <span class="dcp-online" :style="{ color: device?.online !== false ? '#22c55e' : '#94a3b8' }">
+                ● {{ device?.online !== false ? '在线' : '离线' }}
+              </span>
             </div>
             <button class="dcp-close" @click="close">✕</button>
           </div>
 
           <!-- 基础信息 grid -->
           <div class="dcp-body">
-            <div class="dcp-grid">
+            <div class="dcp-grid dcp-info-grid">
               <div class="dcp-dd-item">
                 <span class="dcp-dd-label">安装位置</span>
                 <span class="dcp-dd-value">{{ device?.room || '—' }}</span>
+              </div>
+              <div class="dcp-dd-item">
+                <span class="dcp-dd-label">设备厂商</span>
+                <span class="dcp-dd-value">{{ device?.vendor || '—' }}</span>
               </div>
               <div class="dcp-dd-item">
                 <span class="dcp-dd-label">设备类型</span>
@@ -28,12 +34,6 @@
               <div class="dcp-dd-item">
                 <span class="dcp-dd-label">IP 地址</span>
                 <span class="dcp-dd-value mono">{{ device?.ip || '—' }}</span>
-              </div>
-              <div class="dcp-dd-item">
-                <span class="dcp-dd-label">运行状态</span>
-                <span class="dcp-dd-value" :style="{ color: localStatus ? '#22c55e' : '#94a3b8' }">
-                  {{ localStatus ? '运行中' : '已关闭' }}
-                </span>
               </div>
             </div>
 

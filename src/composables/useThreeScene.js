@@ -187,61 +187,22 @@ export function useThreeScene(canvasRef) {
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(mouse, camera.value)
 
-    const cam = camera.value
-    const tgt = controls.value.target
-
-    // 检查是否点击热点
-    const hits = raycaster.intersectObjects(hotspotSprites.map(h => h.sprite), false)
+    // 只检测可见的热点
+    const visibleSprites = hotspotSprites.filter(h => h.sprite.visible).map(h => h.sprite)
+    const hits = raycaster.intersectObjects(visibleSprites, false)
     if (hits.length > 0) {
       const hit = hotspotSprites.find(h => h.sprite === hits[0].object)
       if (hit) {
-        const pos = cam.position
-        const target = tgt
-        console.log(`%c========== 点击热点 ==========`, 'color: #00d4aa; font-weight: bold; font-size: 14px;')
-        console.log(`%c[热点名称] ${hit.def.name}`, 'color: #ff6b6b; font-weight: bold;')
-        console.log(`%c[热点位置] (${hit.def.position.x.toFixed(3)}, ${hit.def.position.y.toFixed(3)}, ${hit.def.position.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
-        console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
-        console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ce93d8; font-weight: bold;')
-        console.log(`%c==============================`, 'color: #00d4aa; font-weight: bold;')
-        // 点击顶牌飞到相机位置
         if (hit.def.cameraPos) {
           flyTo(hit.def.cameraPos.clone(), hit.def.position.clone(), 1.0)
         }
-        // 更新当前房间
         const newRoomId = ROOM_MAP[hit.def.room] || 'all'
         activeRoomId.value = newRoomId
         updateHotspotVisibility()
-        // 触发热点点击回调
         onHotspotClick.value?.(hit.def)
         return
       }
     }
-
-    // 检查是否点击模型
-    const modelHits = model.value ? raycaster.intersectObjects(model.value.children, true) : []
-    if (modelHits.length > 0) {
-      const hp = modelHits[0].point
-      const objName = modelHits[0].object.name || '未命名'
-      const pos = cam.position
-      const target = tgt
-      
-      console.log(`%c========== 点击模型 ==========`, 'color: #00d4aa; font-weight: bold; font-size: 14px;')
-      console.log(`%c[点击位置] (${hp.x.toFixed(3)}, ${hp.y.toFixed(3)}, ${hp.z.toFixed(3)})`, 'color: #ff6b6b; font-weight: bold;')
-      console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
-      console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
-      console.log(`%c[物体名称] ${objName}`, 'color: #ce93d8;')
-      console.log(`%c==============================`, 'color: #00d4aa; font-weight: bold;')
-      return
-    }
-
-    // 点击空白区域
-    const pos = cam.position
-    const target = tgt
-    console.log(`%c========== 点击空白 ==========`, 'color: #6b7280; font-weight: bold; font-size: 14px;')
-    console.log(`%c[点击位置] 未命中模型`, 'color: #94a3b8;')
-    console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
-    console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
-    console.log(`%c==============================`, 'color: #6b7280; font-weight: bold;')
   }
 
   function setupLights(_scene) {

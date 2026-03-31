@@ -386,36 +386,66 @@
           </div>
 
           <div class="filter-bar">
-            <select class="filter-sel"><option>全部系统</option></select>
-            <input class="filter-in" placeholder="搜索设备..." v-model="deviceSearch" />
+            <select class="filter-sel" v-model="deviceTypeFilter" @change="devicePage = 1">
+              <option value="">全部系统</option>
+              <option value="ac">空调</option>
+              <option value="light">照明</option>
+              <option value="outlet">插座</option>
+              <option value="tv">电视</option>
+              <option value="sensor">传感器</option>
+              <option value="security">安防</option>
+              <option value="ventil">新风</option>
+              <option value="speaker">音箱</option>
+              <option value="washer">洗碗机</option>
+              <option value="heater">热水器</option>
+            </select>
+            <select class="filter-sel" v-model="deviceRoomFilter" @change="devicePage = 1">
+              <option value="">全部位置</option>
+              <option value="客厅">客厅</option>
+              <option value="主卧">主卧</option>
+              <option value="次卧">次卧</option>
+              <option value="厨房">厨房</option>
+              <option value="卫生间">卫生间</option>
+              <option value="阳台">阳台</option>
+              <option value="玄关">玄关</option>
+              <option value="全屋">全屋</option>
+            </select>
+            <input class="filter-in" placeholder="搜索设备..." v-model="deviceSearch" @input="devicePage = 1" />
             <button class="btn btn-primary">查询</button>
-            <button class="btn btn-ghost" @click="deviceSearch = ''">重置</button>
+            <button class="btn btn-ghost" @click="deviceSearch = ''; deviceTypeFilter = ''; deviceRoomFilter = ''; devicePage = 1">重置</button>
             <button class="btn btn-accent" @click="openAddDevice">+ 新增</button>
           </div>
-          <div class="panel-card">
+          <div class="panel-card" style="height: 740px; display: flex; flex-direction: column;">
             <div class="panel-header"><h3 class="panel-title">设备列表</h3><span class="panel-count">{{ filteredDevices.length }} 台</span></div>
-            <table class="data-table">
-              <thead><tr><th>#</th><th>设备名</th><th>位置</th><th>厂商</th><th>IP</th><th>状态</th><th>操作</th></tr></thead>
-              <tbody>
-                <tr v-for="(d, i) in filteredDevices" :key="d.id">
-                  <td class="num">{{ i + 1 }}</td>
-                  <td><span class="dot" :class="d.online ? 'on' : 'off'"></span> {{ d.name }}</td>
-                  <td>{{ d.room }}</td>
-                  <td>{{ d.vendor }}</td>
-                  <td class="ip">{{ d.ip }}</td>
-                  <td><span class="stag" :class="d.online ? 'on' : 'off'">{{ d.online ? '在线' : '离线' }}</span></td>
-                  <td>
-                    <button class="btn btn-sm btn-primary" @click="openDeviceControlFromTable(d)">控制</button>
-                    <button class="btn btn-sm btn-ghost" @click="openDeviceDetail(d)">详情</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div style="flex: 1; overflow-y: auto; min-height: 0;">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>设备名</th><th>位置</th><th>厂商</th><th>IP</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr v-for="(d, i) in pagedDevices" :key="d.id">
+                    <td class="num">{{ (devicePage - 1) * DEVICE_PAGE_SIZE + i + 1 }}</td>
+                    <td><span class="dot" :class="d.online ? 'on' : 'off'"></span> {{ d.name }}</td>
+                    <td>{{ d.room }}</td>
+                    <td>{{ d.vendor }}</td>
+                    <td class="ip">{{ d.ip }}</td>
+                    <td><span class="stag" :class="d.online ? 'on' : 'off'">{{ d.online ? '在线' : '离线' }}</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" @click="openDeviceControlFromTable(d)">控制</button>
+                      <button class="btn btn-sm btn-ghost" @click="openDeviceDetail(d)">详情</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div class="pagination">
-              <button class="pg-btn" disabled>&lt;</button>
-              <button class="pg-btn active">1</button>
-              <button class="pg-btn">2</button>
-              <button class="pg-btn">&gt;</button>
+              <button class="pg-btn" :disabled="devicePage <= 1" @click="devicePage--">&lt;</button>
+              <button
+                v-for="p in deviceTotalPages"
+                :key="p"
+                class="pg-btn"
+                :class="{ active: devicePage === p }"
+                @click="devicePage = p"
+              >{{ p }}</button>
+              <button class="pg-btn" :disabled="devicePage >= deviceTotalPages" @click="devicePage++">&gt;</button>
             </div>
           </div>
         </div>
@@ -439,9 +469,23 @@
             </div>
           </div>
           <div class="filter-bar">
-            <select class="filter-sel"><option>全部产品</option></select>
+            <select class="filter-sel" v-model="productSubFilter" @change="productPage = 1">
+              <option value="">全部产品</option>
+              <option value="环境控制">环境控制</option>
+              <option value="照明控制">照明控制</option>
+              <option value="安防系统">安防系统</option>
+              <option value="家电控制">家电控制</option>
+              <option value="传感器">传感器</option>
+              <option value="能源管理">能源管理</option>
+            </select>
+            <select class="filter-sel" v-model="productTagFilter" @change="productPage = 1">
+              <option value="">全部状态</option>
+              <option value="已接入">已接入</option>
+              <option value="待接入">待接入</option>
+              <option value="未接入">未接入</option>
+            </select>
             <button class="btn btn-primary">查询</button>
-            <button class="btn btn-ghost">重置</button>
+            <button class="btn btn-ghost" @click="productSubFilter = ''; productTagFilter = ''; productPage = 1">重置</button>
           </div>
           <div class="product-grid">
             <div v-for="p in pagedProducts" :key="p.id" class="product-card">
@@ -449,10 +493,25 @@
               <div class="product-info">
                 <h4 class="product-name">{{ p.name }}</h4>
                 <p class="product-meta">{{ p.sub }} · {{ p.vendor }}</p>
-                <span class="product-tag">{{ p.tag }}</span>
+                <span class="product-tag" :class="{
+                  'tag-connected': p.tag === '已接入',
+                  'tag-pending': p.tag === '待接入',
+                  'tag-offline': p.tag === '未接入'
+                }">{{ p.tag }}</span>
               </div>
               <button class="btn btn-sm btn-ghost">查看</button>
             </div>
+          </div>
+          <div class="pagination">
+            <button class="pg-btn" :disabled="productPage <= 1" @click="productPage--">&lt;</button>
+            <button
+              v-for="p in productTotalPages"
+              :key="p"
+              class="pg-btn"
+              :class="{ active: productPage === p }"
+              @click="productPage = p"
+            >{{ p }}</button>
+            <button class="pg-btn" :disabled="productPage >= productTotalPages" @click="productPage++">&gt;</button>
           </div>
         </div>
 
@@ -685,9 +744,7 @@
                     </div>
                     <div class="scan-item-right">
                       <span v-if="d.alreadyAdded" class="scan-tag added">已添加</span>
-                      <div v-else class="scan-checkbox" :class="{ checked: scanSelected.includes(d.ip) }">
-                        <span v-if="scanSelected.includes(d.ip)">✓</span>
-                      </div>
+                      <span v-else class="scan-tag pending">未添加</span>
                     </div>
                   </div>
                 </div>
@@ -958,7 +1015,7 @@ onHotspotClick.value = (hotspot) => {
     return
   }
 
-  // 从 deviceList 中按名称匹配 IP
+  // 从 deviceList 中按名称匹配完整设备信息（含厂商）
   const matched = deviceList.value.find(d => d.name === hotspot.name)
 
   selectedHotspotDevice.value = {
@@ -969,16 +1026,24 @@ onHotspotClick.value = (hotspot) => {
     status: matched?.status ?? true,
     value: matched?.value ?? (hotspot.type === 'ac' ? 24 : hotspot.type === 'light' ? 80 : 50),
     ip: matched?.ip ?? null,
+    vendor: matched?.vendor ?? '未知',
+    online: matched?.online ?? true,
   }
   showSlidePanel.value = true
 }
 
 // 设备更新回调
 function onDeviceUpdate(device) {
-  // 实时更新 deviceList 中对应设备的状态
+  // 实时更新 deviceList 中对应设备的状态和在线状态
   const idx = deviceList.value.findIndex(d => d.name === device.name)
   if (idx !== -1) {
-    deviceList.value[idx] = { ...deviceList.value[idx], status: device.status, value: device.value }
+    deviceList.value[idx] = {
+      ...deviceList.value[idx],
+      status: device.status,
+      value: device.value,
+      // 设备关闭时状态改为离线
+      online: device.status ? deviceList.value[idx].online : false,
+    }
   }
 }
 
@@ -1342,7 +1407,7 @@ function startScan() {
       const existingIps = new Set(deviceList.value.map(d => d.ip))
       scanResults.value = mockScanDevices.map(d => ({
         ...d,
-        alreadyAdded: existingIps.has(d.ip),
+        alreadyAdded: false,
       }))
     }
   }, 200)
@@ -1453,20 +1518,58 @@ function deviceTypeTips(type) {
 }
 
 const deviceList = ref([
-  { id: 'dev1', name: '客厅空调',   room: '客厅',  vendor: '三星',   ip: '192.168.1.11', online: true,  status: true,  type: 'ac',       value: 24 },
-  { id: 'dev3', name: '新风系统',   room: '全屋',  vendor: '海尔',   ip: '192.168.1.12', online: true,  status: true,  type: 'ventil',   value: 50 },
-  { id: 'dev4', name: '客厅电视',   room: '客厅',  vendor: 'SONY',   ip: '192.168.1.13', online: true,  status: false, type: 'tv',       value: 30 },
-  { id: 'dev5', name: '智能音箱',   room: '客厅',  vendor: '小米',   ip: '192.168.1.14', online: true,  status: true,  type: 'speaker',  value: 60 },
-  { id: 'dev6', name: '门禁系统',   room: '玄关',  vendor: '德施曼', ip: '192.168.1.15', online: false, status: false, type: 'security', value: 0  },
-  { id: 'dev7', name: '主卧空调',   room: '主卧',  vendor: '三星',   ip: '192.168.1.16', online: true,  status: false, type: 'ac',       value: 26 },
-  { id: 'dev8', name: '次卧空调',   room: '次卧',  vendor: '三星',   ip: '192.168.1.17', online: true,  status: false, type: 'ac',       value: 26 },
-  { id: 'dev9', name: '洗碗机',     room: '厨房',  vendor: '西门子', ip: '192.168.1.18', online: true,  status: false, type: 'washer',   value: 0  },
-  { id: 'dev10',name: '热水器',     room: '厨房',  vendor: '林内',   ip: '192.168.1.19', online: true,  status: false, type: 'heater',   value: 55 },
+  // 原有设备
+  { id: 'dev1',  name: '客厅空调',       room: '客厅',  vendor: '三星',   ip: '192.168.1.11', online: true,  status: true,  type: 'ac',       value: 24 },
+  { id: 'dev3',  name: '新风系统',       room: '全屋',  vendor: '海尔',   ip: '192.168.1.12', online: true,  status: true,  type: 'ventil',   value: 50 },
+  { id: 'dev4',  name: '客厅电视',       room: '客厅',  vendor: 'SONY',   ip: '192.168.1.13', online: true,  status: false, type: 'tv',       value: 30 },
+  { id: 'dev5',  name: '智能音箱',       room: '客厅',  vendor: '小米',   ip: '192.168.1.14', online: true,  status: true,  type: 'speaker',  value: 60 },
+  { id: 'dev6',  name: '门禁系统',       room: '玄关',  vendor: '德施曼', ip: '192.168.1.15', online: false, status: false, type: 'security', value: 0  },
+  { id: 'dev7',  name: '主卧空调',       room: '主卧',  vendor: '三星',   ip: '192.168.1.16', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev8',  name: '次卧空调',       room: '次卧',  vendor: '三星',   ip: '192.168.1.17', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev9',  name: '洗碗机',         room: '厨房',  vendor: '西门子', ip: '192.168.1.18', online: true,  status: false, type: 'washer',   value: 0  },
+  { id: 'dev10', name: '热水器',         room: '厨房',  vendor: '林内',   ip: '192.168.1.19', online: true,  status: false, type: 'heater',   value: 55 },
+  // 顶牌设备（3D场景中的设备）
+  { id: 'dev11', name: '空调插座A',       room: '主卧',  vendor: '小米',   ip: '192.168.1.20', online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev12', name: '主卧灯开关',     room: '主卧',  vendor: '小米',   ip: '192.168.1.21', online: true,  status: true,  type: 'light',    value: 80 },
+  { id: 'dev13', name: '空调插座B',       room: '次卧',  vendor: '小米',   ip: '192.168.1.22', online: true,  status: false, type: 'outlet',   value: 0  },
+  { id: 'dev14', name: '次卧灯开关',     room: '次卧',  vendor: '小米',   ip: '192.168.1.23', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev15', name: '客厅电视',       room: '客厅',  vendor: '海信',   ip: '192.168.1.24', online: true,  status: true,  type: 'tv',       value: 30 },
+  { id: 'dev16', name: '客厅插座A',       room: '客厅',  vendor: '小米',   ip: '192.168.1.25', online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev17', name: '空气质量传感器', room: '客厅',  vendor: '霍尼韦尔',ip: '192.168.1.26', online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev18', name: '门禁控制器',     room: '玄关',  vendor: '德施曼', ip: '192.168.1.27', online: true,  status: true,  type: 'security', value: 0  },
+  { id: 'dev19', name: '客厅灯开关',     room: '客厅',  vendor: '小米',   ip: '192.168.1.28', online: true,  status: true,  type: 'light',    value: 100 },
+  { id: 'dev20', name: '客厅插座B',       room: '客厅',  vendor: '小米',   ip: '192.168.1.29', online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev21', name: '厨房灯开关',     room: '厨房',  vendor: '小米',   ip: '192.168.1.30', online: true,  status: true,  type: 'light',    value: 100 },
+  { id: 'dev22', name: '厨房插座',       room: '厨房',  vendor: '小米',   ip: '192.168.1.31', online: true,  status: false, type: 'outlet',   value: 0  },
+  { id: 'dev23', name: '烟雾/燃气传感器', room: '厨房',  vendor: '海曼', ip: '192.168.1.32', online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev24', name: '水浸传感器',     room: '卫生间', vendor: '小米',   ip: '192.168.1.33', online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev25', name: '卫生间灯开关',   room: '卫生间', vendor: '小米',   ip: '192.168.1.34', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev26', name: '阳台灯开关',     room: '阳台',  vendor: '小米',   ip: '192.168.1.35', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev27', name: '温湿度/光照传感器', room: '阳台', vendor: '小米', ip: '192.168.1.36', online: true,  status: true,  type: 'sensor',  value: 0  },
 ])
 
-const filteredDevices = computed(() =>
-  deviceSearch.value ? deviceList.value.filter(d => d.name.includes(deviceSearch.value)) : deviceList.value
-)
+// 设备列表筛选
+const deviceRoomFilter = ref('')
+const deviceTypeFilter = ref('')
+const devicePage = ref(1)
+const DEVICE_PAGE_SIZE = 10
+
+const filteredDevices = computed(() => {
+  return deviceList.value.filter(d => {
+    const matchSearch = !deviceSearch.value || d.name.includes(deviceSearch.value)
+    const matchRoom = !deviceRoomFilter.value || d.room === deviceRoomFilter.value
+    const matchType = !deviceTypeFilter.value || d.type === deviceTypeFilter.value
+    return matchSearch && matchRoom && matchType
+  })
+})
+
+const deviceTotalPages = computed(() => Math.max(1, Math.ceil(filteredDevices.value.length / DEVICE_PAGE_SIZE)))
+
+const pagedDevices = computed(() => {
+  if (devicePage.value > deviceTotalPages.value) devicePage.value = 1
+  const start = (devicePage.value - 1) * DEVICE_PAGE_SIZE
+  return filteredDevices.value.slice(start, start + DEVICE_PAGE_SIZE)
+})
 
 const healthItems = [
   { icon: '❤',  label: '心率',   value: '72次/分',   trend: 2,   color: '#ff6b6b', range: '正常: 60-100次/分',   pct: 72,  raw: 72 },
@@ -1570,17 +1673,51 @@ const energyRank = [
 ]
 
 const products = [
-  { id: 1, icon: '❄️', name: '变频空调 KFR-35', sub: '环境控制', vendor: '美的',   tag: '一级能效' },
-  { id: 2, icon: '💡', name: '智能照明套件',     sub: '照明控制', vendor: '小米',   tag: '已接入'   },
-  { id: 3, icon: '🌀', name: '新风系统 FX-200',  sub: '环境控制', vendor: '海尔',   tag: '已接入'   },
-  { id: 4, icon: '🔒', name: '智能门锁 S1',      sub: '安防系统', vendor: '德施曼', tag: '已接入'   },
+  // 环境控制
+  { id: 1,  icon: '❄️', name: '变频空调 KFR-35',    sub: '环境控制', vendor: '美的',     tag: '已接入'   },
+  { id: 2,  icon: '🌀', name: '新风系统 FX-200',     sub: '环境控制', vendor: '海尔',     tag: '已接入'   },
+  { id: 3,  icon: '🌡', name: '空气净化器 KJ-500',  sub: '环境控制', vendor: '飞利浦',   tag: '待接入'   },
+  { id: 4,  icon: '💨', name: '除湿机 D1-10L',      sub: '环境控制', vendor: '德业',     tag: '未接入'   },
+  { id: 5,  icon: '🌡', name: '温湿度传感器 TH-01', sub: '环境控制', vendor: '小米',     tag: '已接入'   },
+  // 照明控制
+  { id: 6,  icon: '💡', name: '智能照明套件',        sub: '照明控制', vendor: '小米',     tag: '已接入'   },
+  { id: 7,  icon: '💡', name: 'RGB 智能灯泡',        sub: '照明控制', vendor: 'Yeelight', tag: '已接入'   },
+  { id: 8,  icon: '💡', name: '智能开关面板',        sub: '照明控制', vendor: '公牛',     tag: '待接入'   },
+  { id: 9,  icon: '💡', name: '调光驱动器',          sub: '照明控制', vendor: '欧瑞博',   tag: '未接入'   },
+  // 安防系统
+  { id: 10, icon: '🔒', name: '智能门锁 S1',         sub: '安防系统', vendor: '德施曼',   tag: '已接入'   },
+  { id: 11, icon: '📹', name: '智能摄像头 C3W',      sub: '安防系统', vendor: '萤石',     tag: '已接入'   },
+  { id: 12, icon: '🔥', name: '烟雾报警器',          sub: '安防系统', vendor: '海曼',     tag: '已接入'   },
+  { id: 13, icon: '💧', name: '水浸传感器',          sub: '安防系统', vendor: '小米',     tag: '待接入'   },
+  { id: 14, icon: '🚪', name: '门磁感应器',          sub: '安防系统', vendor: '小米',     tag: '未接入'   },
+  { id: 15, icon: '🔔', name: '智能门铃 D1',         sub: '安防系统', vendor: '叮零',     tag: '未接入'   },
+  // 家电控制
+  { id: 16, icon: '📺', name: '智能电视 65Q7',      sub: '家电控制', vendor: '海信',     tag: '已接入'   },
+  { id: 17, icon: '🔊', name: '智能音箱 Pro',        sub: '家电控制', vendor: '小米',     tag: '已接入'   },
+  { id: 18, icon: '🍽️', name: '智能洗碗机',          sub: '家电控制', vendor: '西门子',   tag: '待接入'   },
+  { id: 19, icon: '🚿', name: '燃气热水器',          sub: '家电控制', vendor: '林内',     tag: '未接入'   },
+  { id: 20, icon: '🧹', name: '扫地机器人 S1',       sub: '家电控制', vendor: '石头',     tag: '未接入'   },
+  { id: 21, icon: '👕', name: '智能洗衣机',          sub: '家电控制', vendor: '小天鹅',   tag: '待接入'   },
+  { id: 22, icon: '🍶', name: '智能冰箱',            sub: '家电控制', vendor: '海尔',     tag: '未接入'   },
+  // 传感器
+  { id: 23, icon: '🌡', name: '温湿度传感器',        sub: '传感器',   vendor: '小米',     tag: '已接入'   },
+  { id: 24, icon: '💧', name: '水浸传感器',          sub: '传感器',   vendor: '小米',     tag: '已接入'   },
+  { id: 25, icon: '🔥', name: '烟雾传感器',          sub: '传感器',   vendor: '海曼',     tag: '已接入'   },
+  { id: 26, icon: '🚪', name: '门磁传感器',          sub: '传感器',   vendor: '小米',     tag: '待接入'   },
+  { id: 27, icon: '👤', name: '人体存在传感器',      sub: '传感器',   vendor: '领普',     tag: '未接入'   },
+  { id: 28, icon: '☀️', name: '光照传感器',          sub: '传感器',   vendor: '小米',     tag: '未接入'   },
+  { id: 29, icon: '📶', name: '空气质量传感器',      sub: '传感器',   vendor: '霍尼韦尔', tag: '已接入'   },
+  { id: 30, icon: '🔌', name: '智能插座',            sub: '传感器',   vendor: '小米',     tag: '待接入'   },
+  // 能源管理
+  { id: 31, icon: '⚡', name: '智能电表',             sub: '能源管理', vendor: '正泰',     tag: '待接入'   },
+  { id: 32, icon: '🔌', name: '计量插座',            sub: '能源管理', vendor: '小米',     tag: '未接入'   },
 ]
 
 // 产品筛选 & 分页
 const productSubFilter = ref('')
 const productTagFilter = ref('')
 const productPage = ref(1)
-const PAGE_SIZE = 4
+const PRODUCT_PAGE_SIZE = 12
 
 const filteredProducts = computed(() => {
   return products.filter(p => {
@@ -1590,16 +1727,13 @@ const filteredProducts = computed(() => {
   })
 })
 
-const productTotalPages = computed(() => Math.max(1, Math.ceil(filteredProducts.value.length / PAGE_SIZE)))
+const productTotalPages = computed(() => Math.max(1, Math.ceil(filteredProducts.value.length / PRODUCT_PAGE_SIZE)))
 
 const pagedProducts = computed(() => {
-  const start = (productPage.value - 1) * PAGE_SIZE
-  return filteredProducts.value.slice(start, start + PAGE_SIZE)
+  if (productPage.value > productTotalPages.value) productPage.value = 1
+  const start = (productPage.value - 1) * PRODUCT_PAGE_SIZE
+  return filteredProducts.value.slice(start, start + PRODUCT_PAGE_SIZE)
 })
-
-// 设备列表筛选
-const deviceRoomFilter = ref('')
-const deviceTypeFilter = ref('')
 
 const lineChartRef = ref(null)
 const pieChartRef  = ref(null)
