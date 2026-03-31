@@ -88,9 +88,11 @@
                 <div class="panel-tabs">
                   <button class="panel-tab" :class="{ active: activeDeviceTab === 'light' }" @click="activeDeviceTab = 'light'">💡 照明</button>
                   <button class="panel-tab" :class="{ active: activeDeviceTab === 'ac' }" @click="activeDeviceTab = 'ac'">❄️ 空调</button>
+                  <button class="panel-tab" :class="{ active: activeDeviceTab === 'entertainment' }" @click="activeDeviceTab = 'entertainment'">🎮 娱乐</button>
                 </div>
               </div>
-              <div class="device-list">
+              <!-- 照明/空调设备列表 -->
+              <div class="device-list" v-if="activeDeviceTab !== 'entertainment'">
                 <div v-for="device in envDevices" :key="device.id" class="device-item" @click="flyToDeviceRoom(device)">
                   <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
                   <div class="device-info">
@@ -106,6 +108,25 @@
                     </button>
                   </div>
                 </div>
+              </div>
+              <!-- 娱乐设备列表 -->
+              <div class="device-list" v-if="activeDeviceTab === 'entertainment'">
+                <div v-for="device in entertainmentDevices" :key="device.id" class="device-item" @click="flyToDeviceRoom(device)">
+                  <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
+                  <div class="device-info">
+                    <span class="d-name">{{ device.name }}</span>
+                    <span class="d-room">{{ device.room }}</span>
+                  </div>
+                  <div class="device-right">
+                    <div class="toggle" :class="{ on: device.status }" @click.stop="toggleDevice(device)">
+                      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </div>
+                    <button class="ctrl-btn" @click.stop="openDeviceControl(device)">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div v-if="entertainmentDevices.length === 0" class="device-empty">暂无娱乐设备</div>
               </div>
             </div>
             <!-- 安防监控 -->
@@ -1129,11 +1150,6 @@ onHotspotClick.value = (hotspot) => {
   if (!isFullscreen.value) {
     return
   }
-  openHotspotPanel(hotspot)
-}
-
-// 从 deviceList 读取最新状态打开控制面板
-function openHotspotPanel(hotspot) {
   const matched = deviceList.value.find(d => d.name === hotspot.name)
   selectedHotspotDevice.value = {
     id: hotspot.id,
@@ -1381,6 +1397,11 @@ const allDevices = computed(() => deviceList.value)
 const envDevices = computed(() => {
   const tabType = activeDeviceTab.value  // 'light' | 'ac'
   return deviceList.value.filter(d => d.type === tabType)
+})
+
+// 娱乐设备：电视、音箱
+const entertainmentDevices = computed(() => {
+  return deviceList.value.filter(d => ['tv', 'speaker'].includes(d.type))
 })
 
 // 根据设备区域和状态获取图标样式

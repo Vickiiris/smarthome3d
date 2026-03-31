@@ -55,7 +55,13 @@
                 <input type="range" min="16" max="30" v-model="temperature" />
               </div>
               <div class="modes">
-                <button v-for="m in ['制冷', '制热', '送风']" :key="m" class="mode-btn" :class="{ act: acMode === m }" @click="acMode = m">{{ m }}</button>
+                <button v-for="m in ['制冷', '制热', '送风', '自动']" :key="m" class="mode-btn" :class="{ act: acMode === m }" @click="acMode = m">{{ m }}</button>
+              </div>
+              <div class="ms" style="margin-top:12px">
+                <span class="ml">风速</span>
+              </div>
+              <div class="modes">
+                <button v-for="s in ['自动', '低速', '中速', '高速']" :key="s" class="mode-btn" :class="{ act: acFanSpeed === s }" @click="acFanSpeed = s">{{ s }}</button>
               </div>
             </template>
 
@@ -188,6 +194,7 @@ const localStatus = ref(true)
 const brightness = ref(80)
 const temperature = ref(24)
 const acMode = ref('制冷')
+const acFanSpeed = ref('自动')
 const tvVolume = ref(30)
 const tvMode = ref('标准')
 const speakerVolume = ref(60)
@@ -202,6 +209,8 @@ watch(() => props.device, (d) => {
     localStatus.value = d.status
     brightness.value = d.value ?? 80
     temperature.value = d.type === 'ac' ? (d.value ?? 24) : 24
+    acMode.value = d.mode ?? '制冷'
+    acFanSpeed.value = d.fanSpeed ?? '自动'
     tvVolume.value = d.type === 'tv' ? (d.value ?? 30) : 30
     speakerVolume.value = d.type === 'speaker' ? (d.value ?? 60) : 60
     ventilSpeed.value = d.type === 'ventil' ? (d.value ?? 50) : 50
@@ -226,7 +235,13 @@ const iconBg = computed(() => {
 function toggleStatus() {
   localStatus.value = !localStatus.value
   emit('toggle', localStatus.value)
-  emit('update', { ...props.device, status: localStatus.value })
+  emit('update', {
+    ...props.device,
+    status: localStatus.value,
+    value: props.device?.type === 'ac' ? temperature.value : brightness.value,
+    mode: acMode.value,
+    fanSpeed: acFanSpeed.value,
+  })
 }
 </script>
 
