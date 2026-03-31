@@ -182,7 +182,7 @@ const props = defineProps({
   device: Object
 })
 
-const emit = defineEmits(['close', 'toggle'])
+const emit = defineEmits(['close', 'toggle', 'update'])
 
 const localStatus = ref(true)
 const brightness = ref(80)
@@ -225,7 +225,8 @@ const iconBg = computed(() => {
 
 function toggleStatus() {
   localStatus.value = !localStatus.value
-  emit('toggle')
+  emit('toggle', localStatus.value)
+  emit('update', { ...props.device, status: localStatus.value })
 }
 </script>
 

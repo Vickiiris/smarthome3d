@@ -235,10 +235,10 @@ const powerData = computed(() => {
 
 watch(() => props.device, (d) => {
   if (!d) return
-  localValue.value  = d.value  ?? (d.type === 'ac' ? 24 : 80)
-  localStatus.value = d.status ?? true
-  localMode.value   = 'cool'
-  localFanSpeed.value = 'auto'
+  localValue.value    = d.value    ?? (d.type === 'ac' ? 24 : 80)
+  localStatus.value   = d.status   ?? true
+  localMode.value     = d.mode     ?? 'cool'
+  localFanSpeed.value = d.fanSpeed ?? 'auto'
 }, { immediate: true })
 
 function adjustTemp(delta) {

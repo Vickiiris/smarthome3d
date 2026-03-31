@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-logo">
@@ -386,18 +386,14 @@
           </div>
 
           <div class="filter-bar">
+            <input class="filter-in" v-model="deviceSearch" placeholder="搜索设备名称…" @input="devicePage = 1" />
             <select class="filter-sel" v-model="deviceTypeFilter" @change="devicePage = 1">
-              <option value="">全部系统</option>
-              <option value="ac">空调</option>
-              <option value="light">照明</option>
+              <option value="">全部类型</option>
+              <option value="ac">空调/新风</option>
+              <option value="light">照明/开关</option>
               <option value="outlet">插座</option>
-              <option value="tv">电视</option>
-              <option value="sensor">传感器</option>
-              <option value="security">安防</option>
-              <option value="ventil">新风</option>
-              <option value="speaker">音箱</option>
-              <option value="washer">洗碗机</option>
-              <option value="heater">热水器</option>
+              <option value="sensor">传感器/安防</option>
+              <option value="appliance">家电</option>
             </select>
             <select class="filter-sel" v-model="deviceRoomFilter" @change="devicePage = 1">
               <option value="">全部位置</option>
@@ -410,8 +406,6 @@
               <option value="玄关">玄关</option>
               <option value="全屋">全屋</option>
             </select>
-            <input class="filter-in" placeholder="搜索设备..." v-model="deviceSearch" @input="devicePage = 1" />
-            <button class="btn btn-primary">查询</button>
             <button class="btn btn-ghost" @click="deviceSearch = ''; deviceTypeFilter = ''; deviceRoomFilter = ''; devicePage = 1">重置</button>
             <button class="btn btn-accent" @click="openAddDevice">+ 新增</button>
           </div>
@@ -423,11 +417,11 @@
                 <tbody>
                   <tr v-for="(d, i) in pagedDevices" :key="d.id">
                     <td class="num">{{ (devicePage - 1) * DEVICE_PAGE_SIZE + i + 1 }}</td>
-                    <td><span class="dot" :class="d.online ? 'on' : 'off'"></span> {{ d.name }}</td>
+                    <td><span class="dot" :class="deviceOnline(d) ? 'on' : 'off'"></span> {{ d.name }}</td>
                     <td>{{ d.room }}</td>
                     <td>{{ d.vendor }}</td>
                     <td class="ip">{{ d.ip }}</td>
-                    <td><span class="stag" :class="d.online ? 'on' : 'off'">{{ d.online ? '在线' : '离线' }}</span></td>
+                    <td><span class="stag" :class="deviceOnline(d) ? 'on' : 'off'">{{ deviceOnline(d) ? '在线' : '离线' }}</span></td>
                     <td>
                       <button class="btn btn-sm btn-primary" @click="openDeviceControlFromTable(d)">控制</button>
                       <button class="btn btn-sm btn-ghost" @click="openDeviceDetail(d)">详情</button>
@@ -604,6 +598,7 @@
     :device="selectedDevice"
     @close="showControlPanel = false"
     @toggle="toggleSelectedDevice"
+    @update="onDeviceUpdate"
   />
 
   <!-- ===== 新增设备弹窗 ===== -->
@@ -819,12 +814,28 @@
             </div>
           </div>
           <div class="env-detail-section">
-            <div class="env-detail-section-title">📋 设备说明</div>
-            <p>{{ deviceTypeDesc(deviceDetailItem.type) }}</p>
+            <div class="env-detail-section-title">⏱ 累计使用时长</div>
+            <div class="dd-item" style="margin-top: 10px;">
+              <span class="dd-label">运行时长</span>
+              <span class="dd-value mono">{{ deviceUsageTime(deviceDetailItem) }}</span>
+            </div>
           </div>
-          <div class="env-detail-section tips">
-            <div class="env-detail-section-title">💡 使用建议</div>
-            <p>{{ deviceTypeTips(deviceDetailItem.type) }}</p>
+          <div class="env-detail-section">
+            <div class="env-detail-section-title">⚡ 用电统计</div>
+            <div class="device-detail-grid" style="margin-top: 10px;">
+              <div class="dd-item">
+                <span class="dd-label">今日用电</span>
+                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).day }} kWh</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">本周用电</span>
+                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).week }} kWh</span>
+              </div>
+              <div class="dd-item">
+                <span class="dd-label">本月用电</span>
+                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).month }} kWh</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1014,35 +1025,50 @@ onHotspotClick.value = (hotspot) => {
   if (!isFullscreen.value) {
     return
   }
+  openHotspotPanel(hotspot)
+}
 
-  // 从 deviceList 中按名称匹配完整设备信息（含厂商）
+// 从 deviceList 读取最新状态打开控制面板
+function openHotspotPanel(hotspot) {
   const matched = deviceList.value.find(d => d.name === hotspot.name)
-
   selectedHotspotDevice.value = {
     id: hotspot.id,
     name: hotspot.name,
     type: hotspot.type || 'ac',
     room: hotspot.room || '主卧',
-    status: matched?.status ?? true,
-    value: matched?.value ?? (hotspot.type === 'ac' ? 24 : hotspot.type === 'light' ? 80 : 50),
-    ip: matched?.ip ?? null,
-    vendor: matched?.vendor ?? '未知',
-    online: matched?.online ?? true,
+    status:   matched?.status   ?? true,
+    value:    matched?.value    ?? (hotspot.type === 'ac' ? 24 : hotspot.type === 'light' ? 80 : 50),
+    mode:     matched?.mode     ?? 'cool',
+    fanSpeed: matched?.fanSpeed ?? 'auto',
+    ip:       matched?.ip       ?? null,
+    vendor:   matched?.vendor   ?? '未知',
+    online:   matched?.online   ?? true,
   }
   showSlidePanel.value = true
 }
 
-// 设备更新回调
+// 设备分类：
+// 网关设备（断电不离线）：传感器、新风、门禁、开关(light)、插座(outlet)
+// Mesh设备（断电即离线）：灯具、空调、电视、热水器、洗碗机、音箱
+const GATEWAY_TYPES = new Set(['sensor', 'security', 'ventil', 'light', 'outlet'])
+
+// 在线状态计算：网关类设备始终在线，Mesh设备跟随 status
+function deviceOnline(device) {
+  if (!device) return false
+  if (GATEWAY_TYPES.has(device.type)) return true
+  return device.status
+}
+
+// 设备更新回调 - 统一更新 deviceList，所有页面共享状态
 function onDeviceUpdate(device) {
-  // 实时更新 deviceList 中对应设备的状态和在线状态
-  const idx = deviceList.value.findIndex(d => d.name === device.name)
+  const idx = deviceList.value.findIndex(d => d.name === device.name || d.id === device.id)
   if (idx !== -1) {
     deviceList.value[idx] = {
       ...deviceList.value[idx],
-      status: device.status,
-      value: device.value,
-      // 设备关闭时状态改为离线
-      online: device.status ? deviceList.value[idx].online : false,
+      status:   device.status,
+      value:    device.value    ?? deviceList.value[idx].value,
+      mode:     device.mode     ?? deviceList.value[idx].mode,
+      fanSpeed: device.fanSpeed ?? deviceList.value[idx].fanSpeed,
     }
   }
 }
@@ -1085,9 +1111,31 @@ const navItems = [
 const currentTitle = computed(() => navItems.find(n => n.id === currentPage.value)?.name ?? '')
 
 function switchPage(id) {
+  // 全屏时切换页面，自动退出全屏并恢复全景
+  if (isFullscreen.value) {
+    isFullscreen.value = false
+    closeAllPanels()
+    resetView()
+    activeRoom.value = 'all'
+    activeRoomId.value = 'all'
+    // 延迟 resize 确保 DOM 更新后再调整 canvas 大小
+    setTimeout(() => {
+      threeScene.resize()
+    }, 150)
+  }
   currentPage.value = id
   if (id === 'energy') nextTick(() => initCharts())
   if (id !== 'health') nextTick(() => mountCanvas(id))
+}
+
+// 关闭所有弹窗/面板
+function closeAllPanels() {
+  showSlidePanel.value = false
+  showControlPanel.value = false
+  showDeviceDetail.value = false
+  envDetailVisible.value = false
+  healthDetailVisible.value = false
+  addDeviceVisible.value = false
 }
 
 const rooms = [
@@ -1115,10 +1163,19 @@ function flyToDeviceRoom(device) {
 }
 
 function toggleFullscreen() {
+  const wasFullscreen = isFullscreen.value
   isFullscreen.value = !isFullscreen.value
+  // 退出全屏时关闭所有窗口并恢复全景
+  if (wasFullscreen) {
+    closeAllPanels()
+    resetView()
+    activeRoom.value = 'all'
+    activeRoomId.value = 'all'
+  }
+  // 延迟 resize 确保 DOM 更新完成
   setTimeout(() => {
     threeScene.resize()
-  }, 100)
+  }, 200)
 }
 
 // 环境参数颜色计算
@@ -1187,12 +1244,12 @@ const envItems = computed(() => {
 })
 
 const securityItems = [
-  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-2'] },
-  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-3'] },
-  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-3'] },
-  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-1'] },
+  { icon: '🚪', label: '门禁',     value: '已锁', cls: 'ok', color: '#22c55e', sensorIds: ['dev18'] },
+  { icon: '💨', label: '烟雾',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['dev23'] },
+  { icon: '🔥', label: '燃气',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['dev23'] },
+  { icon: '📹', label: '摄像头',   value: '运行', cls: 'ok', color: '#22c55e', sensorIds: ['dev17'] },
   { icon: '🚨', label: '安防状态', value: '在家', cls: 'ok', color: '#22c55e', sensorIds: [] },
-  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['sensor-4'] },
+  { icon: '💧', label: '漏水',     value: '正常', cls: 'ok', color: '#22c55e', sensorIds: ['dev24'] },
 ]
 
 // 根据传感器状态更新安防监控
@@ -1213,29 +1270,13 @@ const linkedSecurityItems = computed(() => {
 const activeDeviceTab = ref('light')
 
 // 所有设备列表（照明 + 空调 + 监控）
-const allDevices = ref([
-  // 照明设备
-  { id: 'light-1', name: '客厅灯开关', icon: '💡', type: 'light', status: true, room: '客厅' },
-  { id: 'light-2', name: '主卧灯开关', icon: '🛋️', type: 'light', status: false, room: '主卧' },
-  { id: 'light-3', name: '次卧灯开关', icon: '🌙', type: 'light', status: false, room: '次卧' },
-  { id: 'light-4', name: '厨房灯开关', icon: '🍳', type: 'light', status: true, room: '厨房' },
-  { id: 'light-5', name: '卫生间灯开关', icon: '🚿', type: 'light', status: false, room: '卫生间' },
-  { id: 'light-6', name: '阳台灯开关', icon: '☀️', type: 'light', status: false, room: '阳台' },
-  // 空调设备
-  { id: 'ac-1', name: '客厅空调', icon: '❄️', type: 'ac', status: true, value: 24, room: '客厅' },
-  { id: 'ac-2', name: '主卧空调', icon: '🌬️', type: 'ac', status: false, value: 26, room: '主卧' },
-  { id: 'ac-3', name: '次卧空调', icon: '🌡️', type: 'ac', status: false, value: 26, room: '次卧' },
-  { id: 'ac-4', name: '新风系统', icon: '🌀', type: 'ac', status: true, room: '全屋' },
-  // 传感器设备
-  { id: 'sensor-1', name: '人体存在感应器', icon: '👤', type: 'sensor', status: true, room: '客厅', linkedSecurity: '摄像头' },
-  { id: 'sensor-2', name: '门磁感应器', icon: '🚪', type: 'sensor', status: true, room: '玄关', linkedSecurity: '门禁' },
-  { id: 'sensor-3', name: '烟雾/燃气传感器', icon: '🔥', type: 'sensor', status: true, room: '厨房', linkedSecurity: '烟雾' },
-  { id: 'sensor-4', name: '水淹传感器', icon: '💧', type: 'sensor', status: true, room: '卫生间', linkedSecurity: '漏水' },
-])
+// 环境总览页设备列表 - 直接从 deviceList 派生，统一数据源
+const allDevices = computed(() => deviceList.value)
 
 // 根据Tab筛选设备（环境总览页面）
 const envDevices = computed(() => {
-  return allDevices.value.filter(d => d.type === activeDeviceTab.value)
+  const tabType = activeDeviceTab.value  // 'light' | 'ac'
+  return deviceList.value.filter(d => d.type === tabType)
 })
 
 // 根据设备区域和状态获取图标样式
@@ -1262,19 +1303,32 @@ function getDeviceColor(device) {
 }
 
 function toggleDevice(device) {
-  device.status = !device.status
+  const idx = deviceList.value.findIndex(d => d.id === device.id || d.name === device.name)
+  if (idx !== -1) {
+    deviceList.value[idx] = {
+      ...deviceList.value[idx],
+      status: !deviceList.value[idx].status,
+    }
+  }
 }
 
 // 打开设备详细控制面板
 function openDeviceControl(device) {
+  // 从 deviceList 读取最新状态
+  const latest = deviceList.value.find(d => d.id === device.id || d.name === device.name) || device
   selectedDevice.value = {
-    id: device.id,
-    name: device.name,
+    id: latest.id,
+    name: latest.name,
     icon: device.icon,
-    type: device.type,
-    status: device.status,
-    value: device.value,
-    room: device.room,
+    type: latest.type,
+    status:   latest.status,
+    value:    latest.value,
+    mode:     latest.mode     ?? 'cool',
+    fanSpeed: latest.fanSpeed ?? 'auto',
+    room:     latest.room,
+    vendor:   latest.vendor,
+    ip:       latest.ip,
+    online:   latest.online,
   }
   showControlPanel.value = true
 }
@@ -1303,14 +1357,10 @@ function openSecurityControl(item) {
 
 // 切换选中设备状态
 function toggleSelectedDevice() {
-  if (selectedDevice.value) {
-    // 找到原设备并切换状态
-    const device = allDevices.value.find(d => d.id === selectedDevice.value.id)
-    if (device) {
-      device.status = !device.status
-      selectedDevice.value.status = device.status
-    }
-  }
+  if (!selectedDevice.value) return
+  const newStatus = !selectedDevice.value.status
+  selectedDevice.value.status = newStatus
+  onDeviceUpdate({ ...selectedDevice.value, status: newStatus })
 }
 
 // ===== 新增设备 =====
@@ -1382,12 +1432,12 @@ const scanSelected = ref([])
 let scanTimer = null
 
 const mockScanDevices = [
-  { ip: '192.168.1.20', name: '智能门锁 Pro', vendor: '德施曼', icon: '🔒', type: 'security' },
-  { ip: '192.168.1.21', name: '卧室照明',     vendor: '飞利浦', icon: '💡', type: 'light'    },
-  { ip: '192.168.1.22', name: '扫地机器人',   vendor: '石头',   icon: '🤖', type: 'sensor'   },
-  { ip: '192.168.1.23', name: '智能窗帘',     vendor: '欧瑞博', icon: '🪟', type: 'ventil'   },
-  { ip: '192.168.1.24', name: '厨房烟机',     vendor: '方太',   icon: '💨', type: 'ventil'   },
-  { ip: '192.168.1.25', name: '浴室暖风机',   vendor: '奥普',   icon: '🌡️', type: 'heater'   },
+  { ip: '192.168.1.102', name: '智能门锁 Pro', vendor: '德施曼', icon: '🔒', type: 'security' },
+  { ip: '192.168.1.137', name: '卧室照明',     vendor: '飞利浦', icon: '💡', type: 'light'    },
+  { ip: '192.168.1.184', name: '扫地机器人',   vendor: '石头',   icon: '🤖', type: 'sensor'   },
+  { ip: '192.168.1.219', name: '智能窗帘',     vendor: '欧瑞博', icon: '🪟', type: 'ventil'   },
+  { ip: '192.168.1.253', name: '厨房烟机',     vendor: '方太',   icon: '💨', type: 'ventil'   },
+  { ip: '192.168.1.161', name: '浴室暖风机',   vendor: '奥普',   icon: '🌡️', type: 'heater'   },
 ]
 
 function startScan() {
@@ -1442,21 +1492,21 @@ function openDeviceControlFromTable(device) {
     ac: '❄️', light: '💡', tv: '📺', speaker: '🔊',
     security: '🔒', ventil: '🌀', washer: '🍽️', heater: '🚿',
   }
-  const typeMap = {
-    ac: 'ac', light: 'light', tv: 'tv', speaker: 'speaker',
-    security: 'sensor', ventil: 'ventil', washer: 'washer', heater: 'heater',
-  }
+  // 从 deviceList 读取最新状态
+  const latest = deviceList.value.find(d => d.id === device.id) || device
   selectedDevice.value = {
-    id: device.id,
-    name: device.name,
-    icon: iconMap[device.type] || '📱',
-    type: typeMap[device.type] || 'sensor',
-    status: device.status,
-    value: device.value,
-    room: device.room,
-    vendor: device.vendor,
-    ip: device.ip,
-    online: device.online,
+    id: latest.id,
+    name: latest.name,
+    icon: iconMap[latest.type] || '📱',
+    type: latest.type,
+    status:   latest.status,
+    value:    latest.value,
+    mode:     latest.mode     ?? 'cool',
+    fanSpeed: latest.fanSpeed ?? 'auto',
+    room:     latest.room,
+    vendor:   latest.vendor,
+    ip:       latest.ip,
+    online:   latest.online,
   }
   showControlPanel.value = true
 }
@@ -1479,6 +1529,37 @@ function openDeviceDetail(device) {
 
 function closeDeviceDetail() {
   showDeviceDetail.value = false
+}
+
+// 设备使用时长（根据设备ID生成固定值）
+function deviceUsageTime(device) {
+  if (!device) return '0小时'
+  const seed = device.id?.charCodeAt(device.id.length - 1) || 0
+  const hours = (seed % 500) + 50
+  const days = Math.floor(hours / 24)
+  const remainingHours = hours % 24
+  if (days > 0) {
+    return `${days}天 ${remainingHours}小时`
+  }
+  return `${hours}小时`
+}
+
+// 设备用电统计（根据设备类型和ID生成固定值）
+function devicePowerStats(device) {
+  if (!device) return { day: 0, week: 0, month: 0 }
+  const seed = device.id?.charCodeAt(device.id.length - 1) || 0
+  const typeMultiplier = {
+    ac: 3.5, outlet: 0.8, light: 0.3, tv: 1.2,
+    sensor: 0.05, security: 0.1, ventil: 1.5,
+    speaker: 0.2, washer: 2.0, heater: 4.0
+  }
+  const mult = typeMultiplier[device.type] || 0.5
+  const base = (seed % 10) + 1
+  return {
+    day: (base * mult * 0.1).toFixed(2),
+    week: (base * mult * 0.7).toFixed(2),
+    month: (base * mult * 3).toFixed(2),
+  }
 }
 
 function deviceTypeLabel(type) {
@@ -1519,33 +1600,32 @@ function deviceTypeTips(type) {
 
 const deviceList = ref([
   // 原有设备
-  { id: 'dev1',  name: '客厅空调',       room: '客厅',  vendor: '三星',   ip: '192.168.1.11', online: true,  status: true,  type: 'ac',       value: 24 },
-  { id: 'dev3',  name: '新风系统',       room: '全屋',  vendor: '海尔',   ip: '192.168.1.12', online: true,  status: true,  type: 'ventil',   value: 50 },
-  { id: 'dev4',  name: '客厅电视',       room: '客厅',  vendor: 'SONY',   ip: '192.168.1.13', online: true,  status: false, type: 'tv',       value: 30 },
-  { id: 'dev5',  name: '智能音箱',       room: '客厅',  vendor: '小米',   ip: '192.168.1.14', online: true,  status: true,  type: 'speaker',  value: 60 },
-  { id: 'dev6',  name: '门禁系统',       room: '玄关',  vendor: '德施曼', ip: '192.168.1.15', online: false, status: false, type: 'security', value: 0  },
-  { id: 'dev7',  name: '主卧空调',       room: '主卧',  vendor: '三星',   ip: '192.168.1.16', online: true,  status: false, type: 'ac',       value: 26 },
-  { id: 'dev8',  name: '次卧空调',       room: '次卧',  vendor: '三星',   ip: '192.168.1.17', online: true,  status: false, type: 'ac',       value: 26 },
-  { id: 'dev9',  name: '洗碗机',         room: '厨房',  vendor: '西门子', ip: '192.168.1.18', online: true,  status: false, type: 'washer',   value: 0  },
-  { id: 'dev10', name: '热水器',         room: '厨房',  vendor: '林内',   ip: '192.168.1.19', online: true,  status: false, type: 'heater',   value: 55 },
+  { id: 'dev1',  name: '客厅空调',           icon: '❄️',  room: '客厅',   vendor: '三星',    ip: '192.168.1.47', online: true,  status: true,  type: 'ac',       value: 24 },
+  { id: 'dev3',  name: '新风系统',           icon: '🌀',  room: '全屋',   vendor: '海尔',    ip: '192.168.1.83', online: true,  status: true,  type: 'ventil',   value: 50 },
+  { id: 'dev4',  name: '客厅电视',           icon: '📺',  room: '客厅',   vendor: 'SONY',    ip: '192.168.1.156',online: true,  status: false, type: 'tv',       value: 30 },
+  { id: 'dev5',  name: '智能音箱',           icon: '🔊',  room: '客厅',   vendor: '小米',    ip: '192.168.1.29', online: true,  status: true,  type: 'speaker',  value: 60 },
+  { id: 'dev6',  name: '门禁系统',           icon: '🔒',  room: '玄关',   vendor: '德施曼',  ip: '192.168.1.112',online: true,  status: false, type: 'security', value: 0  },
+  { id: 'dev7',  name: '主卧空调',           icon: '🌬️', room: '主卧',   vendor: '三星',    ip: '192.168.1.64', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev8',  name: '次卧空调',           icon: '🌡️', room: '次卧',   vendor: '三星',    ip: '192.168.1.91', online: true,  status: false, type: 'ac',       value: 26 },
+  { id: 'dev9',  name: '洗碗机',             icon: '🍽️', room: '厨房',   vendor: '西门子',  ip: '192.168.1.178',online: true,  status: false, type: 'washer',   value: 0  },
+  { id: 'dev10', name: '热水器',             icon: '🚿',  room: '厨房',   vendor: '林内',    ip: '192.168.1.203',online: true,  status: false, type: 'heater',   value: 55 },
   // 顶牌设备（3D场景中的设备）
-  { id: 'dev11', name: '空调插座A',       room: '主卧',  vendor: '小米',   ip: '192.168.1.20', online: true,  status: true,  type: 'outlet',   value: 0  },
-  { id: 'dev12', name: '主卧灯开关',     room: '主卧',  vendor: '小米',   ip: '192.168.1.21', online: true,  status: true,  type: 'light',    value: 80 },
-  { id: 'dev13', name: '空调插座B',       room: '次卧',  vendor: '小米',   ip: '192.168.1.22', online: true,  status: false, type: 'outlet',   value: 0  },
-  { id: 'dev14', name: '次卧灯开关',     room: '次卧',  vendor: '小米',   ip: '192.168.1.23', online: true,  status: false, type: 'light',    value: 0  },
-  { id: 'dev15', name: '客厅电视',       room: '客厅',  vendor: '海信',   ip: '192.168.1.24', online: true,  status: true,  type: 'tv',       value: 30 },
-  { id: 'dev16', name: '客厅插座A',       room: '客厅',  vendor: '小米',   ip: '192.168.1.25', online: true,  status: true,  type: 'outlet',   value: 0  },
-  { id: 'dev17', name: '空气质量传感器', room: '客厅',  vendor: '霍尼韦尔',ip: '192.168.1.26', online: true,  status: true,  type: 'sensor',   value: 0  },
-  { id: 'dev18', name: '门禁控制器',     room: '玄关',  vendor: '德施曼', ip: '192.168.1.27', online: true,  status: true,  type: 'security', value: 0  },
-  { id: 'dev19', name: '客厅灯开关',     room: '客厅',  vendor: '小米',   ip: '192.168.1.28', online: true,  status: true,  type: 'light',    value: 100 },
-  { id: 'dev20', name: '客厅插座B',       room: '客厅',  vendor: '小米',   ip: '192.168.1.29', online: true,  status: true,  type: 'outlet',   value: 0  },
-  { id: 'dev21', name: '厨房灯开关',     room: '厨房',  vendor: '小米',   ip: '192.168.1.30', online: true,  status: true,  type: 'light',    value: 100 },
-  { id: 'dev22', name: '厨房插座',       room: '厨房',  vendor: '小米',   ip: '192.168.1.31', online: true,  status: false, type: 'outlet',   value: 0  },
-  { id: 'dev23', name: '烟雾/燃气传感器', room: '厨房',  vendor: '海曼', ip: '192.168.1.32', online: true,  status: true,  type: 'sensor',   value: 0  },
-  { id: 'dev24', name: '水浸传感器',     room: '卫生间', vendor: '小米',   ip: '192.168.1.33', online: true,  status: true,  type: 'sensor',   value: 0  },
-  { id: 'dev25', name: '卫生间灯开关',   room: '卫生间', vendor: '小米',   ip: '192.168.1.34', online: true,  status: false, type: 'light',    value: 0  },
-  { id: 'dev26', name: '阳台灯开关',     room: '阳台',  vendor: '小米',   ip: '192.168.1.35', online: true,  status: false, type: 'light',    value: 0  },
-  { id: 'dev27', name: '温湿度/光照传感器', room: '阳台', vendor: '小米', ip: '192.168.1.36', online: true,  status: true,  type: 'sensor',  value: 0  },
+  { id: 'dev11', name: '空调插座A',           icon: '🔌',  room: '主卧',   vendor: '小米',    ip: '192.168.1.38', online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev12', name: '主卧灯开关',         icon: '🛏️', room: '主卧',   vendor: '小米',    ip: '192.168.1.55', online: true,  status: true,  type: 'light',    value: 80 },
+  { id: 'dev13', name: '空调插座B',           icon: '🔌',  room: '次卧',   vendor: '小米',    ip: '192.168.1.72', online: true,  status: false, type: 'outlet',   value: 0  },
+  { id: 'dev14', name: '次卧灯开关',         icon: '🌙',  room: '次卧',   vendor: '小米',    ip: '192.168.1.99', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev16', name: '客厅插座A',           icon: '🔌',  room: '客厅',   vendor: '小米',    ip: '192.168.1.134',online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev17', name: '空气质量传感器',     icon: '🌫️', room: '客厅',   vendor: '霍尼韦尔',ip: '192.168.1.167',online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev18', name: '门禁控制器',         icon: '🚪',  room: '玄关',   vendor: '德施曼',  ip: '192.168.1.118',online: true,  status: true,  type: 'security', value: 0  },
+  { id: 'dev19', name: '客厅灯开关',         icon: '🏠',  room: '客厅',   vendor: '小米',    ip: '192.168.1.143',online: true,  status: true,  type: 'light',    value: 100 },
+  { id: 'dev20', name: '客厅插座B',           icon: '🔌',  room: '客厅',   vendor: '小米',    ip: '192.168.1.189',online: true,  status: true,  type: 'outlet',   value: 0  },
+  { id: 'dev21', name: '厨房灯开关',         icon: '🍳',  room: '厨房',   vendor: '小米',    ip: '192.168.1.214',online: true,  status: true,  type: 'light',    value: 100 },
+  { id: 'dev22', name: '厨房插座',           icon: '🔌',  room: '厨房',   vendor: '小米',    ip: '192.168.1.231',online: true,  status: false, type: 'outlet',   value: 0  },
+  { id: 'dev23', name: '烟雾/燃气传感器',   icon: '🔥',  room: '厨房',   vendor: '海曼',    ip: '192.168.1.245',online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev24', name: '水浸传感器',         icon: '💧',  room: '卫生间', vendor: '小米',    ip: '192.168.1.17', online: true,  status: true,  type: 'sensor',   value: 0  },
+  { id: 'dev25', name: '卫生间灯开关',       icon: '🚿',  room: '卫生间', vendor: '小米',    ip: '192.168.1.33', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev26', name: '阳台灯开关',         icon: '🌿',  room: '阳台',   vendor: '小米',    ip: '192.168.1.58', online: true,  status: false, type: 'light',    value: 0  },
+  { id: 'dev27', name: '温湿度/光照传感器', icon: '🌡️', room: '阳台',   vendor: '小米',    ip: '192.168.1.76', online: true,  status: true,  type: 'sensor',   value: 0  },
 ])
 
 // 设备列表筛选
@@ -1555,12 +1635,25 @@ const devicePage = ref(1)
 const DEVICE_PAGE_SIZE = 10
 
 const filteredDevices = computed(() => {
-  return deviceList.value.filter(d => {
+  // 合并类型映射
+  const typeGroupMap = {
+    'ac':       ['ac', 'ventil'],
+    'light':    ['light'],
+    'outlet':   ['outlet'],
+    'sensor':   ['sensor', 'security'],
+    'appliance':['tv', 'speaker', 'washer', 'heater'],
+  }
+  let list = deviceList.value.filter(d => {
     const matchSearch = !deviceSearch.value || d.name.includes(deviceSearch.value)
-    const matchRoom = !deviceRoomFilter.value || d.room === deviceRoomFilter.value
-    const matchType = !deviceTypeFilter.value || d.type === deviceTypeFilter.value
+    const matchRoom   = !deviceRoomFilter.value || d.room === deviceRoomFilter.value
+    const matchType   = !deviceTypeFilter.value ||
+      (typeGroupMap[deviceTypeFilter.value] || []).includes(d.type)
     return matchSearch && matchRoom && matchType
   })
+  // 按房间排序
+  const roomOrder = { '客厅': 1, '主卧': 2, '次卧': 3, '厨房': 4, '卫生间': 5, '阳台': 6, '玄关': 7, '全屋': 8 }
+  list.sort((a, b) => (roomOrder[a.room] || 9) - (roomOrder[b.room] || 9))
+  return list
 })
 
 const deviceTotalPages = computed(() => Math.max(1, Math.ceil(filteredDevices.value.length / DEVICE_PAGE_SIZE)))
@@ -1720,11 +1813,15 @@ const productPage = ref(1)
 const PRODUCT_PAGE_SIZE = 12
 
 const filteredProducts = computed(() => {
-  return products.filter(p => {
+  let list = products.filter(p => {
     const matchSub = !productSubFilter.value || p.sub === productSubFilter.value
     const matchTag = !productTagFilter.value || p.tag === productTagFilter.value
     return matchSub && matchTag
   })
+  // 按接入状态排序：已接入 > 待接入 > 未接入
+  const statusOrder = { '已接入': 1, '待接入': 2, '未接入': 3 }
+  list.sort((a, b) => (statusOrder[a.tag] || 4) - (statusOrder[b.tag] || 4))
+  return list
 })
 
 const productTotalPages = computed(() => Math.max(1, Math.ceil(filteredProducts.value.length / PRODUCT_PAGE_SIZE)))
