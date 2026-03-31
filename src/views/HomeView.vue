@@ -45,7 +45,7 @@
 
       <div class="content">
 
-        <!-- ===== 环境监控 ===== -->
+        <!-- ===== 环境总览 ===== -->
         <div v-show="currentPage === 'env'" class="page">
           <div ref="envScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
             <canvas ref="canvasRef" class="three-canvas"></canvas>
@@ -444,7 +444,7 @@
             <button class="btn btn-ghost">重置</button>
           </div>
           <div class="product-grid">
-            <div v-for="p in products" :key="p.id" class="product-card">
+            <div v-for="p in pagedProducts" :key="p.id" class="product-card">
               <div class="product-icon">{{ p.icon }}</div>
               <div class="product-info">
                 <h4 class="product-name">{{ p.name }}</h4>
@@ -773,13 +773,22 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- 右侧滑入控制面板 -->
+  <DeviceControlPanel
+    :visible="showSlidePanel"
+    :device="selectedHotspotDevice"
+    @close="showSlidePanel = false"
+    @update="onDeviceUpdate"
+  />
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useHomeStore } from '@/stores/homeStore'
 import { useThreeScene } from '@/composables/useThreeScene'
 import DeviceControlModal from '@/components/DeviceControlModal.vue'
+import DeviceControlPanel from '@/components/DeviceControlPanel.vue'
 
 const homeStore = useHomeStore()
 const currentPage = ref('env')
@@ -790,6 +799,10 @@ const isFullscreen = ref(false)
 // 环境详情弹窗
 const envDetailVisible = ref(false)
 const envDetailItem = ref(null)
+
+// 右侧控制面板（点击顶牌显示）
+const showSlidePanel = ref(false)
+const selectedHotspotDevice = ref(null)
 
 const envDetailMap = {
   '室外温度': { desc: '室外大气温度，反映当前户外热环境。', standard: '国标 GB/T 18883：室内温度舒适范围 18~26°C（冬季 16~24°C，夏季 24~28°C）。', tips: '室外温度过高时建议减少户外活动，注意防暑。' },
@@ -918,7 +931,7 @@ function closeHealthDetail() {
   healthDetailVisible.value = false
 }
 
-// 设备控制面板
+// 设备控制面板（弹窗 - 设备列表点击）
 const showControlPanel = ref(false)
 const selectedDevice = ref(null)
 
@@ -931,7 +944,43 @@ const productScene = ref(null)
 // 主 canvas ref
 const canvasRef = ref(null)
 const threeScene = useThreeScene(canvasRef)
-const { flyToRoom, resetView } = threeScene
+const { flyToRoom, resetView, onHotspotClick, activeRoomId } = threeScene
+
+// 顶牌切换房间时同步 activeRoom
+watch(activeRoomId, (id) => {
+  activeRoom.value = id
+})
+
+// 设置热点点击回调 - 只有全屏时才弹出控制面板
+onHotspotClick.value = (hotspot) => {
+  // 非全屏状态不弹出控制面板
+  if (!isFullscreen.value) {
+    return
+  }
+
+  // 从 deviceList 中按名称匹配 IP
+  const matched = deviceList.value.find(d => d.name === hotspot.name)
+
+  selectedHotspotDevice.value = {
+    id: hotspot.id,
+    name: hotspot.name,
+    type: hotspot.type || 'ac',
+    room: hotspot.room || '主卧',
+    status: matched?.status ?? true,
+    value: matched?.value ?? (hotspot.type === 'ac' ? 24 : hotspot.type === 'light' ? 80 : 50),
+    ip: matched?.ip ?? null,
+  }
+  showSlidePanel.value = true
+}
+
+// 设备更新回调
+function onDeviceUpdate(device) {
+  // 实时更新 deviceList 中对应设备的状态
+  const idx = deviceList.value.findIndex(d => d.name === device.name)
+  if (idx !== -1) {
+    deviceList.value[idx] = { ...deviceList.value[idx], status: device.status, value: device.value }
+  }
+}
 
 let canvasPage = 'env'
 
@@ -962,7 +1011,7 @@ function updateTime() {
 }
 
 const navItems = [
-  { id: 'env',     name: '环境监控', icon: '🌤' },
+  { id: 'env',     name: '环境总览', icon: '🌤' },
   { id: 'energy',  name: '能源管理', icon: '⚡' },
   { id: 'health',  name: '健康监测', icon: '❤' },
   { id: 'device',  name: '设备管理', icon: '📱' },
@@ -986,6 +1035,7 @@ const rooms = [
 
 function switchRoom(roomId) {
   activeRoom.value = roomId
+  activeRoomId.value = roomId
   if (roomId === 'all') resetView()
   else flyToRoom(roomId)
 }
@@ -1118,7 +1168,7 @@ const allDevices = ref([
   { id: 'sensor-4', name: '水淹传感器', icon: '💧', type: 'sensor', status: true, room: '卫生间', linkedSecurity: '漏水' },
 ])
 
-// 根据Tab筛选设备（环境监控页面）
+// 根据Tab筛选设备（环境总览页面）
 const envDevices = computed(() => {
   return allDevices.value.filter(d => d.type === activeDeviceTab.value)
 })
@@ -1525,6 +1575,31 @@ const products = [
   { id: 3, icon: '🌀', name: '新风系统 FX-200',  sub: '环境控制', vendor: '海尔',   tag: '已接入'   },
   { id: 4, icon: '🔒', name: '智能门锁 S1',      sub: '安防系统', vendor: '德施曼', tag: '已接入'   },
 ]
+
+// 产品筛选 & 分页
+const productSubFilter = ref('')
+const productTagFilter = ref('')
+const productPage = ref(1)
+const PAGE_SIZE = 4
+
+const filteredProducts = computed(() => {
+  return products.filter(p => {
+    const matchSub = !productSubFilter.value || p.sub === productSubFilter.value
+    const matchTag = !productTagFilter.value || p.tag === productTagFilter.value
+    return matchSub && matchTag
+  })
+})
+
+const productTotalPages = computed(() => Math.max(1, Math.ceil(filteredProducts.value.length / PAGE_SIZE)))
+
+const pagedProducts = computed(() => {
+  const start = (productPage.value - 1) * PAGE_SIZE
+  return filteredProducts.value.slice(start, start + PAGE_SIZE)
+})
+
+// 设备列表筛选
+const deviceRoomFilter = ref('')
+const deviceTypeFilter = ref('')
 
 const lineChartRef = ref(null)
 const pieChartRef  = ref(null)

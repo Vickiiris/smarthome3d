@@ -24,15 +24,34 @@ export function useThreeScene(canvasRef) {
   const lightObjects = new Map()
 
   const hotspotSprites = []
-  const activeControlWidget = shallowRef(null)
-  const activeHotspot = shallowRef(null)
-
-  const onHotspotClick = ref(null)
-  const onWidgetClose = ref(null)
   const debugInfo = ref({ clickPos: '-', cameraPos: '-', cameraTarget: '-' })
 
-  let bgTexture = null
-  let arrowTexture = null
+  const onHotspotClick = ref(null)
+  const activeRoomId = ref('all')
+
+  // 房间名 → roomId 映射（阳台归主卧）
+  const ROOM_MAP = {
+    '客厅': 'living-room',
+    '主卧': 'bedroom',
+    '次卧': 'bedroom2',
+    '厨房': 'kitchen',
+    '卫生间': 'bathroom',
+    '玄关': 'living-room',
+    '阳台': 'bedroom',
+    '全屋': 'all',
+  }
+
+  // 根据当前 activeRoomId 更新顶牌可见性
+  function updateHotspotVisibility() {
+    hotspotSprites.forEach(({ sprite, def }) => {
+      if (activeRoomId.value === 'all') {
+        sprite.visible = true
+      } else {
+        const roomId = ROOM_MAP[def.room] || 'all'
+        sprite.visible = roomId === activeRoomId.value
+      }
+    })
+  }
 
   function initScene() {
     if (!canvasRef.value) return
@@ -84,100 +103,77 @@ export function useThreeScene(canvasRef) {
     canvasRef.value.addEventListener('click', onCanvasClick)
   }
 
-  function createHotspotTexture(def) {
-    const W = 222, BG_H = 75, ARR_H = 44, H = BG_H + ARR_H
+  // 使用 texture 文件夹下的图片创建顶牌
+  function createHotspotTexture(def, bgImg, arrowImg) {
+    const scale = 2
+    const showArrow = !def.noArrow
+    const W = 160 * scale
+    const bgH = 60 * scale  // 背景高度
+    const arrowH = showArrow ? 40 * scale : 0
+    const H = bgH + arrowH
     const canvas = document.createElement('canvas')
-    canvas.width = W; canvas.height = H
+    canvas.width = W
+    canvas.height = H
     const ctx = canvas.getContext('2d')
-    if (bgTexture) ctx.drawImage(bgTexture.image, 0, 0, W, BG_H)
-    if (arrowTexture) ctx.drawImage(arrowTexture.image, W / 2 - 40.5, BG_H, 81, ARR_H)
-    ctx.font = 'bold 28px serif'
+
+    // 绘制背景图片（上方）
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, W, bgH)
+    }
+
+    // 绘制箭头图片（底部居中，与背景分开）
+    if (showArrow && arrowImg) {
+      const arrowW = 56 * scale  
+      const arrowX = (W - arrowW) / 2
+      const arrowY = bgH - 2 * scale  
+      ctx.drawImage(arrowImg, arrowX, arrowY, arrowW, arrowH)
+    }
+
+    // 绘制文字（居中于背景区域）
+    ctx.font = `500 ${16 * scale}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(def.icon, 36, BG_H * 0.5)
-    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText(def.name, W * 0.64, BG_H * 0.5)
+    ctx.fillStyle = '#e2e8f0'
+    ctx.fillText(def.name, W / 2, bgH / 2)
+
     const tex = new THREE.CanvasTexture(canvas)
     tex.needsUpdate = true
+    tex.minFilter = THREE.LinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = false
     return tex
   }
 
   function createHotspots(_scene) {
     const texLoader = new THREE.TextureLoader()
+    let bgImg = null
+    let arrowImg = null
     let loaded = 0
+    const totalToLoad = 2
+
     const buildSprites = () => {
       HOTSPOTS.forEach((def) => {
-        const tex = createHotspotTexture(def)
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, sizeAttenuation: true })
+        const tex = createHotspotTexture(def, bgImg, arrowImg)
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          transparent: true,
+          depthTest: false,
+          sizeAttenuation: true,
+        })
         const sprite = new THREE.Sprite(mat)
-        sprite.scale.set(0.6, 0.32, 1)
-        sprite.position.copy(def.position)
-        sprite.position.y += 0.25
+        // noArrow 的顶牌只有背景高度，sprite 高度减半
+        const spriteH = def.noArrow ? 0.11 : 0.175
+        sprite.scale.set(0.28, spriteH, 1)
+        sprite.position.set(def.position.x, def.position.y + 0.16, def.position.z)
         sprite.name = `hotspot-${def.id}`
+        sprite.userData = def
         _scene.add(sprite)
         hotspotSprites.push({ sprite, def })
       })
     }
-    const onLoad = () => { if (++loaded >= 2) buildSprites() }
-    texLoader.load('/textures/hotspot-bg.png', (t) => { bgTexture = t; onLoad() }, undefined, () => { bgTexture = null; onLoad() })
-    texLoader.load('/textures/hotspot-arrow.png', (t) => { arrowTexture = t; onLoad() }, undefined, () => { arrowTexture = null; onLoad() })
-  }
 
-  function showControlWidget(hotspot) {
-    if (!scene.value) return
-    closeControlWidget()
-
-    const div = document.createElement('div')
-    div.className = `ctrl-widget ctrl-widget-${hotspot.type}`
-    div.innerHTML = `
-      <div class="ctrl-header">
-        <span class="ctrl-icon">${hotspot.icon}</span>
-        <span class="ctrl-name">${hotspot.name}</span>
-        <button class="ctrl-close">✕</button>
-      </div>
-      <div class="ctrl-body" id="ctrl-body-${hotspot.id}">
-        <div class="ctrl-loading">加载控制中...</div>
-      </div>
-    `
-    div.style.pointerEvents = 'auto'
-
-    const label = new CSS2DObject(div)
-    label.position.copy(hotspot.position)
-    label.position.y += 0.5
-    label.name = `ctrl-widget-${hotspot.id}`
-    scene.value.add(label)
-    activeControlWidget.value = label
-    activeHotspot.value = hotspot
-
-    div.querySelector('.ctrl-close')?.addEventListener('click', (e) => {
-      e.stopPropagation()
-      closeControlWidget()
-      onWidgetClose.value?.()
-    })
-
-    onHotspotClick.value?.(hotspot)
-  }
-
-  function closeControlWidget() {
-    if (activeControlWidget.value && scene.value) {
-      scene.value.remove(activeControlWidget.value)
-      activeControlWidget.value = null
-    }
-    activeHotspot.value = null
-  }
-
-  function updateWidgetContent(html) {
-    if (!activeControlWidget.value) return
-    const div = activeControlWidget.value.element
-    const body = div.querySelector('.ctrl-body')
-    if (body) body.innerHTML = html
-  }
-
-  function updateWidgetStatus(status) {
-    if (!activeControlWidget.value) return
-    const div = activeControlWidget.value.element
-    div.dataset.status = status
+    texLoader.load('/texture/bg.png', (t) => { bgImg = t.image; if (++loaded >= totalToLoad) buildSprites() })
+    texLoader.load('/texture/↓.png', (t) => { arrowImg = t.image; if (++loaded >= totalToLoad) buildSprites() })
   }
 
   function onCanvasClick(e) {
@@ -191,31 +187,61 @@ export function useThreeScene(canvasRef) {
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(mouse, camera.value)
 
+    const cam = camera.value
+    const tgt = controls.value.target
+
+    // 检查是否点击热点
     const hits = raycaster.intersectObjects(hotspotSprites.map(h => h.sprite), false)
     if (hits.length > 0) {
       const hit = hotspotSprites.find(h => h.sprite === hits[0].object)
       if (hit) {
-        flyTo(
-          new THREE.Vector3(hit.def.position.x + 0.8, hit.def.position.y + 0.8, hit.def.position.z + 0.8),
-          hit.def.position.clone(), 1.0
-        )
-        showControlWidget(hit.def)
+        const pos = cam.position
+        const target = tgt
+        console.log(`%c========== 点击热点 ==========`, 'color: #00d4aa; font-weight: bold; font-size: 14px;')
+        console.log(`%c[热点名称] ${hit.def.name}`, 'color: #ff6b6b; font-weight: bold;')
+        console.log(`%c[热点位置] (${hit.def.position.x.toFixed(3)}, ${hit.def.position.y.toFixed(3)}, ${hit.def.position.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
+        console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
+        console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ce93d8; font-weight: bold;')
+        console.log(`%c==============================`, 'color: #00d4aa; font-weight: bold;')
+        // 点击顶牌飞到相机位置
+        if (hit.def.cameraPos) {
+          flyTo(hit.def.cameraPos.clone(), hit.def.position.clone(), 1.0)
+        }
+        // 更新当前房间
+        const newRoomId = ROOM_MAP[hit.def.room] || 'all'
+        activeRoomId.value = newRoomId
+        updateHotspotVisibility()
+        // 触发热点点击回调
+        onHotspotClick.value?.(hit.def)
         return
       }
     }
 
+    // 检查是否点击模型
     const modelHits = model.value ? raycaster.intersectObjects(model.value.children, true) : []
-    const cam = camera.value
-    const tgt = controls.value.target
-    const cs = `(${cam.position.x.toFixed(3)}, ${cam.position.y.toFixed(3)}, ${cam.position.z.toFixed(3)})`
-    const ts = `(${tgt.x.toFixed(3)}, ${tgt.y.toFixed(3)}, ${tgt.z.toFixed(3)})`
     if (modelHits.length > 0) {
       const hp = modelHits[0].point
-      debugInfo.value = { clickPos: `(${hp.x.toFixed(3)}, ${hp.y.toFixed(3)}, ${hp.z.toFixed(3)})`, cameraPos: cs, cameraTarget: ts }
-      console.log(`[点击] ${hp.x.toFixed(3)},${hp.y.toFixed(3)},${hp.z.toFixed(3)} | ${modelHits[0].object.name}`)
-    } else {
-      debugInfo.value = { clickPos: '未命中', cameraPos: cs, cameraTarget: ts }
+      const objName = modelHits[0].object.name || '未命名'
+      const pos = cam.position
+      const target = tgt
+      
+      console.log(`%c========== 点击模型 ==========`, 'color: #00d4aa; font-weight: bold; font-size: 14px;')
+      console.log(`%c[点击位置] (${hp.x.toFixed(3)}, ${hp.y.toFixed(3)}, ${hp.z.toFixed(3)})`, 'color: #ff6b6b; font-weight: bold;')
+      console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
+      console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
+      console.log(`%c[物体名称] ${objName}`, 'color: #ce93d8;')
+      console.log(`%c==============================`, 'color: #00d4aa; font-weight: bold;')
+      return
     }
+
+    // 点击空白区域
+    const pos = cam.position
+    const target = tgt
+    console.log(`%c========== 点击空白 ==========`, 'color: #6b7280; font-weight: bold; font-size: 14px;')
+    console.log(`%c[点击位置] 未命中模型`, 'color: #94a3b8;')
+    console.log(`%c[相机位置] (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`, 'color: #4fc3f7; font-weight: bold;')
+    console.log(`%c[相机目标] (${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)})`, 'color: #ffd54f; font-weight: bold;')
+    console.log(`%c==============================`, 'color: #6b7280; font-weight: bold;')
   }
 
   function setupLights(_scene) {
@@ -343,14 +369,22 @@ export function useThreeScene(canvasRef) {
 
   function flyToRoom(roomId) {
     const map = {
-      'living-room': [-0.5, 2.5, 3.5, -0.48, 0, 1.06],
-      'bedroom': [0.179, 0.646, 0.192, 0.730, -0.163, -0.601],
-      'bedroom2': [-1.090, 0.923, 0.389, -1.096, -0.167, -0.709],
-      'kitchen': [-0.216, 0.955, 1.856, 1.006, -0.248, 1.884],
-      'bathroom': [0.497, 0.635, 1.253, 1.161, -0.122, 0.495],
+      'living-room': [-0.394, 2.713, 4.115, -0.48, 0, 1.06],
+      'bedroom': [-0.197, 1.744, 0.901, 0.730, -0.163, -0.601],
+      'bedroom2': [-1.430, 1.726, 0.678, -1.096, -0.167, -0.709],
+      'kitchen': [-0.636, 1.403, 1.985, 1.006, -0.248, 1.884],
+      'bathroom': [0.420, 1.213, 1.488, 1.161, -0.122, 0.495],
     }
     const t = map[roomId]
     if (t) flyTo(new THREE.Vector3(t[0], t[1], t[2]), new THREE.Vector3(t[3], t[4], t[5]))
+    activeRoomId.value = roomId
+    updateHotspotVisibility()
+  }
+
+  function resetView() {
+    flyTo(INITIAL_CAMERA.pos.clone(), INITIAL_CAMERA.target.clone())
+    activeRoomId.value = 'all'
+    updateHotspotVisibility()
   }
 
   onMounted(() => { initScene() })
@@ -365,14 +399,185 @@ export function useThreeScene(canvasRef) {
 
   return {
     scene, camera, renderer, controls, model,
-    isLoading, loadProgress, lightObjects, debugInfo,
-    activeHotspot,
-    onHotspotClick, onWidgetClose,
-    setLightStatus, flyToRoom, resetView, flyTo, closeControlWidget,
-    updateWidgetContent, updateWidgetStatus,
+    isLoading, loadProgress, lightObjects,
+    onHotspotClick, activeRoomId,
+    setLightStatus, flyToRoom, resetView, flyTo,
     resize, getRenderer,
   }
 }
 
 // 顶牌数据 - 与 homeStore 中的 pointers 对应
-const HOTSPOTS = []
+const HOTSPOTS = [
+  {
+    id: 'bedroom-ac',
+    name: '主卧空调',
+    icon: '❄️',
+    type: 'ac',
+    room: '主卧',
+    position: new THREE.Vector3(1.785, 0.244, -1.780),
+    cameraPos: new THREE.Vector3(0.515, 0.609, -1.782),
+  },
+  {
+    id: 'ac-outlet-a',
+    name: '空调插座A',
+    icon: '🔌',
+    type: 'outlet',
+    room: '主卧',
+    position: new THREE.Vector3(1.795, 0.250, -1.338),
+    cameraPos: new THREE.Vector3(0.506, 0.580, -1.183),
+  },
+  {
+    id: 'bedroom-light',
+    name: '主卧灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '主卧',
+    position: new THREE.Vector3(0.719, 0.221, 0.153),
+    cameraPos: new THREE.Vector3(0.672, 0.439, -1.153),
+  },
+  {
+    id: 'bedroom2-ac',
+    name: '次卧空调',
+    icon: '❄️',
+    type: 'ac',
+    room: '次卧',
+    position: new THREE.Vector3(-0.121, 0.215, -1.768),
+    cameraPos: new THREE.Vector3(-1.198, 0.597, -1.682),
+  },
+  {
+    id: 'ac-outlet-b',
+    name: '空调插座B',
+    icon: '🔌',
+    type: 'outlet',
+    room: '次卧',
+    position: new THREE.Vector3(-0.042, 0.239, -1.341),
+    cameraPos: new THREE.Vector3(-1.191, 0.606, -1.355),
+  },
+  {
+    id: 'bedroom2-light',
+    name: '次卧灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '次卧',
+    position: new THREE.Vector3(-0.739, 0.212, 0.153),
+    cameraPos: new THREE.Vector3(-0.781, 0.622, -0.905),
+  },
+  {
+    id: 'living-tv',
+    name: '客厅电视',
+    icon: '📺',
+    type: 'tv',
+    room: '客厅',
+    position: new THREE.Vector3(-1.199, 0.201, 0.230),
+    cameraPos: new THREE.Vector3(-1.209, 0.565, 1.392),
+  },
+  {
+    id: 'living-outlet-a',
+    name: '客厅插座A',
+    icon: '🔌',
+    type: 'outlet',
+    room: '客厅',
+    position: new THREE.Vector3(-1.699, -0.176, 0.221),
+    cameraPos: new THREE.Vector3(-1.634, 0.223, 1.086),
+  },
+  {
+    id: 'air-sensor',
+    name: '空气质量传感器',
+    icon: '📡',
+    type: 'sensor',
+    room: '客厅',
+    position: new THREE.Vector3(-1.814, 0.229, 0.940),
+    cameraPos: new THREE.Vector3(-0.930, 0.476, 0.964),
+  },
+  {
+    id: 'door-controller',
+    name: '门禁控制器',
+    icon: '🔒',
+    type: 'security',
+    room: '玄关',
+    position: new THREE.Vector3(-1.814, 0.224, 1.646),
+    cameraPos: new THREE.Vector3(-1.050, 0.503, 1.624),
+  },
+  {
+    id: 'living-light',
+    name: '客厅灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '客厅',
+    position: new THREE.Vector3(0.016, 0.181, 2.886),
+    cameraPos: new THREE.Vector3(-0.010, 0.474, 1.772),
+  },
+  {
+    id: 'living-outlet-b',
+    name: '客厅插座B',
+    icon: '🔌',
+    type: 'outlet',
+    room: '客厅',
+    noArrow: true,
+    position: new THREE.Vector3(0.016, 0.341, 2.891),
+    cameraPos: new THREE.Vector3(-0.010, 0.474, 1.772),
+  },
+  {
+    id: 'kitchen-light',
+    name: '厨房灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '厨房',
+    position: new THREE.Vector3(0.846, 0.185, 2.886),
+    cameraPos: new THREE.Vector3(0.796, 0.473, 1.753),
+  },
+  {
+    id: 'kitchen-outlet',
+    name: '厨房插座',
+    icon: '🔌',
+    type: 'outlet',
+    room: '厨房',
+    position: new THREE.Vector3(1.810, 0.244, 1.546),
+    cameraPos: new THREE.Vector3(0.549, 0.412, 1.591),
+  },
+  {
+    id: 'smoke-sensor',
+    name: '烟雾/燃气传感器',
+    icon: '🔥',
+    type: 'sensor',
+    room: '厨房',
+    position: new THREE.Vector3(1.619, 0.234, 1.332),
+    cameraPos: new THREE.Vector3(1.602, 0.639, 2.473),
+  },
+  {
+    id: 'water-sensor',
+    name: '水浸传感器',
+    icon: '💧',
+    type: 'sensor',
+    room: '卫生间',
+    position: new THREE.Vector3(1.618, 0.234, 0.244),
+    cameraPos: new THREE.Vector3(1.607, 0.768, 1.414),
+  },
+  {
+    id: 'bathroom-light',
+    name: '卫生间灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '卫生间',
+    position: new THREE.Vector3(0.679, 0.203, 0.580),
+    cameraPos: new THREE.Vector3(1.847, 0.635, 0.589),
+  },
+  {
+    id: 'balcony-light',
+    name: '阳台灯开关',
+    icon: '💡',
+    type: 'light',
+    room: '阳台',
+    position: new THREE.Vector3(0.586, 0.234, -2.193),
+    cameraPos: new THREE.Vector3(0.654, 0.627, -3.035),
+  },
+  {
+    id: 'outdoor-air-sensor',
+    name: '温湿度/光照传感器',
+    icon: '🌡',
+    type: 'sensor',
+    room: '阳台',
+    position: new THREE.Vector3(1.415, 0.215, -2.193),
+    cameraPos: new THREE.Vector3(1.476, 0.646, -3.021),
+  },
+]
