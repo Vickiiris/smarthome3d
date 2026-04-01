@@ -1162,7 +1162,8 @@ onHotspotClick.value = (hotspot) => {
     fanSpeed: matched?.fanSpeed ?? 'auto',
     ip:       matched?.ip       ?? null,
     vendor:   matched?.vendor   ?? '未知',
-    online:   matched?.online   ?? true,
+    online:   matched ? deviceOnline(matched) : true,
+    icon:     matched?.icon     ?? null,
   }
   showSlidePanel.value = true
 }
@@ -1183,13 +1184,21 @@ function deviceOnline(device) {
 function onDeviceUpdate(device) {
   const idx = deviceList.value.findIndex(d => d.name === device.name || d.id === device.id)
   if (idx !== -1) {
+    // 更新 deviceList（创建新引用，触发所有使用处响应式更新）
     deviceList.value[idx] = {
       ...deviceList.value[idx],
       status:   device.status,
       value:    device.value    ?? deviceList.value[idx].value,
       mode:     device.mode     ?? deviceList.value[idx].mode,
       fanSpeed: device.fanSpeed ?? deviceList.value[idx].fanSpeed,
+      // Mesh 设备：开关状态决定在线状态
+      online:   GATEWAY_TYPES.has(deviceList.value[idx].type)
+                  ? (deviceList.value[idx].online ?? true)
+                  : device.status,
     }
+    // 同步更新当前打开的控制面板引用，使其指向 deviceList 中的最新对象
+    selectedHotspotDevice.value = deviceList.value[idx]
+    selectedDevice.value = deviceList.value[idx]
   }
 }
 
@@ -1430,9 +1439,14 @@ function getDeviceColor(device) {
 function toggleDevice(device) {
   const idx = deviceList.value.findIndex(d => d.id === device.id || d.name === device.name)
   if (idx !== -1) {
+    const newStatus = !deviceList.value[idx].status
     deviceList.value[idx] = {
       ...deviceList.value[idx],
-      status: !deviceList.value[idx].status,
+      status: newStatus,
+      // Mesh 设备：开关状态决定在线状态
+      online: GATEWAY_TYPES.has(deviceList.value[idx].type)
+                ? (deviceList.value[idx].online ?? true)
+                : newStatus,
     }
   }
 }
@@ -1453,7 +1467,7 @@ function openDeviceControl(device) {
     room:     latest.room,
     vendor:   latest.vendor,
     ip:       latest.ip,
-    online:   latest.online,
+    online:   deviceOnline(latest),
   }
   showControlPanel.value = true
 }
@@ -1631,7 +1645,7 @@ function openDeviceControlFromTable(device) {
     room:     latest.room,
     vendor:   latest.vendor,
     ip:       latest.ip,
-    online:   latest.online,
+    online:   deviceOnline(latest),
   }
   showControlPanel.value = true
 }

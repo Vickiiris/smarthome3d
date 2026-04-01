@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, readonly } from 'vue'
 
 const props = defineProps({
   visible: Boolean,
@@ -236,10 +236,10 @@ function toggleStatus() {
   localStatus.value = !localStatus.value
   emit('toggle', localStatus.value)
   emit('update', {
-    ...props.device,
-    status: localStatus.value,
-    value: props.device?.type === 'ac' ? temperature.value : brightness.value,
-    mode: acMode.value,
+    ...readonly(props.device),
+    status:   localStatus.value,
+    value:    props.device?.type === 'ac' ? temperature.value : brightness.value,
+    mode:     acMode.value,
     fanSpeed: acFanSpeed.value,
   })
 }

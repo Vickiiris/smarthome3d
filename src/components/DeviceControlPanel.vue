@@ -43,7 +43,7 @@
               <div class="dcp-switch-row">
                 <span class="dcp-switch-label">{{ localStatus ? '设备已开启' : '设备已关闭' }}</span>
                 <div class="dcp-toggle" @click="togglePower">
-                  <div class="dcp-toggle-track" :class="{ on: localStatus }">
+                  <div class="dcp-toggle-track" :class="{ on: !!localStatus }">
                     <div class="dcp-toggle-thumb"></div>
                   </div>
                 </div>
@@ -51,7 +51,7 @@
             </div>
 
             <!-- 空调控制 -->
-            <template v-if="device?.type === 'ac' && localStatus">
+            <template v-if="device?.type === 'ac' && !!localStatus">
               <div class="dcp-section">
                 <div class="dcp-section-title">🌡 温度设置</div>
                 <div class="dcp-temp-row">
@@ -93,7 +93,7 @@
             </template>
 
             <!-- 灯光控制 -->
-            <template v-else-if="device?.type === 'light' && localStatus">
+            <template v-else-if="device?.type === 'light' && !!localStatus">
               <div class="dcp-section">
                 <div class="dcp-section-title">☀️ 亮度调节</div>
                 <input
@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, readonly } from 'vue'
 
 const props = defineProps({
   visible: Boolean,
@@ -173,10 +173,23 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'update'])
 
-const localValue = ref(24)
-const localStatus = ref(true)
-const localMode = ref('cool')
-const localFanSpeed = ref('auto')
+// 所有本地状态通过 watch 从 props 同步，initialValue 仅为 null 占位
+const localValue = ref(null)
+const localStatus = ref(null)
+const localMode = ref(null)
+const localFanSpeed = ref(null)
+
+watch(
+  () => props.device,
+  (d) => {
+    if (!d) return
+    localValue.value    = d.value    ?? (d.type === 'ac' ? 24 : 80)
+    localStatus.value   = d.status   ?? false
+    localMode.value     = d.mode     ?? 'cool'
+    localFanSpeed.value = d.fanSpeed ?? 'auto'
+  },
+  { immediate: true, deep: true }
+)
 
 const acModes = [
   { value: 'cool', label: '制冷', icon: '❄️' },
@@ -233,14 +246,6 @@ const powerData = computed(() => {
   }
 })
 
-watch(() => props.device, (d) => {
-  if (!d) return
-  localValue.value    = d.value    ?? (d.type === 'ac' ? 24 : 80)
-  localStatus.value   = d.status   ?? true
-  localMode.value     = d.mode     ?? 'cool'
-  localFanSpeed.value = d.fanSpeed ?? 'auto'
-}, { immediate: true })
-
 function adjustTemp(delta) {
   localValue.value = Math.max(16, Math.min(30, localValue.value + delta))
   emitUpdate()
@@ -253,7 +258,13 @@ function setBrightness(v) {
 }
 function togglePower() { localStatus.value = !localStatus.value; emitUpdate() }
 function emitUpdate() {
-  emit('update', { ...props.device, value: localValue.value, status: localStatus.value, mode: localMode.value, fanSpeed: localFanSpeed.value })
+  emit('update', {
+    ...readonly(props.device),
+    status:   localStatus.value,
+    value:    localValue.value,
+    mode:     localMode.value,
+    fanSpeed: localFanSpeed.value,
+  })
 }
 function close() { emit('close') }
 </script>
