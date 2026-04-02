@@ -205,12 +205,12 @@ const fanSpeeds = [
 ]
 
 const deviceIcon = computed(() => {
-  const m = { ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀' }
+  const m = { ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀', washer:'🍽️', speaker:'🔊', heater:'🚿' }
   return m[props.device?.type] || '📱'
 })
 
 const deviceTypeLabel = computed(() => {
-  const m = { ac:'空调', light:'照明', tv:'电视', outlet:'插座', sensor:'传感器', security:'安防', ventil:'新风' }
+  const m = { ac:'空调', light:'照明', tv:'电视', outlet:'插座', sensor:'传感器', security:'安防', ventil:'抽油烟机', washer:'洗碗机', speaker:'音箱', heater:'热水器' }
   return m[props.device?.type] || '智能设备'
 })
 

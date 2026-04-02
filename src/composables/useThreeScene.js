@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 import gsap from 'gsap'
 
 const INITIAL_CAMERA = {
@@ -73,7 +74,7 @@ export function useThreeScene(canvasRef) {
     _renderer.shadowMap.enabled = true
     _renderer.shadowMap.type = THREE.PCFSoftShadowMap
     _renderer.toneMapping = THREE.ACESFilmicToneMapping
-    _renderer.toneMappingExposure = 2.0
+    _renderer.toneMappingExposure = 0.8
     _renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.value = _renderer
 
@@ -96,7 +97,7 @@ export function useThreeScene(canvasRef) {
     _controls.target.copy(INITIAL_CAMERA.target)
     controls.value = _controls
 
-    setupLights(_scene)
+    setupLights(_scene, _renderer)
     loadModel(_scene)
     animate()
     window.addEventListener('resize', onResize)
@@ -161,6 +162,7 @@ export function useThreeScene(canvasRef) {
           sizeAttenuation: true,
         })
         const sprite = new THREE.Sprite(mat)
+        sprite.renderOrder = 999  // 始终显示在最顶层，避免被模型遮挡
         // noArrow 的顶牌只有背景高度，sprite 高度减半
         const spriteH = def.noArrow ? 0.11 : 0.175
         sprite.scale.set(0.28, spriteH, 1)
@@ -177,7 +179,9 @@ export function useThreeScene(canvasRef) {
   }
 
   function onCanvasClick(e) {
-    if (!camera.value || !controls.value) return
+    if (!camera.value || !controls.value || !model.value) return
+    const cam = camera.value
+    const tgt = controls.value.target
     const canvas = canvasRef.value
     const rect = canvas.getBoundingClientRect()
     const mouse = new THREE.Vector2(
@@ -186,6 +190,13 @@ export function useThreeScene(canvasRef) {
     )
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(mouse, camera.value)
+
+    // 检测点击模型的位置
+    const intersects = raycaster.intersectObject(model.value, true)
+    if (intersects.length > 0) {
+      const point = intersects[0].point
+      console.log(`[点击模型] 位置(${point.x.toFixed(3)}, ${point.y.toFixed(3)}, ${point.z.toFixed(3)}) | 相机 pos(${cam.position.x.toFixed(3)}, ${cam.position.y.toFixed(3)}, ${cam.position.z.toFixed(3)}) | target(${tgt.x.toFixed(3)}, ${tgt.y.toFixed(3)}, ${tgt.z.toFixed(3)})`)
+    }
 
     // 只检测可见的热点
     const visibleSprites = hotspotSprites.filter(h => h.sprite.visible).map(h => h.sprite)
@@ -205,9 +216,9 @@ export function useThreeScene(canvasRef) {
     }
   }
 
-  function setupLights(_scene) {
-    _scene.add(new THREE.AmbientLight(0xffffff, 1.2))
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.5)
+  function setupLights(_scene, _renderer) {
+    _scene.add(new THREE.AmbientLight(0xffffff, 1))
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 0.5)
     hemi.position.set(0, 20, 0)
     _scene.add(hemi)
     const dir = new THREE.DirectionalLight(0xffffff, 2.5)
@@ -222,31 +233,42 @@ export function useThreeScene(canvasRef) {
     dir.shadow.camera.bottom = -10
     dir.shadow.bias = -0.001
     _scene.add(dir)
-    const fill = new THREE.DirectionalLight(0xffffff, 1.5)
+    const fill = new THREE.DirectionalLight(0xffffff, 1)
     fill.position.set(-5, 8, -5)
     _scene.add(fill)
     const pts = [
-      ['light-1', 0xfff5e0, 3, -0.5, 2, 1],
-      ['light-2', 0xffa040, 2.5, -0.5, 1.5, 0],
-      ['light-3', 0xfff0d0, 2.5, -0.65, 2, -0.56],
-      ['light-4', 0xa78bfa, 2, 0.6, 1.5, -0.5],
-      ['light-5', 0xf0f8ff, 3, 0.6, 2, 1.0],
-      ['light-6', 0xffffff, 2.5, 0.72, 2, 0.15],
+      ['light-1', 0xfff5e0, 2, -0.5, 2, 1],
+      ['light-2', 0xffa040, 1.5, -0.5, 1.5, 0],
+      ['light-3', 0xfff0d0, 1.5, -0.65, 2, -0.56],
+      ['light-4', 0xa78bfa, 1, 0.6, 1.5, -0.5],
+      ['light-5', 0xf0f8ff, 2, 0.6, 2, 1.0],
+      ['light-6', 0xffffff, 1.5, 0.72, 2, 0.15],
     ]
     pts.forEach(([id, color, intensity, x, y, z]) => {
-      const light = new THREE.PointLight(color, intensity, 12)
+      const light = new THREE.PointLight(color, intensity, 2.5)
       light.position.set(x, y, z)
       _scene.add(light)
       lightObjects.set(id, light)
+    })
+
+    // 加载本地 HDR 环境贴图
+    const pmremGenerator = new THREE.PMREMGenerator(_renderer)
+    pmremGenerator.compileEquirectangularShader()
+    new RGBELoader().load('/texture/skybox_box.hdr', (texture) => {
+      const envMap = pmremGenerator.fromEquirectangular(texture)
+      _scene.environment = envMap.texture
+      _scene.environmentIntensity = 0.1
+      texture.dispose()
+      pmremGenerator.dispose()
     })
   }
 
   function loadModel(_scene) {
     const dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
+    dracoLoader.setDecoderPath('/draco/')
     const loader = new GLTFLoader()
     loader.setDRACOLoader(dracoLoader)
-    loader.load('/models/Room_01.glb',
+    loader.load('/models/Room_001.glb',
       (gltf) => {
         const _model = gltf.scene
         const box = new THREE.Box3().setFromObject(_model)
@@ -260,7 +282,7 @@ export function useThreeScene(canvasRef) {
             child.castShadow = true
             child.receiveShadow = true
             if (child.material instanceof THREE.MeshStandardMaterial)
-              child.material.envMapIntensity = 1.5
+              child.material.envMapIntensity = 1
           }
         })
         _scene.add(_model)
@@ -268,7 +290,7 @@ export function useThreeScene(canvasRef) {
         createHotspots(_scene)
         _model.scale.setScalar(0)
         gsap.to(_model.scale, { x: scale, y: scale, z: scale, duration: 1.2, ease: 'back.out(1.7)', onComplete: () => { isLoading.value = false } })
-      },
+  },
       (p) => { if (p.total > 0) loadProgress.value = Math.round(p.loaded / p.total * 100) },
       (err) => { console.error(err); isLoading.value = false }
     )
@@ -375,8 +397,8 @@ const HOTSPOTS = [
     icon: '❄️',
     type: 'ac',
     room: '主卧',
-    position: new THREE.Vector3(1.785, 0.244, -1.780),
-    cameraPos: new THREE.Vector3(0.515, 0.609, -1.782),
+position: new THREE.Vector3(1.660, 0.026, -1.610),
+    cameraPos: new THREE.Vector3(0.468, 0.171, -1.485),
   },
   {
     id: 'ac-outlet-a',
@@ -384,8 +406,8 @@ const HOTSPOTS = [
     icon: '🔌',
     type: 'outlet',
     room: '主卧',
-    position: new THREE.Vector3(1.795, 0.250, -1.338),
-    cameraPos: new THREE.Vector3(0.506, 0.580, -1.183),
+position: new THREE.Vector3(1.745, 0.053, -1.201),
+    cameraPos: new THREE.Vector3(0.496, 0.348, -1.132),
   },
   {
     id: 'bedroom-light',
@@ -393,8 +415,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '主卧',
-    position: new THREE.Vector3(0.719, 0.221, 0.153),
-    cameraPos: new THREE.Vector3(0.672, 0.439, -1.153),
+position: new THREE.Vector3(0.696, -0.060, 0.242),
+    cameraPos: new THREE.Vector3(0.662, 0.207, -1.102),
   },
   {
     id: 'bedroom2-ac',
@@ -402,8 +424,8 @@ const HOTSPOTS = [
     icon: '❄️',
     type: 'ac',
     room: '次卧',
-    position: new THREE.Vector3(-0.121, 0.215, -1.768),
-    cameraPos: new THREE.Vector3(-1.198, 0.597, -1.682),
+position: new THREE.Vector3(-0.131, -0.017, -1.607),
+    cameraPos: new THREE.Vector3(-1.208, 0.365, -1.631),
   },
   {
     id: 'ac-outlet-b',
@@ -411,8 +433,8 @@ const HOTSPOTS = [
     icon: '🔌',
     type: 'outlet',
     room: '次卧',
-    position: new THREE.Vector3(-0.042, 0.239, -1.341),
-    cameraPos: new THREE.Vector3(-1.191, 0.606, -1.355),
+position: new THREE.Vector3(-0.033, 0.040, -1.193),
+    cameraPos: new THREE.Vector3(-1.224, 0.316, -1.154),
   },
   {
     id: 'bedroom2-light',
@@ -420,8 +442,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '次卧',
-    position: new THREE.Vector3(-0.739, 0.212, 0.153),
-    cameraPos: new THREE.Vector3(-0.781, 0.622, -0.905),
+position: new THREE.Vector3(-0.708, -0.057, 0.242),
+    cameraPos: new THREE.Vector3(-0.791, 0.390, -0.854),
   },
   {
     id: 'living-tv',
@@ -429,8 +451,17 @@ const HOTSPOTS = [
     icon: '📺',
     type: 'tv',
     room: '客厅',
-    position: new THREE.Vector3(-1.199, 0.201, 0.230),
-    cameraPos: new THREE.Vector3(-1.209, 0.565, 1.392),
+    position: new THREE.Vector3(-1.209, -0.031, 0.281),
+    cameraPos: new THREE.Vector3(-1.219, 0.333, 1.443),
+  },
+  {
+    id: 'living-speaker',
+    name: '智能音箱',
+    icon: '🔊',
+    type: 'speaker',
+    room: '客厅',
+    position: new THREE.Vector3(-1.212, -0.241, 2.053),
+    cameraPos: new THREE.Vector3(-0.879, -0.120, 1.706),
   },
   {
     id: 'living-outlet-a',
@@ -438,8 +469,8 @@ const HOTSPOTS = [
     icon: '🔌',
     type: 'outlet',
     room: '客厅',
-    position: new THREE.Vector3(-1.699, -0.176, 0.221),
-    cameraPos: new THREE.Vector3(-1.634, 0.223, 1.086),
+    position: new THREE.Vector3(-1.647, -0.358, 0.272),
+    cameraPos: new THREE.Vector3(-1.584, 0.041, 1.137),
   },
   {
     id: 'air-sensor',
@@ -447,8 +478,8 @@ const HOTSPOTS = [
     icon: '📡',
     type: 'sensor',
     room: '客厅',
-    position: new THREE.Vector3(-1.814, 0.229, 0.940),
-    cameraPos: new THREE.Vector3(-0.930, 0.476, 0.964),
+    position: new THREE.Vector3(-1.824, -0.003, 0.991),
+    cameraPos: new THREE.Vector3(-0.940, 0.244, 1.015),
   },
   {
     id: 'door-controller',
@@ -456,8 +487,8 @@ const HOTSPOTS = [
     icon: '🔒',
     type: 'security',
     room: '玄关',
-    position: new THREE.Vector3(-1.814, 0.224, 1.646),
-    cameraPos: new THREE.Vector3(-1.050, 0.503, 1.624),
+    position: new THREE.Vector3(-1.824, -0.008, 1.697),
+    cameraPos: new THREE.Vector3(-1.060, 0.271, 1.675),
   },
   {
     id: 'living-light',
@@ -465,8 +496,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '客厅',
-    position: new THREE.Vector3(0.016, 0.181, 2.886),
-    cameraPos: new THREE.Vector3(-0.010, 0.474, 1.772),
+    position: new THREE.Vector3(0.006, -0.051, 2.937),
+    cameraPos: new THREE.Vector3(-0.020, 0.242, 1.823),
   },
   {
     id: 'living-outlet-b',
@@ -475,8 +506,8 @@ const HOTSPOTS = [
     type: 'outlet',
     room: '客厅',
     noArrow: true,
-    position: new THREE.Vector3(0.016, 0.341, 2.891),
-    cameraPos: new THREE.Vector3(-0.010, 0.474, 1.772),
+    position: new THREE.Vector3(0.006, 0.109, 2.942),
+    cameraPos: new THREE.Vector3(-0.020, 0.242, 1.823),
   },
   {
     id: 'kitchen-light',
@@ -484,8 +515,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '厨房',
-    position: new THREE.Vector3(0.846, 0.185, 2.886),
-    cameraPos: new THREE.Vector3(0.796, 0.473, 1.753),
+    position: new THREE.Vector3(0.819, -0.014, 2.890),
+    cameraPos: new THREE.Vector3(0.802, 0.284, 1.850),
   },
   {
     id: 'kitchen-outlet',
@@ -493,8 +524,8 @@ const HOTSPOTS = [
     icon: '🔌',
     type: 'outlet',
     room: '厨房',
-    position: new THREE.Vector3(1.810, 0.244, 1.546),
-    cameraPos: new THREE.Vector3(0.549, 0.412, 1.591),
+    position: new THREE.Vector3(1.800, 0.012, 1.597),
+    cameraPos: new THREE.Vector3(0.539, 0.180, 1.642),
   },
   {
     id: 'smoke-sensor',
@@ -502,8 +533,8 @@ const HOTSPOTS = [
     icon: '🔥',
     type: 'sensor',
     room: '厨房',
-    position: new THREE.Vector3(1.619, 0.234, 1.332),
-    cameraPos: new THREE.Vector3(1.602, 0.639, 2.473),
+    position: new THREE.Vector3(1.409, 0.028, 2.871),
+    cameraPos: new THREE.Vector3(1.323, 0.327, 1.827),
   },
   {
     id: 'water-sensor',
@@ -511,8 +542,8 @@ const HOTSPOTS = [
     icon: '💧',
     type: 'sensor',
     room: '卫生间',
-    position: new THREE.Vector3(1.618, 0.234, 0.244),
-    cameraPos: new THREE.Vector3(1.607, 0.768, 1.414),
+    position: new THREE.Vector3(1.728, -0.501, 0.889),
+    cameraPos: new THREE.Vector3(0.721, 0.083, 0.913),
   },
   {
     id: 'bathroom-light',
@@ -520,8 +551,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '卫生间',
-    position: new THREE.Vector3(0.679, 0.203, 0.580),
-    cameraPos: new THREE.Vector3(1.847, 0.635, 0.589),
+    position: new THREE.Vector3(0.661, -0.064, 0.804),
+    cameraPos: new THREE.Vector3(1.685, 0.299, 0.790),
   },
   {
     id: 'balcony-light',
@@ -529,8 +560,8 @@ const HOTSPOTS = [
     icon: '💡',
     type: 'light',
     room: '阳台',
-    position: new THREE.Vector3(0.586, 0.234, -2.193),
-    cameraPos: new THREE.Vector3(0.654, 0.627, -3.035),
+position: new THREE.Vector3(0.576, 0.002, -2.032),
+    cameraPos: new THREE.Vector3(0.644, 0.395, -2.984),
   },
   {
     id: 'outdoor-air-sensor',
@@ -538,7 +569,43 @@ const HOTSPOTS = [
     icon: '🌡',
     type: 'sensor',
     room: '阳台',
-    position: new THREE.Vector3(1.415, 0.215, -2.193),
-    cameraPos: new THREE.Vector3(1.476, 0.646, -3.021),
+position: new THREE.Vector3(1.368, 0.008, -2.022),
+    cameraPos: new THREE.Vector3(1.348, 0.382, -2.988),
+  },
+  {
+    id: 'kitchen-heater',
+    name: '燃气热水器',
+    icon: '🚿',
+    type: 'heater',
+    room: '厨房',
+    position: new THREE.Vector3(1.602, 0.404, 2.827),
+    cameraPos: new THREE.Vector3(1.570, 0.470, 1.911),
+  },
+  {
+    id: 'bedroom-washer',
+    name: '洗衣机',
+    icon: '🧺',
+    type: 'washer',
+    room: '主卧',
+    position: new THREE.Vector3(1.469, -0.097, -2.541),
+    cameraPos: new THREE.Vector3(0.281, 0.419, -2.563),
+  },
+  {
+    id: 'kitchen-range-hood',
+    name: '抽油烟机',
+    icon: '🌀',
+    type: 'ventil',
+    room: '厨房',
+    position: new THREE.Vector3(1.650, 0.490, 1.864),
+    cameraPos: new THREE.Vector3(0.585, 0.479, 1.835),
+  },
+  {
+    id: 'kitchen-dishwasher',
+    name: '洗碗机',
+    icon: '🍽️',
+    type: 'washer',
+    room: '厨房',
+    position: new THREE.Vector3(1.445, -0.190, 2.358),
+    cameraPos: new THREE.Vector3(0.679, -0.088, 2.337),
   },
 ]

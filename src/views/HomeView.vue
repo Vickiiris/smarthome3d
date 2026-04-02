@@ -1171,7 +1171,7 @@ onHotspotClick.value = (hotspot) => {
 // 设备分类：
 // 网关设备（断电不离线）：传感器、新风、门禁、开关(light)、插座(outlet)
 // Mesh设备（断电即离线）：灯具、空调、电视、热水器、洗碗机、音箱
-const GATEWAY_TYPES = new Set(['sensor', 'security', 'ventil', 'light', 'outlet'])
+const GATEWAY_TYPES = new Set(['sensor', 'security', 'light', 'outlet'])
 
 // 在线状态计算：网关类设备始终在线，Mesh设备跟随 status
 function deviceOnline(device) {
@@ -1757,13 +1757,13 @@ const deviceList = ref([
   // 原有设备
   { id: 'dev1',  name: '客厅空调',           icon: '❄️',  room: '客厅',   vendor: '三星',    ip: '192.168.1.47', online: true,  status: true,  type: 'ac',       value: 24 },
   { id: 'dev3',  name: '新风系统',           icon: '🌀',  room: '全屋',   vendor: '海尔',    ip: '192.168.1.83', online: true,  status: true,  type: 'ventil',   value: 50 },
-  { id: 'dev4',  name: '客厅电视',           icon: '📺',  room: '客厅',   vendor: 'SONY',    ip: '192.168.1.156',online: true,  status: false, type: 'tv',       value: 30 },
-  { id: 'dev5',  name: '智能音箱',           icon: '🔊',  room: '客厅',   vendor: '小米',    ip: '192.168.1.29', online: true,  status: true,  type: 'speaker',  value: 60 },
+  { id: 'dev4',  name: '客厅电视',           icon: '📺',  room: '客厅',   vendor: '三星',    ip: '192.168.1.156',online: true,  status: false, type: 'tv',       value: 30 },
+  { id: 'dev5',  name: '智能音箱',           icon: '🔊',  room: '客厅',   vendor: '米歇尔',    ip: '192.168.1.29', online: true,  status: true,  type: 'speaker',  value: 60 },
   { id: 'dev6',  name: '门禁系统',           icon: '🔒',  room: '玄关',   vendor: '德施曼',  ip: '192.168.1.112',online: true,  status: false, type: 'security', value: 0  },
   { id: 'dev7',  name: '主卧空调',           icon: '🌬️', room: '主卧',   vendor: '三星',    ip: '192.168.1.64', online: true,  status: false, type: 'ac',       value: 26 },
   { id: 'dev8',  name: '次卧空调',           icon: '🌡️', room: '次卧',   vendor: '三星',    ip: '192.168.1.91', online: true,  status: false, type: 'ac',       value: 26 },
   { id: 'dev9',  name: '洗碗机',             icon: '🍽️', room: '厨房',   vendor: '西门子',  ip: '192.168.1.178',online: true,  status: false, type: 'washer',   value: 0  },
-  { id: 'dev10', name: '热水器',             icon: '🚿',  room: '厨房',   vendor: '林内',    ip: '192.168.1.203',online: true,  status: false, type: 'heater',   value: 55 },
+  { id: 'dev10', name: '燃气热水器',         icon: '🚿',  room: '厨房',   vendor: '阿里斯顿',    ip: '192.168.1.203',online: true,  status: false, type: 'heater',   value: 55 },
   // 顶牌设备（3D场景中的设备）
   { id: 'dev11', name: '空调插座A',           icon: '🔌',  room: '主卧',   vendor: '小米',    ip: '192.168.1.38', online: true,  status: true,  type: 'outlet',   value: 0  },
   { id: 'dev12', name: '主卧灯开关',         icon: '🛏️', room: '主卧',   vendor: '小米',    ip: '192.168.1.55', online: true,  status: true,  type: 'light',    value: 80 },
@@ -1781,6 +1781,8 @@ const deviceList = ref([
   { id: 'dev25', name: '卫生间灯开关',       icon: '🚿',  room: '卫生间', vendor: '小米',    ip: '192.168.1.33', online: true,  status: false, type: 'light',    value: 0  },
   { id: 'dev26', name: '阳台灯开关',         icon: '🌿',  room: '阳台',   vendor: '小米',    ip: '192.168.1.58', online: true,  status: false, type: 'light',    value: 0  },
   { id: 'dev27', name: '温湿度/光照传感器', icon: '🌡️', room: '阳台',   vendor: '小米',    ip: '192.168.1.76', online: true,  status: true,  type: 'sensor',   value: 0  },
+  // 顶牌新增设备
+  { id: 'dev28', name: '抽油烟机',          icon: '🌀',  room: '厨房',   vendor: '欧派',    ip: '192.168.1.142',online: true,  status: false, type: 'ventil',   value: 0  },
 ])
 
 // 设备列表筛选
@@ -1942,10 +1944,10 @@ const products = [
   { id: 15, icon: '🚪', name: '门磁感应器',          sub: '传感器',   vendor: '小米',     tag: '待接入', protocol: 'Zigbee 3.0', power: '电池' },
   { id: 16, icon: '👤', name: '人体存在传感器',      sub: '传感器',   vendor: '领普',     tag: '未接入', protocol: 'Zigbee 3.0', power: '电池' },
   // 家电控制
-  { id: 17, icon: '📺', name: '智能电视 65Q7',       sub: '家电控制', vendor: 'SONY',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v5.0.2', connectedAt: '2024-07-05', signal: '强 (-37dBm)' },
-  { id: 18, icon: '🔊', name: '智能音箱 Pro',        sub: '家电控制', vendor: '小米',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.4.1', connectedAt: '2024-08-01', signal: '强 (-43dBm)' },
+  { id: 17, icon: '📺', name: '智能电视 65Q7',       sub: '家电控制', vendor: '三星',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v5.0.2', connectedAt: '2024-07-05', signal: '强 (-37dBm)' },
+  { id: 18, icon: '🔊', name: '智能音箱 Pro',        sub: '家电控制', vendor: '米歇尔',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.4.1', connectedAt: '2024-08-01', signal: '强 (-43dBm)' },
   { id: 19, icon: '🍽️', name: '智能洗碗机',          sub: '家电控制', vendor: '西门子',   tag: '待接入', protocol: 'Wi-Fi', power: '220V AC' },
-  { id: 20, icon: '🚿', name: '燃气热水器',          sub: '家电控制', vendor: '林内',     tag: '待接入', protocol: 'Wi-Fi', power: '燃气' },
+  { id: 20, icon: '🚿', name: '燃气热水器',          sub: '家电控制', vendor: '阿里斯顿',     tag: '待接入', protocol: 'Wi-Fi', power: '燃气' },
   { id: 21, icon: '🧹', name: '扫地机器人 S1',       sub: '家电控制', vendor: '石头',     tag: '未接入', protocol: 'Wi-Fi', power: '充电' },
   // 能源管理
   { id: 22, icon: '🔌', name: '智能插座',            sub: '能源管理', vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.0.3', connectedAt: '2024-09-18', signal: '强 (-46dBm)' },
