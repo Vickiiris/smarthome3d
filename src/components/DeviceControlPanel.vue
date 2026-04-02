@@ -145,6 +145,84 @@
               </div>
             </template>
 
+            <!-- 电视控制 -->
+            <template v-else-if="device?.type === 'tv' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">📺 音量调节</div>
+                <input type="range" class="dcp-slider" v-model.number="localValue" @input="emitUpdate" min="0" max="100" />
+                <div class="dcp-slider-labels"><span>0%</span><span class="dcp-slider-cur">{{ localValue }}%</span><span>100%</span></div>
+              </div>
+              <div class="dcp-section">
+                <div class="dcp-section-title">🖼️ 画面模式</div>
+                <div class="dcp-mode-grid">
+                  <button v-for="m in tvModes" :key="m.value" class="dcp-mode-btn" :class="{ active: localMode === m.value }" @click="localMode = m.value; emitUpdate()">{{ m.label }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- 音箱控制 -->
+            <template v-else-if="device?.type === 'speaker' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">🔊 音量调节</div>
+                <input type="range" class="dcp-slider" v-model.number="localValue" @input="emitUpdate" min="0" max="100" />
+                <div class="dcp-slider-labels"><span>0%</span><span class="dcp-slider-cur">{{ localValue }}%</span><span>100%</span></div>
+              </div>
+            </template>
+
+            <!-- 抽油烟机控制 -->
+            <template v-else-if="device?.type === 'ventil' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">🌀 档位调节</div>
+                <div class="dcp-mode-grid">
+                  <button v-for="s in ventilSpeeds" :key="s.value" class="dcp-mode-btn" :class="{ active: localValue === s.value }" @click="localValue = s.value; emitUpdate()">{{ s.label }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- 洗碗机控制 -->
+            <template v-else-if="device?.type === 'washer' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">🍽️ 洗涤模式</div>
+                <div class="dcp-mode-grid">
+                  <button v-for="m in washerModes" :key="m.value" class="dcp-mode-btn" :class="{ active: localMode === m.value }" @click="localMode = m.value; emitUpdate()">{{ m.label }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- 热水器控制 -->
+            <template v-else-if="device?.type === 'heater' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">🌡 水温设置</div>
+                <div class="dcp-temp-row">
+                  <button class="dcp-temp-btn" @click="adjustTemp(-1)">−</button>
+                  <div class="dcp-temp-display"><span class="dcp-temp-val">{{ localValue }}</span><span class="dcp-temp-unit">°C</span></div>
+                  <button class="dcp-temp-btn" @click="adjustTemp(1)">+</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- 门禁控制 -->
+            <template v-else-if="device?.type === 'security' && !!localStatus">
+              <div class="dcp-section">
+                <div class="dcp-section-title">🔓 解锁控制</div>
+                <div class="dcp-switch-row">
+                  <span class="dcp-switch-label">{{ localValue > 0 ? '已锁定' : '已解锁' }}</span>
+                  <div class="dcp-toggle" @click="localValue = localValue > 0 ? 0 : 1; emitUpdate()">
+                    <div class="dcp-toggle-track" :class="{ on: localValue === 0 }">
+                      <div class="dcp-toggle-thumb"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="dcp-section">
+                <div class="dcp-section-title">📹 视频对讲</div>
+                <div class="dcp-grid">
+                  <div class="dcp-dd-item"><span class="dcp-dd-label">实时画面</span><span class="dcp-dd-value" style="color: var(--primary)">点击查看</span></div>
+                  <div class="dcp-dd-item"><span class="dcp-dd-label">通话状态</span><span class="dcp-dd-value">空闲中</span></div>
+                </div>
+              </div>
+            </template>
+
             <!-- 设备说明 -->
             <div class="dcp-section">
               <div class="dcp-section-title">📋 设备说明</div>
@@ -203,6 +281,24 @@ const fanSpeeds = [
   { value: 'high',   label: '高速' },
   { value: 'auto',   label: '自动' },
 ]
+const ventilSpeeds = [
+  { value: 1, label: '低速' },
+  { value: 2, label: '中速' },
+  { value: 3, label: '高速' },
+]
+const washerModes = [
+  { value: 'fast', label: '快速洗' },
+  { value: 'normal', label: '标准洗' },
+  { value: 'heavy', label: '强力洗' },
+  { value: 'eco', label: '节能洗' },
+]
+const tvModes = [
+  { value: 'standard', label: '标准' },
+  { value: 'movie', label: '电影' },
+  { value: 'sport', label: '体育' },
+  { value: 'game', label: '游戏' },
+  { value: 'eco', label: '节能' },
+]
 
 const deviceIcon = computed(() => {
   const m = { ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀', washer:'🍽️', speaker:'🔊', heater:'🚿' }
@@ -221,6 +317,11 @@ const deviceDesc = computed(() => {
     outlet: '智能插座，支持远程开关控制与实时用电计量，可设置定时和过载保护。',
     tv:     '智能电视，支持 4K 超高清显示，内置流媒体应用，可与音箱联动实现家庭影院效果。',
     sensor: '智能传感器设备，支持实时状态监测和异常告警。',
+    ventil: '抽油烟机，支持多档位调节，快速吸走油烟，保持厨房空气清新。',
+    washer: '智能洗碗机，支持多种洗涤模式，高效清洁餐具，节水省电。',
+    speaker: '智能音箱，支持语音控制、蓝牙连接，可播放音乐、电台、有声书。',
+    heater: '燃气热水器，支持精确水温调节，提供恒温热水，支持预约和远程控制。',
+    security: '门禁控制器，支持指纹、密码、卡片多种开锁方式，具备异常报警功能。',
   }
   return m[props.device?.type] || '智能家居设备，支持远程控制与状态监测。'
 })
@@ -232,6 +333,11 @@ const deviceTips = computed(() => {
     outlet: '建议定期查看用电数据，发现异常功率及时排查；避免长期满负荷运行。',
     tv:     '建议开启护眼模式，观看时间不宜过长；定期清理缓存保持系统流畅。',
     sensor: '建议定期检查设备电量，确保传感器正常工作；异常告警请及时处理。',
+    ventil: '建议每次烹饪后保持运行 3-5 分钟；定期清洗油网保持吸力；长期不用请断开电源。',
+    washer: '建议根据餐具数量选择合适模式；定期清理过滤网；使用专用洗涤剂效果更佳。',
+    speaker: '建议避免长时间高音量播放；定期更新固件获取最新功能；保持网络连接稳定。',
+    heater: '建议设定温度 50-55°C 既舒适又节能；定期检查燃气管道确保安全；长期外出请关闭燃气阀。',
+    security: '建议定期更换密码；指纹识别异常时请使用备用开锁方式；保持电量充足。',
   }
   return m[props.device?.type] || '定期检查设备状态，如有异常请及时联系售后服务。'
 })
