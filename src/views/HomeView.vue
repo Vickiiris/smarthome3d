@@ -389,6 +389,7 @@
             </div>
           </div>
         </div>
+
         <!-- ===== 健康监测 ===== -->
         <div v-show="currentPage === 'health'" class="page health-page">
           <div class="health-hero">
