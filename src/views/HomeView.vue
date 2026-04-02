@@ -166,39 +166,225 @@
               </div>
             </div>
           </div>
-          <div class="energy-hero">
-            <div class="e-big">
-              <div class="e-big-label">今日用电</div>
-              <div class="e-big-val">{{ homeStore.stats.dailyEnergy ?? '8.5' }} <span class="e-unit">kWh</span></div>
-              <div class="e-compare">较昨日 <span class="up">↑ 5.2%</span></div>
+
+          <!-- 第一行：核心指标卡片 -->
+          <div class="energy-overview-row">
+            <div class="energy-metric-card electric" @click="openEnergyDetail('today')">
+              <div class="em-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+              <div class="em-info">
+                <div class="em-label">今日用电</div>
+                <div class="em-value">{{ homeStore.stats.dailyEnergy ?? '8.5' }} <span class="em-unit">kWh</span></div>
+                <div class="em-trend up">↑ 5.2%</div>
+              </div>
             </div>
-            <div class="e-sub-grid">
-              <div class="e-sub"><span class="e-sub-l">实时功率</span><span class="e-sub-v">{{ homeStore.stats.energyUsage.toFixed(1) }} kW</span></div>
-              <div class="e-sub"><span class="e-sub-l">累计用电</span><span class="e-sub-v">{{ homeStore.stats.totalEnergy ?? 235 }} kWh</span></div>
-              <div class="e-sub"><span class="e-sub-l">节能率</span><span class="e-sub-v green">{{ homeStore.stats.savingRate ?? 18 }}%</span></div>
-              <div class="e-sub"><span class="e-sub-l">碳减排</span><span class="e-sub-v">{{ homeStore.stats.carbonReduction ?? 12.5 }} kg</span></div>
+            <div class="energy-metric-card water" @click="openEnergyDetail('water')">
+              <div class="em-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+              </div>
+              <div class="em-info">
+                <div class="em-label">今日用水</div>
+                <div class="em-value">0.8 <span class="em-unit">m³</span></div>
+                <div class="em-trend down">↓ 3.2%</div>
+              </div>
+            </div>
+            <div class="energy-metric-card gas" @click="openEnergyDetail('gas')">
+              <div class="em-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
+              </div>
+              <div class="em-info">
+                <div class="em-label">今日燃气</div>
+                <div class="em-value">0.45 <span class="em-unit">m³</span></div>
+                <div class="em-trend up">↑ 2.1%</div>
+              </div>
+            </div>
+            <div class="energy-metric-card cost" @click="openEnergyDetail('cost')">
+              <div class="em-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div class="em-info">
+                <div class="em-label">今日费用</div>
+                <div class="em-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + 0.8 * 3.5 + 0.45 * 2.8).toFixed(1) }}</div>
+                <div class="em-trend down">↓ 2.8%</div>
+              </div>
             </div>
           </div>
+
+          <!-- 第二行：趋势图表 -->
           <div class="charts-row">
-            <div class="panel-card">
-              <div class="panel-header"><h3 class="panel-title">用电趋势</h3><span>24小时</span></div>
+            <div class="panel-card chart-lg">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  用电趋势
+                </h3>
+                <span>24小时</span>
+              </div>
               <div ref="lineChartRef" class="chart-box"></div>
             </div>
-            <div class="panel-card">
-              <div class="panel-header"><h3 class="panel-title">用电结构</h3></div>
+            <div class="panel-card chart-sm">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  用电结构
+                </h3>
+              </div>
               <div ref="pieChartRef" class="chart-box"></div>
             </div>
           </div>
-          <div class="panel-card">
-            <div class="panel-header"><h3 class="panel-title">设备能耗排行</h3></div>
-            <div class="rank-list">
-              <div v-for="(item, i) in energyRank" :key="item.name" class="rank-item">
-                <div class="rank-num" :class="['g','s','b'][i] || ''">{{ i + 1 }}</div>
-                <div class="rank-info">
-                  <span class="rank-name">{{ item.name }}</span>
-                  <div class="rank-bar-w"><div class="rank-bar" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+
+          <!-- 第三行：水气图表 -->
+          <div class="charts-row">
+            <div class="panel-card chart-lg">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  用水趋势
+                </h3>
+                <span>24小时</span>
+              </div>
+              <div ref="waterChartRef" class="chart-box"></div>
+            </div>
+            <div class="panel-card chart-sm">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  用水结构
+                </h3>
+              </div>
+              <div ref="waterPieChartRef" class="chart-box"></div>
+            </div>
+          </div>
+
+          <!-- 第四行：燃气图表 -->
+          <div class="charts-row">
+            <div class="panel-card chart-lg">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
+                  燃气趋势
+                </h3>
+                <span>24小时</span>
+              </div>
+              <div ref="gasChartRef" class="chart-box"></div>
+            </div>
+            <div class="panel-card chart-sm">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                  燃气结构
+                </h3>
+              </div>
+              <div ref="gasPieChartRef" class="chart-box"></div>
+            </div>
+          </div>
+
+          <!-- 第五行：费用明细 -->
+          <div class="energy-cost-detail-row">
+            <div class="cost-detail-card" @click="openEnergyDetail('cost')">
+              <div class="cdc-header">
+                <div class="cdc-icon electric">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 </div>
-                <span class="rank-val">{{ item.val }} kWh</span>
+                <div class="cdc-title">电费明细</div>
+              </div>
+              <div class="cdc-body">
+                <div class="cdc-main">
+                  <span class="cdc-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30).toFixed(1) }}</span>
+                  <span class="cdc-label">本月预估</span>
+                </div>
+                <div class="cdc-items">
+                  <div class="cdc-item"><span>峰时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.6).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>平时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.3).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>谷时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.1).toFixed(1) }}</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="cost-detail-card" @click="openEnergyDetail('waterCost')">
+              <div class="cdc-header">
+                <div class="cdc-icon water">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                </div>
+                <div class="cdc-title">水费明细</div>
+              </div>
+              <div class="cdc-body">
+                <div class="cdc-main">
+                  <span class="cdc-value">¥{{ (0.8 * 30 * 3.5).toFixed(1) }}</span>
+                  <span class="cdc-label">本月预估</span>
+                </div>
+                <div class="cdc-items">
+                  <div class="cdc-item"><span>生活用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.7).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>洗浴用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.2).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>厨房用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.1).toFixed(1) }}</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="cost-detail-card" @click="openEnergyDetail('gasCost')">
+              <div class="cdc-header">
+                <div class="cdc-icon gas">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
+                </div>
+                <div class="cdc-title">燃气费明细</div>
+              </div>
+              <div class="cdc-body">
+                <div class="cdc-main">
+                  <span class="cdc-value">¥{{ (0.45 * 30 * 2.8).toFixed(1) }}</span>
+                  <span class="cdc-label">本月预估</span>
+                </div>
+                <div class="cdc-items">
+                  <div class="cdc-item"><span>热水器</span><span>¥{{ (0.45 * 30 * 2.8 * 0.55).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>燃气灶</span><span>¥{{ (0.45 * 30 * 2.8 * 0.35).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>壁挂炉</span><span>¥{{ (0.45 * 30 * 2.8 * 0.1).toFixed(1) }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第六行：设备能耗排行 + 环保贡献 -->
+          <div class="energy-bottom-row">
+            <div class="panel-card rank-card">
+              <div class="panel-header"><h3 class="panel-title">能耗排行</h3><span>用电/用水/燃气</span></div>
+              <div class="rank-tabs">
+                <button class="rank-tab" :class="{ active: rankTab === 'electric' }" @click="rankTab = 'electric'">用电</button>
+                <button class="rank-tab" :class="{ active: rankTab === 'water' }" @click="rankTab = 'water'">用水</button>
+                <button class="rank-tab" :class="{ active: rankTab === 'gas' }" @click="rankTab = 'gas'">燃气</button>
+              </div>
+              <div class="rank-list">
+                <div v-for="(item, i) in currentRankList" :key="item.name" class="rank-item" @click="openEnergyDetail(rankTab + '-rank', item)">
+                  <div class="rank-num" :class="['g','s','b'][i] || ''">{{ i + 1 }}</div>
+                  <div class="rank-icon">{{ item.icon }}</div>
+                  <div class="rank-info">
+                    <span class="rank-name">{{ item.name }}</span>
+                    <div class="rank-bar-w"><div class="rank-bar" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                  </div>
+                  <span class="rank-val">{{ item.val }} {{ item.unit }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="eco-contribute-card">
+              <div class="eco-header">
+                <span class="eco-icon">🌱</span>
+                <span class="eco-title">环保贡献</span>
+              </div>
+              <div class="eco-stats">
+                <div class="eco-stat">
+                  <div class="eco-value">{{ homeStore.stats.carbonReduction ?? 12.5 }}</div>
+                  <div class="eco-unit">kg</div>
+                  <div class="eco-label">CO₂减排</div>
+                </div>
+                <div class="eco-divider"></div>
+                <div class="eco-stat">
+                  <div class="eco-value">{{ Math.floor((homeStore.stats.carbonReduction ?? 12.5) / 5) }}</div>
+                  <div class="eco-unit">棵</div>
+                  <div class="eco-label">相当于植树</div>
+                </div>
+              </div>
+              <div class="eco-tips">
+                <div class="eco-tip">
+                  <span class="tip-icon">💡</span>
+                  <span>本月节能率 {{ homeStore.stats.savingRate ?? 18 }}%，继续保持！</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1494,6 +1680,85 @@ function openSecurityControl(item) {
   }
 }
 
+// 打开能源详情弹窗
+function openEnergyDetail(type, item = null) {
+  // 能耗排行点击：显示分时段耗能明细
+  if (type.endsWith('-rank') && item) {
+    const rankType = type.replace('-rank', '')
+    const periods = {
+      electric: [
+        { label: '凌晨 00:00-06:00', value: (item.val * 0.15).toFixed(2), pct: 15, color: '#81c784' },
+        { label: '早晨 06:00-09:00', value: (item.val * 0.18).toFixed(2), pct: 18, color: '#4fc3f7' },
+        { label: '上午 09:00-12:00', value: (item.val * 0.12).toFixed(2), pct: 12, color: '#00d4aa' },
+        { label: '中午 12:00-14:00', value: (item.val * 0.08).toFixed(2), pct: 8, color: '#ffd54f' },
+        { label: '下午 14:00-18:00', value: (item.val * 0.15).toFixed(2), pct: 15, color: '#ce93d8' },
+        { label: '傍晚 18:00-21:00', value: (item.val * 0.22).toFixed(2), pct: 22, color: '#ff7043' },
+        { label: '夜间 21:00-24:00', value: (item.val * 0.10).toFixed(2), pct: 10, color: '#607d8b' },
+      ],
+      water: [
+        { label: '凌晨 00:00-06:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#607d8b' },
+        { label: '早晨 06:00-09:00', value: (item.val * 0.20).toFixed(3), pct: 20, color: '#4fc3f7' },
+        { label: '上午 09:00-12:00', value: (item.val * 0.10).toFixed(3), pct: 10, color: '#00d4aa' },
+        { label: '中午 12:00-14:00', value: (item.val * 0.25).toFixed(3), pct: 25, color: '#ffd54f' },
+        { label: '下午 14:00-18:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#ce93d8' },
+        { label: '傍晚 18:00-21:00', value: (item.val * 0.30).toFixed(3), pct: 30, color: '#ff7043' },
+        { label: '夜间 21:00-24:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#81c784' },
+      ],
+      gas: [
+        { label: '凌晨 00:00-06:00', value: (item.val * 0.02).toFixed(3), pct: 2, color: '#607d8b' },
+        { label: '早晨 06:00-09:00', value: (item.val * 0.15).toFixed(3), pct: 15, color: '#ffa726' },
+        { label: '上午 09:00-12:00', value: (item.val * 0.08).toFixed(3), pct: 8, color: '#ffcc80' },
+        { label: '中午 12:00-14:00', value: (item.val * 0.10).toFixed(3), pct: 10, color: '#ffd54f' },
+        { label: '下午 14:00-18:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#ce93d8' },
+        { label: '傍晚 18:00-21:00', value: (item.val * 0.55).toFixed(3), pct: 55, color: '#ff7043' },
+        { label: '夜间 21:00-24:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#81c784' },
+      ],
+    }
+    const units = { electric: 'kWh', water: 'm³', gas: 'm³' }
+    selectedDevice.value = {
+      id: type,
+      name: item.name + ' 分时段耗能',
+      icon: item.icon,
+      type: 'energy',
+      title: item.name + ' 分时段耗能',
+      unit: units[rankType],
+      value: item.val,
+      periods: periods[rankType],
+      desc: '今日各时段能耗明细',
+    }
+    showControlPanel.value = true
+    return
+  }
+
+  const energyData = {
+    today: { title: '今日用电详情', unit: 'kWh', value: homeStore.stats.dailyEnergy ?? 8.5, trend: '+5.2%', desc: '今日累计用电量' },
+    power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(1), trend: '', desc: '当前用电功率' },
+    total: { title: '累计用电', unit: 'kWh', value: homeStore.stats.totalEnergy ?? 235, trend: '', desc: '本月累计用电' },
+    saving: { title: '节能率', unit: '%', value: homeStore.stats.savingRate ?? 18, trend: '', desc: '相比历史平均节能比例' },
+    carbon: { title: '碳减排量', unit: 'kg', value: homeStore.stats.carbonReduction ?? 12.5, trend: '', desc: '相当于减少的二氧化碳排放' },
+    water: { title: '今日用水详情', unit: 'm³', value: 0.8, trend: '-3.2%', desc: '今日累计用水量' },
+    gas: { title: '今日燃气详情', unit: 'm³', value: 0.45, trend: '+2.1%', desc: '今日累计燃气用量' },
+    cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + 0.8 * 3.5 + 0.45 * 2.8).toFixed(1), trend: '-2.8%', desc: '今日电费+水费+燃气费' },
+    waterCost: { title: '今日水费详情', unit: '元', value: (0.8 * 3.5).toFixed(1), trend: '+1.5%', desc: '今日水费支出' },
+    gasCost: { title: '今日燃气费详情', unit: '元', value: (0.45 * 2.8).toFixed(1), trend: '-5.8%', desc: '今日燃气费支出' },
+  }
+  const data = energyData[type] || energyData.today
+  const iconMap = { water: '💧', gas: '🔥', waterCost: '💧', gasCost: '🔥', cost: '💰' }
+  selectedDevice.value = {
+    id: 'energy-' + type,
+    name: data.title,
+    icon: iconMap[type] || '⚡',
+    type: 'energy',
+    status: true,
+    value: data.value,
+    unit: data.unit,
+    trend: data.trend,
+    desc: data.desc,
+    room: '全屋',
+  }
+  showControlPanel.value = true
+}
+
 // 切换选中设备状态
 function toggleSelectedDevice() {
   if (!selectedDevice.value) return
@@ -1915,12 +2180,30 @@ const alarms = [
   { time: '前日',  content: '饮水提醒',    level: 'info', levelText: '提示', status: 'done',    statusText: '已处理' },
 ]
 
+// 能耗排行数据
 const energyRank = [
-  { name: '空调', val: 3.2, pct: 100, color: '#4fc3f7' },
-  { name: '冰箱', val: 1.8, pct: 56,  color: '#81c784' },
-  { name: '照明', val: 0.9, pct: 28,  color: '#ffd54f' },
-  { name: '电视', val: 0.5, pct: 16,  color: '#ce93d8' },
+  { name: '空调', val: 3.2, pct: 100, color: '#4fc3f7', icon: '❄️', unit: 'kWh' },
+  { name: '冰箱', val: 1.8, pct: 56,  color: '#81c784', icon: '🧊', unit: 'kWh' },
+  { name: '照明', val: 0.9, pct: 28,  color: '#ffd54f', icon: '💡', unit: 'kWh' },
+  { name: '电视', val: 0.5, pct: 16,  color: '#ce93d8', icon: '📺', unit: 'kWh' },
 ]
+const waterRank = [
+  { name: '淋浴', val: 0.35, pct: 100, color: '#4fc3f7', icon: '🚿', unit: 'm³' },
+  { name: '洗衣机', val: 0.18, pct: 51,  color: '#81c784', icon: '🧺', unit: 'm³' },
+  { name: '厨房', val: 0.12, pct: 34,  color: '#ffd54f', icon: '🍳', unit: 'm³' },
+  { name: '洗手台', val: 0.08, pct: 23,  color: '#ce93d8', icon: '🚰', unit: 'm³' },
+]
+const gasRank = [
+  { name: '热水器', val: 0.25, pct: 100, color: '#ff7043', icon: '🚿', unit: 'm³' },
+  { name: '燃气灶', val: 0.15, pct: 60,  color: '#ffa726', icon: '🔥', unit: 'm³' },
+  { name: '壁挂炉', val: 0.05, pct: 20,  color: '#ffcc80', icon: '🏠', unit: 'm³' },
+]
+const rankTab = ref('electric')
+const currentRankList = computed(() => {
+  if (rankTab.value === 'water') return waterRank
+  if (rankTab.value === 'gas') return gasRank
+  return energyRank
+})
 
 const products = [
   // 环境控制
@@ -1982,7 +2265,11 @@ const pagedProducts = computed(() => {
 
 const lineChartRef = ref(null)
 const pieChartRef  = ref(null)
-let lineChart = null, pieChart = null
+const waterChartRef = ref(null)
+const gasChartRef = ref(null)
+const waterPieChartRef = ref(null)
+const gasPieChartRef = ref(null)
+let lineChart = null, pieChart = null, waterChart = null, gasChart = null, waterPieChart = null, gasPieChart = null
 
 async function initCharts() {
   const ec = await import('echarts')
@@ -1994,7 +2281,7 @@ async function initCharts() {
       grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
       xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
-      series: [{ data: [2.2,1.8,2.5,5.3,4.1,6.8,3.0], type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
+      series: [{ data: [1.8,1.2,2.0,4.5,3.8,5.5,2.8], type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
     })
   }
   if (pieChartRef.value && !pieChart) {
@@ -2010,19 +2297,107 @@ async function initCharts() {
       ], label: { color: '#94a3b8', fontSize: 12 }, labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } }]
     })
   }
+  // 用水趋势图（柱状图）
+  if (waterChartRef.value && !waterChart) {
+    waterChart = ec.init(waterChartRef.value)
+    waterChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
+      grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
+      xAxis: { type: 'category', data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      series: [{ 
+        data: [0.02,0.01,0.06,0.18,0.08,0.22,0.12], 
+        type: 'bar', 
+        barWidth: '50%',
+        itemStyle: { 
+          color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#4fc3f7'},{offset:1,color:'rgba(79,195,247,0.3)'}]),
+          borderRadius: [4, 4, 0, 0]
+        }
+      }]
+    })
+  }
+  // 燃气使用图（虚线折线图）
+  if (gasChartRef.value && !gasChart) {
+    gasChart = ec.init(gasChartRef.value)
+    gasChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
+      grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
+      xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      series: [{ 
+        data: [0.01,0.01,0.03,0.05,0.04,0.20,0.11], 
+        type: 'line', 
+        smooth: true, 
+        lineStyle: { color: '#ff7043', width: 3, type: 'dashed' }, 
+        symbol: 'triangle', 
+        symbolSize: 8, 
+        itemStyle: { color: '#ff7043' }
+      }]
+    })
+  }
+  // 用水结构图（横向条形图）
+  if (waterPieChartRef.value && !waterPieChart) {
+    waterPieChart = ec.init(waterPieChartRef.value)
+    waterPieChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
+      grid: { left: '3%', right: '15%', top: '5%', bottom: '5%', containLabel: true },
+      xAxis: { type: 'value', show: false },
+      yAxis: { type: 'category', data: ['其他', '厨房', '洗衣', '淋浴'], axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      series: [{ 
+        type: 'bar', 
+        barWidth: '50%',
+        data: [
+          { value: 10, itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
+          { value: 20, itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
+          { value: 25, itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+          { value: 45, itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+        ],
+        label: { show: true, position: 'right', color: '#94a3b8', fontSize: 11, formatter: '{c}%' }
+      }]
+    })
+  }
+  // 燃气结构图（玫瑰图/南丁格尔图）
+  if (gasPieChartRef.value && !gasPieChart) {
+    gasPieChart = ec.init(gasPieChartRef.value)
+    gasPieChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
+      series: [{ 
+        type: 'pie', 
+        radius: [20, 70],
+        center: ['50%','50%'],
+        roseType: 'radius',
+        itemStyle: { borderRadius: 5 },
+        data: [
+          { value: 55, name: '热水器', itemStyle: { color: '#ff7043' } },
+          { value: 35, name: '燃气灶', itemStyle: { color: '#ffa726' } },
+          { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
+        ], 
+        label: { color: '#94a3b8', fontSize: 12 }, 
+        labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } 
+      }]
+    })
+  }
 }
 
 onMounted(() => {
   updateTime()
   timeTimer = setInterval(updateTime, 1000)
   nextTick(() => mountCanvas('env'))
-  window.addEventListener('resize', () => { lineChart?.resize(); pieChart?.resize() })
+  window.addEventListener('resize', () => { lineChart?.resize(); pieChart?.resize(); waterChart?.resize(); gasChart?.resize(); waterPieChart?.resize(); gasPieChart?.resize() })
 })
 
 onUnmounted(() => {
   clearInterval(timeTimer)
   lineChart?.dispose()
   pieChart?.dispose()
+  waterChart?.dispose()
+  gasChart?.dispose()
+  waterPieChart?.dispose()
+  gasPieChart?.dispose()
 })
 </script>
 
@@ -2065,4 +2440,338 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   margin-bottom: 20px;
 }
+
+/* 图表标题图标 */
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-icon {
+  flex-shrink: 0;
+}
+.panel-icon.electric { color: #00d4aa; }
+.panel-icon.water { color: #4fc3f7; }
+.panel-icon.gas { color: #ff7043; }
+
+/* 能源费用卡片 */
+.energy-cost-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cost-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cost-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.cost-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(0,212,170,0.15);
+  color: #00d4aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+.cost-info {
+  flex: 1;
+}
+.cost-label {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+.cost-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.cost-trend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+.cost-trend.up {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+}
+.cost-trend.down {
+  background: rgba(34,197,94,0.15);
+  color: #22c55e;
+}
+
+/* 节能建议 */
+.energy-tips-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.tips-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tips-icon {
+  font-size: 18px;
+}
+.tips-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.tip-text {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* 环保卡片 */
+.eco-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.eco-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+.eco-title {
+  font-size: 13px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.eco-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #22c55e;
+  margin-bottom: 4px;
+}
+.eco-desc {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 12px;
+}
+.eco-badge {
+  font-size: 11px;
+  color: #22c55e;
+  background: rgba(34,197,94,0.15);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* 能源管理新样式 */
+.energy-overview-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.energy-metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.energy-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.energy-metric-card.electric { border-left: 4px solid #00d4aa; }
+.energy-metric-card.electric:hover { border-color: #00d4aa; }
+.energy-metric-card.water { border-left: 4px solid #4fc3f7; }
+.energy-metric-card.water:hover { border-color: #4fc3f7; }
+.energy-metric-card.gas { border-left: 4px solid #ff7043; }
+.energy-metric-card.gas:hover { border-color: #ff7043; }
+.energy-metric-card.cost { border-left: 4px solid #ffd54f; }
+.energy-metric-card.cost:hover { border-color: #ffd54f; }
+.em-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.energy-metric-card.electric .em-icon { background: rgba(0,212,170,0.15); color: #00d4aa; }
+.energy-metric-card.water .em-icon { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.energy-metric-card.gas .em-icon { background: rgba(255,112,67,0.15); color: #ff7043; }
+.energy-metric-card.cost .em-icon { background: rgba(255,213,79,0.15); color: #ffd54f; }
+.em-info { flex: 1; }
+.em-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+.em-value { font-size: 24px; font-weight: 700; color: var(--text-1); }
+.em-unit { font-size: 13px; color: var(--text-3); font-weight: 400; }
+.em-trend { font-size: 11px; font-weight: 600; margin-top: 4px; }
+.em-trend.up { color: #ef4444; }
+.em-trend.down { color: #22c55e; }
+
+/* 图表布局 */
+.chart-lg { flex: 1.5; }
+.chart-sm { flex: 1; }
+
+/* 费用明细卡片 */
+.energy-cost-detail-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cost-detail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cost-detail-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.cdc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cdc-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cdc-icon.electric { background: rgba(0,212,170,0.15); color: #00d4aa; }
+.cdc-icon.water { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.cdc-icon.gas { background: rgba(255,112,67,0.15); color: #ff7043; }
+.cdc-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.cdc-body { display: flex; flex-direction: column; gap: 12px; }
+.cdc-main { display: flex; align-items: baseline; gap: 8px; }
+.cdc-value { font-size: 28px; font-weight: 700; color: var(--text-1); }
+.cdc-label { font-size: 12px; color: var(--text-3); }
+.cdc-items { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.cdc-item { display: flex; justify-content: space-between; font-size: 12px; }
+.cdc-item span:first-child { color: var(--text-3); }
+.cdc-item span:last-child { color: var(--text-1); font-weight: 500; }
+
+/* 底部排行和环保 */
+.energy-bottom-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+}
+.rank-card { flex: 1; }
+.rank-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.rank-tab {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rank-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.rank-icon { font-size: 16px; margin-right: 8px; }
+.eco-contribute-card {
+  background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.05) 100%);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+.eco-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.eco-header .eco-icon { font-size: 20px; }
+.eco-header .eco-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.eco-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.eco-stat { text-align: center; }
+.eco-stat .eco-value { font-size: 32px; font-weight: 700; color: #22c55e; }
+.eco-stat .eco-unit { font-size: 13px; color: var(--text-3); margin-left: 2px; }
+.eco-stat .eco-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.eco-divider { width: 1px; height: 50px; background: rgba(34,197,94,0.2); }
+.eco-tips { margin-top: auto; }
+.eco-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+}
+.eco-tip .tip-icon { font-size: 14px; }
 </style>

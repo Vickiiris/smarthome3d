@@ -15,7 +15,8 @@
           </div>
 
           <div class="modal-body">
-            <div class="ms">
+            <!-- 电源开关（能源详情不需要） -->
+            <div class="ms" v-if="device?.type !== 'energy'">
               <span class="ml">电源</span>
               <div class="btoggle" :class="{ on: localStatus }" @click="toggleStatus">
                 <div class="bt"><div class="bt-dot"></div></div>
@@ -171,6 +172,161 @@
               </div>
               <div class="modes">
                 <button v-for="m in ['速热', '保温', '预约', '节能']" :key="m" class="mode-btn" :class="{ act: heaterMode === m }" @click="heaterMode = m">{{ m }}</button>
+              </div>
+            </template>
+
+            <!-- 能源详情 -->
+            <template v-if="device?.type === 'energy'">
+              <div class="energy-detail">
+                <div class="ed-big">
+                  <span class="ed-val">{{ device.value }}</span>
+                  <span class="ed-unit">{{ device.unit }}</span>
+                  <span v-if="device.trend" class="ed-trend" :class="device.trend.includes('+') ? 'up' : 'down'">{{ device.trend }}</span>
+                </div>
+                <p class="ed-desc">{{ device.desc }}</p>
+                
+                <!-- 各电器明细 -->
+                <div class="ed-devices" v-if="device.id?.includes('today') || device.id?.includes('power')">
+                  <div class="ed-section-title">🔌 各电器用电明细</div>
+                  <div class="ed-device-list">
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">❄️ 空调</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #4fc3f7"></div></div>
+                      <span class="ed-device-val">3.2 kWh</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🧊 冰箱</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 56%; background: #81c784"></div></div>
+                      <span class="ed-device-val">1.8 kWh</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">💡 照明</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 28%; background: #ffd54f"></div></div>
+                      <span class="ed-device-val">0.9 kWh</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">📺 电视</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 16%; background: #ce93d8"></div></div>
+                      <span class="ed-device-val">0.5 kWh</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 用水明细（能耗排行不需要） -->
+                <div class="ed-devices" v-if="device.id?.includes('water') && !device.id?.includes('Cost') && !device.id?.includes('rank')">
+                  <div class="ed-section-title">🚿 用水明细</div>
+                  <div class="ed-device-list">
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🚿 淋浴</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #4fc3f7"></div></div>
+                      <span class="ed-device-val">0.35 m³</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🧺 洗衣</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 51%; background: #81c784"></div></div>
+                      <span class="ed-device-val">0.18 m³</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🍳 厨房</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 34%; background: #ffd54f"></div></div>
+                      <span class="ed-device-val">0.12 m³</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🚰 洗手台</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 23%; background: #ce93d8"></div></div>
+                      <span class="ed-device-val">0.08 m³</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 燃气明细（能耗排行不需要） -->
+                <div class="ed-devices" v-if="device.id?.includes('gas') && !device.id?.includes('Cost') && !device.id?.includes('rank')">
+                  <div class="ed-section-title">🔥 燃气使用明细</div>
+                  <div class="ed-device-list">
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🚿 热水器</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #ff7043"></div></div>
+                      <span class="ed-device-val">0.25 m³</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🔥 燃气灶</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 60%; background: #ffa726"></div></div>
+                      <span class="ed-device-val">0.15 m³</span>
+                    </div>
+                    <div class="ed-device-item">
+                      <span class="ed-device-name">🏠 壁挂炉</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 20%; background: #ffcc80"></div></div>
+                      <span class="ed-device-val">0.05 m³</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 分时段耗能明细 -->
+                <div class="ed-periods" v-if="device.periods">
+                  <div class="ed-section-title">⏰ 今日分时段耗能</div>
+                  <div class="ed-period-list">
+                    <div v-for="p in device.periods" :key="p.label" class="ed-period-item">
+                      <div class="ed-period-label">{{ p.label }}</div>
+                      <div class="ed-period-bar">
+                        <div class="ed-period-fill" :style="{ width: p.pct + '%', background: p.color }"></div>
+                      </div>
+                      <div class="ed-period-val">{{ p.value }} {{ device.unit }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 费用明细 -->
+                <div class="ed-cost-detail" v-if="device.id?.includes('Cost') || device.id === 'energy-cost'">
+                  <div class="ed-section-title">💰 费用明细</div>
+                  <div class="ed-cost-list">
+                    <!-- 电费明细：id 是 energy-cost 或以 cost 结尾但不是 waterCost/gasCost -->
+                    <div class="ed-cost-item" v-if="device.id === 'energy-cost' || (device.id?.endsWith('cost') && !device.id?.includes('water') && !device.id?.includes('gas'))">
+                      <div class="ed-cost-row"><span>峰时用电 (60%)</span><span>¥{{ (parseFloat(device.value) * 0.6).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>平时用电 (30%)</span><span>¥{{ (parseFloat(device.value) * 0.3).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>谷时用电 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                    </div>
+                    <div class="ed-cost-item" v-if="device.id?.includes('waterCost')">
+                      <div class="ed-cost-row"><span>生活用水 (70%)</span><span>¥{{ (parseFloat(device.value) * 0.7).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>洗浴用水 (20%)</span><span>¥{{ (parseFloat(device.value) * 0.2).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>厨房用水 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                    </div>
+                    <div class="ed-cost-item" v-if="device.id?.includes('gasCost')">
+                      <div class="ed-cost-row"><span>热水器 (55%)</span><span>¥{{ (parseFloat(device.value) * 0.55).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>燃气灶 (35%)</span><span>¥{{ (parseFloat(device.value) * 0.35).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row"><span>壁挂炉 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 历史对比 -->
+                <div class="ed-chart">
+                  <div class="ed-chart-title">📈 历史数据对比</div>
+                  <div class="ed-bars">
+                    <div class="ed-bar-item">
+                      <div class="ed-bar-label">昨日</div>
+                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '85%', background: '#4fc3f7' }"></div></div>
+                      <div class="ed-bar-val">{{ (device.value * 0.95).toFixed(1) }}{{ device.unit }}</div>
+                    </div>
+                    <div class="ed-bar-item">
+                      <div class="ed-bar-label">上周</div>
+                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '95%', background: '#81c784' }"></div></div>
+                      <div class="ed-bar-val">{{ (device.value * 1.1).toFixed(1) }}{{ device.unit }}</div>
+                    </div>
+                    <div class="ed-bar-item">
+                      <div class="ed-bar-label">上月</div>
+                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '75%', background: '#ffd54f' }"></div></div>
+                      <div class="ed-bar-val">{{ (device.value * 0.85).toFixed(1) }}{{ device.unit }}</div>
+                    </div>
+                    <div class="ed-bar-item">
+                      <div class="ed-bar-label">年均</div>
+                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '90%', background: '#ce93d8' }"></div></div>
+                      <div class="ed-bar-val">{{ (device.value * 1.05).toFixed(1) }}{{ device.unit }}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </template>
           </div>
@@ -604,6 +760,219 @@ input[type=range] {
 .ss-label {
   font-size: 11px;
   color: var(--text-3);
+}
+
+/* 能源详情样式 */
+.energy-detail {
+  padding: 8px 0;
+}
+.ed-big {
+  text-align: center;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.ed-val {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1;
+}
+.ed-unit {
+  font-size: 16px;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+.ed-trend {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ed-trend.up {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+}
+.ed-trend.down {
+  background: rgba(34,197,94,0.15);
+  color: #22c55e;
+}
+.ed-desc {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  margin-bottom: 20px;
+}
+.ed-chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.ed-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.ed-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ed-bar-item {
+  display: grid;
+  grid-template-columns: 50px 1fr 70px;
+  align-items: center;
+  gap: 12px;
+}
+.ed-bar-label {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ed-bar-wrap {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ed-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.ed-bar-val {
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* 设备明细样式 */
+.ed-devices {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.ed-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.ed-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ed-device-item {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+}
+.ed-device-name {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.ed-device-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* 分时段耗能样式 */
+.ed-periods {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.ed-period-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ed-period-item {
+  display: grid;
+  grid-template-columns: 110px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+}
+.ed-period-label {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ed-period-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ed-period-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.ed-period-val {
+  font-size: 12px;
+  color: var(--text-1);
+  text-align: right;
+  font-weight: 500;
+}
+.ed-device-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.ed-device-val {
+  font-size: 12px;
+  color: var(--text-1);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* 费用明细样式 */
+.ed-cost-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.ed-cost-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ed-cost-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ed-cost-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ed-cost-row.total {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ed-cost-row.total span:last-child {
+  color: #00d4aa;
+  font-size: 16px;
 }
 
 .modal-anim-enter-active {

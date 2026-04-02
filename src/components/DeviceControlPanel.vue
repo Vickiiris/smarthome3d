@@ -17,7 +17,7 @@
           </div>
 
           <!-- 基础信息 grid -->
-          <div class="dcp-body">
+          <div class="dcp-body" v-if="device?.type !== 'energy'">
             <div class="dcp-grid dcp-info-grid">
               <div class="dcp-dd-item">
                 <span class="dcp-dd-label">安装位置</span>
@@ -37,8 +37,8 @@
               </div>
             </div>
 
-            <!-- 主开关 -->
-            <div class="dcp-section">
+            <!-- 主开关（能源详情不需要） -->
+            <div class="dcp-section" v-if="device?.type !== 'energy'">
               <div class="dcp-section-title">⚡ 电源控制</div>
               <div class="dcp-switch-row">
                 <span class="dcp-switch-label">{{ localStatus ? '设备已开启' : '设备已关闭' }}</span>
@@ -233,6 +233,36 @@
             <div class="dcp-section dcp-tips">
               <div class="dcp-section-title">💡 使用建议</div>
               <p class="dcp-desc">{{ deviceTips }}</p>
+            </div>
+          </div>
+
+          <!-- 能源详情专用内容 -->
+          <div class="dcp-body" v-else-if="device?.type === 'energy'">
+            <div class="dcp-section">
+              <div class="dcp-section-title">📊 {{ device.name }}</div>
+              <div class="dcp-grid">
+                <div class="dcp-dd-item">
+                  <span class="dcp-dd-label">当前数值</span>
+                  <span class="dcp-dd-value" style="font-size: 1.5em; color: var(--primary)">{{ device.value }}<small>{{ device.unit }}</small></span>
+                </div>
+                <div class="dcp-dd-item" v-if="device.trend">
+                  <span class="dcp-dd-label">变化趋势</span>
+                  <span class="dcp-dd-value">{{ device.trend }}</span>
+                </div>
+                <div class="dcp-dd-item">
+                  <span class="dcp-dd-label">说明</span>
+                  <span class="dcp-dd-value">{{ device.desc }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="dcp-section">
+              <div class="dcp-section-title">📈 历史数据</div>
+              <div class="dcp-grid">
+                <div class="dcp-dd-item"><span class="dcp-dd-label">昨日</span><span class="dcp-dd-value">{{ (device.value * 0.95).toFixed(1) }}{{ device.unit }}</span></div>
+                <div class="dcp-dd-item"><span class="dcp-dd-label">上周同期</span><span class="dcp-dd-value">{{ (device.value * 1.1).toFixed(1) }}{{ device.unit }}</span></div>
+                <div class="dcp-dd-item"><span class="dcp-dd-label">上月同期</span><span class="dcp-dd-value">{{ (device.value * 0.85).toFixed(1) }}{{ device.unit }}</span></div>
+                <div class="dcp-dd-item"><span class="dcp-dd-label">年均</span><span class="dcp-dd-value">{{ (device.value * 1.05).toFixed(1) }}{{ device.unit }}</span></div>
+              </div>
             </div>
           </div>
 
@@ -675,6 +705,7 @@ function close() { emit('close') }
 .dcp-slider {
   width: 100%;
   height: 6px;
+  appearance: none;
   -webkit-appearance: none;
   background: rgba(255,255,255,0.1);
   border-radius: 3px;
