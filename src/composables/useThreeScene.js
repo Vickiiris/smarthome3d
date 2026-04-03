@@ -262,29 +262,28 @@ export function useThreeScene(canvasRef) {
       pmremGenerator.dispose()
     })
   }
-
-  function loadModel(_scene) {
-    const dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath('/draco/')
-    const loader = new GLTFLoader()
-    loader.setDRACOLoader(dracoLoader)
-    loader.load('/models/Room_001.glb',
-      (gltf) => {
-        const _model = gltf.scene
-        const box = new THREE.Box3().setFromObject(_model)
-        const center = box.getCenter(new THREE.Vector3())
-        const size = box.getSize(new THREE.Vector3())
-        const scale = 6 / Math.max(size.x, size.y, size.z)
-        _model.scale.setScalar(scale)
-        _model.position.sub(center.clone().multiplyScalar(scale))
-        _model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.castShadow = true
-            child.receiveShadow = true
-            if (child.material instanceof THREE.MeshStandardMaterial)
-              child.material.envMapIntensity = 1
-          }
-        })
+    function loadModel(_scene) {
+      const dracoLoader = new DRACOLoader()
+      dracoLoader.setDecoderPath('/draco/')
+      const loader = new GLTFLoader()
+      loader.setDRACOLoader(dracoLoader)
+      loader.load('/models/model.glb',
+        (gltf) => {
+          const _model = gltf.scene
+          const box = new THREE.Box3().setFromObject(_model)
+          const center = box.getCenter(new THREE.Vector3())
+          const size = box.getSize(new THREE.Vector3())
+          const scale = 6 / Math.max(size.x, size.y, size.z)
+          _model.scale.setScalar(scale)
+          _model.position.sub(center.clone().multiplyScalar(scale))
+          _model.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              child.castShadow = true
+              child.receiveShadow = true
+              if (child.material instanceof THREE.MeshStandardMaterial)
+                child.material.envMapIntensity = 1
+            }
+          })
         _scene.add(_model)
         model.value = _model
         createHotspots(_scene)
