@@ -13,3 +13,8 @@ app.use(router)
 app.use(ElementPlus)
 
 app.mount('#app')
+
+// Vue 挂载完成后隐藏加载动画
+if (typeof window.__hideLoader === 'function') {
+  window.__hideLoader()
+}
