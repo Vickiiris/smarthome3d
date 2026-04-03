@@ -234,8 +234,9 @@
       let i = 0
       let vueReady = false
       let progressComplete = false
+      let realProgress = 0
 
-      // 进度动画
+      // 进度动画 - 由外部真实进度控制
       const timer = setInterval(() => {
         if (i >= steps.length) {
           clearInterval(timer)
@@ -244,9 +245,11 @@
           return
         }
         const s = steps[i++]
-        fill.style.width = s.p + '%'
+        // 使用真实进度和模拟进度中较大的那个
+        const displayP = Math.max(s.p, realProgress)
+        fill.style.width = displayP + '%'
         status.textContent = s.text
-        pct.textContent = s.p + '%'
+        pct.textContent = displayP + '%'
       }, 400)
 
       // 检查是否可以隐藏
@@ -262,7 +265,17 @@
       // Vue 挂载后标记 ready
       window.__hideLoader = function () {
         vueReady = true
+        progressComplete = true
         checkHide()
+      }
+
+      // 设置真实加载进度（0-100）
+      window.__setLoaderProgress = function (p) {
+        realProgress = p
+        if (p > 0) {
+          fill.style.width = p + '%'
+          pct.textContent = p + '%'
+        }
       }
     </script>
   </body>

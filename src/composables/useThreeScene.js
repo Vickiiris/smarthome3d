@@ -290,7 +290,16 @@ export function useThreeScene(canvasRef) {
         _model.scale.setScalar(0)
         gsap.to(_model.scale, { x: scale, y: scale, z: scale, duration: 1.2, ease: 'back.out(1.7)', onComplete: () => { isLoading.value = false } })
   },
-      (p) => { if (p.total > 0) loadProgress.value = Math.round(p.loaded / p.total * 100) },
+      (p) => {
+        if (p.total > 0) {
+          const progress = Math.round(p.loaded / p.total * 100)
+          loadProgress.value = progress
+          // 更新加载动画进度
+          if (typeof window.__setLoaderProgress === 'function') {
+            window.__setLoaderProgress(progress)
+          }
+        }
+      },
       (err) => { console.error(err); isLoading.value = false }
     )
   }
