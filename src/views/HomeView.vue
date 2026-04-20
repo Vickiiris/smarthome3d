@@ -53,6 +53,292 @@
 
       <div class="content">
 
+        <!-- ===== 策略告警 ===== -->
+        <div v-show="currentPage === 'alarm'" class="page alarm-page">
+          <!-- 页面顶部：Tab + 搜索 + 筛选 -->
+          <div class="alarm-topbar">
+            <div class="alarm-tabs">
+              <button class="alarm-tab" :class="{ active: alarmTab === 'device' }" @click="switchAlarmTab('device')">
+                <span class="tab-icon">📱</span> 设备告警
+                <span class="tab-badge" v-if="allAlarms.filter(a => a.type === 'device' && a.status === 'pending').length">
+                  {{ allAlarms.filter(a => a.type === 'device' && a.status === 'pending').length }}
+                </span>
+              </button>
+              <button class="alarm-tab" :class="{ active: alarmTab === 'health' }" @click="switchAlarmTab('health')">
+                <span class="tab-icon">❤</span> 健康告警
+                <span class="tab-badge" v-if="allAlarms.filter(a => a.type === 'health' && a.status === 'pending').length">
+                  {{ allAlarms.filter(a => a.type === 'health' && a.status === 'pending').length }}
+                </span>
+              </button>
+              <button class="alarm-tab" :class="{ active: alarmTab === 'strategy' }" @click="switchAlarmTab('strategy')">
+                <span class="tab-icon">⚙️</span> 执行策略
+              </button>
+            </div>
+            <div class="alarm-controls">
+              <input class="filter-in" v-model="alarmSearch" placeholder="搜索告警内容…" @input="alarmPage = 1" />
+              <select class="filter-sel" v-model="alarmLevelFilter" @change="alarmPage = 1">
+                <option value="">全部级别</option>
+                <option value="danger">严重</option>
+                <option value="warn">警告</option>
+                <option value="info">提示</option>
+              </select>
+              <select class="filter-sel" v-model="alarmStatusFilter" @change="alarmPage = 1">
+                <option value="">全部状态</option>
+                <option value="pending">未处理</option>
+                <option value="done">已处理</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ===== 设备告警 & 健康告警 列表 ===== -->
+          <template v-if="alarmTab === 'device' || alarmTab === 'health'">
+            <!-- 统计概览 -->
+            <div class="alarm-stats-row">
+              <div class="panel-card alarm-stat-card danger" @click="alarmLevelFilter = 'danger'; alarmStatusFilter = ''">
+                <div class="asc-icon">🚨</div>
+                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'danger').length }}</div>
+                <div class="asc-label">严重告警</div>
+              </div>
+              <div class="panel-card alarm-stat-card warn" @click="alarmLevelFilter = 'warn'; alarmStatusFilter = ''">
+                <div class="asc-icon">⚠️</div>
+                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'warn').length }}</div>
+                <div class="asc-label">警告</div>
+              </div>
+              <div class="panel-card alarm-stat-card info" @click="alarmLevelFilter = 'info'; alarmStatusFilter = ''">
+                <div class="asc-icon">ℹ️</div>
+                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'info').length }}</div>
+                <div class="asc-label">提示</div>
+              </div>
+              <div class="panel-card alarm-stat-card pending" @click="alarmStatusFilter = 'pending'; alarmLevelFilter = ''">
+                <div class="asc-icon">⏳</div>
+                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.status === 'pending').length }}</div>
+                <div class="asc-label">待处理</div>
+              </div>
+              <div class="panel-card alarm-stat-card done" @click="alarmStatusFilter = 'done'; alarmLevelFilter = ''">
+                <div class="asc-icon">✅</div>
+                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.status === 'done').length }}</div>
+                <div class="asc-label">已处理</div>
+              </div>
+            </div>
+
+            <!-- 告警列表 -->
+            <div class="panel-card alarm-list-panel">
+              <div class="alarm-list-header">
+                <h3 class="panel-title">
+                  {{ alarmTab === 'device' ? '设备告警记录' : '健康告警记录' }}
+                  <span class="panel-subtitle">共 {{ filteredAlarms.length }} 条</span>
+                </h3>
+                <div class="alarm-list-actions">
+                  <button class="btn btn-sm btn-ghost" @click="markAllAlarmsDone" v-if="filteredAlarms.some(a => a.status === 'pending')">全部标记已处理</button>
+                  <button class="btn btn-sm btn-danger-outline" @click="clearDoneAlarms">清空已处理</button>
+                </div>
+              </div>
+              <div v-if="paginatedAlarms.length === 0" class="alarm-empty">
+                <div class="alarm-empty-icon">🎉</div>
+                <div class="alarm-empty-text">{{ filteredAlarms.length === 0 ? '暂无符合条件的告警' : '当前筛选条件下无告警' }}</div>
+              </div>
+              <div v-else class="alarm-items">
+                <div
+                  v-for="a in paginatedAlarms"
+                  :key="a.id"
+                  class="alarm-item"
+                  :class="[a.level, { done: a.status === 'done' }]"
+                >
+                  <div class="alarm-item-left">
+                    <div class="alarm-level-bar" :class="a.level"></div>
+                    <div class="alarm-item-icon-wrap" :class="a.level">
+                      <span>{{ a.level === 'danger' ? '🚨' : a.level === 'warn' ? '⚠️' : 'ℹ️' }}</span>
+                    </div>
+                    <div class="alarm-item-body">
+                      <div class="alarm-item-top">
+                        <span class="alarm-item-source">
+                          <span class="source-icon">{{ a.icon }}</span>
+                          {{ a.source }}
+                        </span>
+                        <span class="alarm-item-tag" :class="a.level">{{ a.levelText }}</span>
+                        <span class="alarm-item-status" :class="a.status">{{ a.statusText }}</span>
+                      </div>
+                      <div class="alarm-item-content">{{ a.content }}</div>
+                      <div class="alarm-item-meta">
+                        <span class="alarm-item-time">📅 {{ a.time }}</span>
+                        <span v-if="a.suggestion" class="alarm-item-suggestion">💡 {{ a.suggestion }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="alarm-item-right">
+                    <button v-if="a.status === 'pending'" class="btn btn-sm btn-primary" @click="resolveAlarm(a)">处理</button>
+                    <span v-else class="alarm-resolved-label">✓ 已处理</span>
+                  </div>
+                </div>
+              </div>
+              <!-- 分页 -->
+              <div v-if="alarmTotalPages > 1" class="pagination">
+                <button class="page-btn" :disabled="alarmPage === 1" @click="alarmPage--">&lt;</button>
+                <button
+                  v-for="p in visiblePages"
+                  :key="p"
+                  class="page-btn"
+                  :class="{ active: p === alarmPage, ellipsis: p === '…' }"
+                  :disabled="p === '…'"
+                  @click="p !== '…' && (alarmPage = p)"
+                >{{ p }}</button>
+                <button class="page-btn" :disabled="alarmPage === alarmTotalPages" @click="alarmPage++">&gt;</button>
+                <span class="page-info">第 {{ alarmPage }} / {{ alarmTotalPages }} 页</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- ===== 执行策略 ===== -->
+          <template v-if="alarmTab === 'strategy'">
+            <div class="strategy-intro">
+              <div class="strategy-intro-icon">⚙️</div>
+              <div class="strategy-intro-text">系统共配置了 <strong>{{ strategies.length }}</strong> 条自动化策略，当前 <strong>{{ strategies.filter(s => s.active).length }}</strong> 条处于激活状态。策略按触发条件自动执行，无需人工干预。</div>
+            </div>
+            <div class="strategy-list">
+              <div
+                v-for="s in paginatedStrategies"
+                :key="s.id"
+                class="panel-card strategy-card"
+                :class="{ inactive: !s.active }"
+                @click="openStrategyDetail(s)"
+              >
+                <div class="strategy-card-header">
+                  <div class="strategy-icon-wrap" :class="s.type">
+                    <span>{{ s.type === 'auto' ? '🤖' : s.type === 'timer' ? '⏰' : s.type === 'threshold' ? '📊' : '🔗' }}</span>
+                  </div>
+                  <div class="strategy-info">
+                    <div class="strategy-name">{{ s.name }}</div>
+                    <div class="strategy-type-badge" :class="s.type">{{ s.typeText }}</div>
+                  </div>
+                  <div class="strategy-toggle">
+                    <button class="toggle-btn" :class="{ active: s.active }" @click.stop="s.active = !s.active">
+                      <span class="toggle-knob"></span>
+                    </button>
+                    <span class="toggle-label">{{ s.active ? '已启用' : '已禁用' }}</span>
+                  </div>
+                </div>
+                <div class="strategy-desc">{{ s.description }}</div>
+                <div class="strategy-footer">
+                  <div class="strategy-trigger">
+                    <span class="st-icon">🔔</span>
+                    <span>{{ s.trigger }}</span>
+                  </div>
+                  <div class="strategy-exec">
+                    <span class="st-icon">⚡</span>
+                    <span>{{ s.action }}</span>
+                  </div>
+                </div>
+                <div class="strategy-stats">
+                  <div class="ss-item">
+                    <span class="ss-num">{{ s.execCount }}</span>
+                    <span class="ss-label">执行次数</span>
+                  </div>
+                  <div class="ss-item">
+                    <span class="ss-num success">{{ s.successRate }}%</span>
+                    <span class="ss-label">成功率</span>
+                  </div>
+                  <div class="ss-item">
+                    <span class="ss-time">{{ s.lastExec }}</span>
+                    <span class="ss-label">上次执行</span>
+                  </div>
+                  <div class="ss-item">
+                    <span class="ss-status" :class="s.status === 'normal' ? 'success' : 'warn'">{{ s.statusText }}</span>
+                    <span class="ss-label">状态</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 策略分页 -->
+            <div v-if="strategyTotalPages > 1" class="pagination">
+              <button class="page-btn" :disabled="strategyPage === 1" @click="strategyPage--">&lt;</button>
+              <button v-for="p in visibleStrategyPages" :key="p" class="page-btn" :class="{ active: p === strategyPage, ellipsis: p === '…' }" :disabled="p === '…'" @click="p !== '…' && (strategyPage = p)">{{ p }}</button>
+              <button class="page-btn" :disabled="strategyPage === strategyTotalPages" @click="strategyPage++">&gt;</button>
+              <span class="page-info">第 {{ strategyPage }} / {{ strategyTotalPages }} 页</span>
+            </div>
+          </template>
+
+          <!-- 策略详情弹窗 -->
+          <div v-if="strategyDetailVisible" class="env-detail-overlay" @click.self="strategyDetailVisible = false">
+            <div class="env-detail-panel strategy-detail-panel">
+              <div class="env-detail-header">
+                <div class="detail-title-row">
+                  <div class="strategy-icon-wrap large" :class="selectedStrategy?.type">
+                    <span>{{ selectedStrategy?.type === 'auto' ? '🤖' : selectedStrategy?.type === 'timer' ? '⏰' : selectedStrategy?.type === 'threshold' ? '📊' : '🔗' }}</span>
+                  </div>
+                  <div>
+                    <h2 class="detail-title">{{ selectedStrategy?.name }}</h2>
+                    <span class="strategy-type-badge" :class="selectedStrategy?.type">{{ selectedStrategy?.typeText }}</span>
+                  </div>
+                </div>
+                <button class="env-detail-close" @click="strategyDetailVisible = false">✕</button>
+              </div>
+              <div class="env-detail-body">
+                <div class="detail-section">
+                  <h4 class="detail-section-title">策略描述</h4>
+                  <p class="detail-text">{{ selectedStrategy?.description }}</p>
+                </div>
+                <div class="detail-section">
+                  <h4 class="detail-section-title">触发条件</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">类型</span>
+                    <span class="detail-value">{{ selectedStrategy?.triggerTypeText }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">条件</span>
+                    <span class="detail-value">{{ selectedStrategy?.trigger }}</span>
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <h4 class="detail-section-title">执行动作</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">设备</span>
+                    <span class="detail-value">{{ selectedStrategy?.targetDevice }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">动作</span>
+                    <span class="detail-value">{{ selectedStrategy?.action }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">延迟</span>
+                    <span class="detail-value">{{ selectedStrategy?.delay }} 秒后执行</span>
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <h4 class="detail-section-title">运行统计</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">执行次数</span>
+                    <span class="detail-value">{{ selectedStrategy?.execCount }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">成功率</span>
+                    <span class="detail-value success">{{ selectedStrategy?.successRate }}%</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">上次执行</span>
+                    <span class="detail-value">{{ selectedStrategy?.lastExec }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">当前状态</span>
+                    <span class="detail-value" :class="selectedStrategy?.status === 'normal' ? 'success' : 'warn'">{{ selectedStrategy?.statusText }}</span>
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <h4 class="detail-section-title">启用 / 禁用</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">状态</span>
+                    <div class="detail-value">
+                      <button class="toggle-btn" :class="{ active: selectedStrategy?.active }" @click="selectedStrategy && (selectedStrategy.active = !selectedStrategy.active)">
+                        <span class="toggle-knob"></span>
+                      </button>
+                      <span class="toggle-label" style="margin-left:8px">{{ selectedStrategy?.active ? '已启用' : '已禁用' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ===== 环境总览 ===== -->
         <div v-show="currentPage === 'env'" class="page">
           <div ref="envScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
@@ -583,17 +869,6 @@
             </div>
           </div>
 
-          <div class="panel-card">
-            <div class="panel-header"><h3 class="panel-title">健康告警</h3><span class="panel-count">{{ alarms.length }} 条</span></div>
-            <div class="alarm-list">
-              <div v-for="a in alarms" :key="a.time" class="alarm-item">
-                <span class="alarm-time">{{ a.time }}</span>
-                <span class="alarm-content">{{ a.content }}</span>
-                <span class="alarm-tag" :class="a.level">{{ a.levelText }}</span>
-                <span class="alarm-status" :class="a.status">{{ a.statusText }}</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- ===== 设备管理 ===== -->
@@ -1580,15 +1855,16 @@ function updateTime() {
 const navItems = [
   { id: 'env',     name: '环境总览', icon: '🌤' },
   { id: 'energy',  name: '能源管理', icon: '⚡' },
-  { id: 'health',  name: '健康监测', icon: '❤' },
   { id: 'device',  name: '设备管理', icon: '📱' },
   { id: 'product', name: '产品中心', icon: '📦' },
+  { id: 'health',  name: '健康监测', icon: '❤' },
+  { id: 'alarm',   name: '策略告警', icon: '🔔' },
 ]
 const currentTitle = computed(() => navItems.find(n => n.id === currentPage.value)?.name ?? '')
 
 function switchPage(id) {
-  // 全屏时切换页面，自动退出全屏并恢复全景
-  if (isFullscreen.value) {
+  // 全屏时或非全景视图时切换页面，自动退出全屏并恢复全景
+  if (isFullscreen.value || activeRoom.value !== 'all') {
     isFullscreen.value = false
     closeAllPanels()
     resetView()
@@ -2362,12 +2638,105 @@ function formatMetricValue(str) {
   return str.replace(/([^\u4e00-\u9fa5\u3000-\u303f]+)/g, '<span class="num">$1</span>')
 }
 
-const alarms = ref([
-  { time: '08:30', content: '心率偏高提醒', level: 'warn', levelText: '警告', status: 'done',    statusText: '已处理' },
-  { time: '14:15', content: '久坐提醒',     level: 'info', levelText: '提示', status: 'pending', statusText: '未处理' },
-  { time: '昨日',  content: '睡眠时间不足', level: 'warn', levelText: '警告', status: 'done',    statusText: '已处理' },
-  { time: '前日',  content: '饮水提醒',    level: 'info', levelText: '提示', status: 'done',    statusText: '已处理' },
+// ========== 策略告警页面 ==========
+const alarmTab = ref('device')
+const alarmSearch = ref('')
+const alarmLevelFilter = ref('')
+const alarmStatusFilter = ref('')
+const alarmPage = ref(1)
+const strategyPage = ref(1)
+const PAGE_SIZE = 8
+const STRATEGY_PAGE_SIZE = 8
+const strategyDetailVisible = ref(false)
+const selectedStrategy = ref(null)
+
+function switchAlarmTab(tab) {
+  alarmTab.value = tab
+  alarmPage.value = 1
+  strategyPage.value = 1
+  // 切换标签时重置筛选条件，显示全部告警
+  alarmSearch.value = ''
+  alarmLevelFilter.value = ''
+  alarmStatusFilter.value = ''
+}
+function resolveAlarm(alarm) { alarm.status = 'done'; alarm.statusText = '已处理' }
+function markAllAlarmsDone() { filteredAlarms.value.forEach(a => { a.status = 'done'; a.statusText = '已处理' }) }
+function clearDoneAlarms() { allAlarms.value = allAlarms.value.filter(a => a.status === 'pending'); alarmPage.value = 1 }
+function openStrategyDetail(s) { selectedStrategy.value = s; strategyDetailVisible.value = true }
+
+// 合并所有告警（设备 + 健康）
+const allAlarms = ref([
+  { id: 201, time: '15:20', type: 'device', source: '客厅空调', icon: '❄️', content: '温度传感器异常，读数偏差超过 5°C，请检查传感器或联系售后', level: 'danger', levelText: '严重', status: 'pending', statusText: '未处理', suggestion: '建议立即联系售后检修' },
+  { id: 202, time: '14:05', type: 'device', source: '厨房烟雾传感器', icon: '💨', content: '电池电量低于 10%，需及时更换电池', level: 'warn', levelText: '警告', status: 'pending', statusText: '未处理', suggestion: '请更换电池' },
+  { id: 203, time: '13:30', type: 'device', source: '主卧智能门锁', icon: '🔐', content: '连续 3 次密码输入错误，已临时锁定', level: 'danger', levelText: '严重', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 204, time: '12:15', type: 'device', source: '阳台摄像头', icon: '📹', content: '设备离线超过 30 分钟，网络连接异常', level: 'warn', levelText: '警告', status: 'pending', statusText: '未处理', suggestion: '检查网络和电源' },
+  { id: 205, time: '11:00', type: 'device', source: '客厅扫地机器人', icon: '🤖', content: '尘盒已满，请清理后再使用', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 206, time: '10:30', type: 'device', source: '热水器', icon: '🚿', content: '固件更新可用（v3.2.1），建议更新以获取最新功能', level: 'info', levelText: '提示', status: 'pending', statusText: '未处理', suggestion: null },
+  { id: 207, time: '昨日',  type: 'device', source: '玄关人体传感器', icon: '📡', content: '感应灵敏度下降，检测范围缩小', level: 'warn', levelText: '警告', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 208, time: '前日',  type: 'device', source: '书房智能插座', icon: '🔌', content: '功率超载保护触发（> 2200W），插座已自动断电', level: 'danger', levelText: '严重', status: 'done', statusText: '已处理', suggestion: '减少插座上的设备' },
+  { id: 209, time: '09:45', type: 'device', source: '厨房净水器', icon: '💧', content: '滤芯寿命剩余 10%，建议 3 天内更换', level: 'warn', levelText: '警告', status: 'pending', statusText: '未处理', suggestion: '更换滤芯' },
+  { id: 210, time: '08:30', type: 'device', source: '主卧空调', icon: '❄️', content: '运行超时提醒：已连续运行 8 小时', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 211, time: '昨日',  type: 'device', source: '客厅窗帘电机', icon: '🪟', content: '行程校准数据丢失，需重新设置行程', level: 'warn', levelText: '警告', status: 'pending', statusText: '未处理', suggestion: '重新校准窗帘行程' },
+  { id: 212, time: '前日',  type: 'device', source: '车库门传感器', icon: '🚪', content: '开门响应延迟 > 3 秒，传感器可能老化', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 101, time: '08:30', type: 'health', source: '健康监测', icon: '❤️', content: '心率持续偏高（> 100bpm 超过 10 分钟），请注意休息', level: 'warn', levelText: '警告', status: 'done', statusText: '已处理', suggestion: '建议适当休息，减少咖啡因摄入' },
+  { id: 102, time: '14:15', type: 'health', source: '健康监测', icon: '❤️', content: '久坐提醒：已连续坐着超过 2 小时', level: 'info', levelText: '提示', status: 'pending', statusText: '未处理', suggestion: '站起来活动一下' },
+  { id: 103, time: '昨日',  type: 'health', source: '健康监测', icon: '❤️', content: '睡眠时长不足：实际睡眠 5.2 小时，低于推荐 7 小时', level: 'warn', levelText: '警告', status: 'done', statusText: '已处理', suggestion: '建议提前入睡时间' },
+  { id: 104, time: '前日',  type: 'health', source: '健康监测', icon: '❤️', content: '饮水提醒：今日饮水量仅 0.8L，未达到 2L 目标', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: '多喝水' },
+  { id: 105, time: '07:50', type: 'health', source: '健康监测', icon: '❤️', content: '血压偏高：收缩压 142mmHg，建议复测', level: 'warn', levelText: '警告', status: 'pending', statusText: '未处理', suggestion: '静坐后复测血压' },
+  { id: 106, time: '21:00', type: 'health', source: '健康监测', icon: '❤️', content: '血氧偏低：SpO2 91%，低于正常范围（95-100%）', level: 'danger', levelText: '严重', status: 'pending', statusText: '未处理', suggestion: '建议深呼吸，如持续请就医' },
+  { id: 107, time: '18:30', type: 'health', source: '健康监测', icon: '❤️', content: '体温正常：36.5°C，今日无异常', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: null },
+  { id: 108, time: '昨日',  type: 'health', source: '健康监测', icon: '❤️', content: '体重变化提醒：较上周增加 1.2kg，建议关注饮食', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: '注意饮食和运动' },
+  { id: 109, time: '昨日',  type: 'health', source: '健康监测', icon: '❤️', content: '紫外线强度偏高，外出请注意防晒', level: 'info', levelText: '提示', status: 'done', statusText: '已处理', suggestion: '外出使用防晒霜' },
+  { id: 110, time: '前日',  type: 'health', source: '健康监测', icon: '❤️', content: '空气质量提醒：室内 PM2.5 超标（78μg/m³）', level: 'warn', levelText: '警告', status: 'done', statusText: '已处理', suggestion: '开启空气净化器' },
 ])
+
+const strategies = ref([
+  { id: 1, name: '空调节能模式', type: 'auto', typeText: '自动控制', description: '当室内温度达到设定目标后，自动将空调切换至节能模式，减少能耗 25-30%', trigger: '温度 > 26°C 持续 15 分钟', triggerTypeText: '温控触发', targetDevice: '客厅空调', action: '切换到节能模式（低风速，26°C）', delay: 0, execCount: 847, successRate: 99, lastExec: '今日 14:20', status: 'normal', statusText: '正常', active: true },
+  { id: 2, name: '离家模式', type: 'auto', typeText: '自动控制', description: '所有家庭成员都离开家后，自动关闭所有灯、空调和待机设备', trigger: '所有人员定位均不在家内', triggerTypeText: '离家触发', targetDevice: '全屋设备', action: '关闭全部灯、空调、电视、音响', delay: 5, execCount: 312, successRate: 98, lastExec: '昨日 18:05', status: 'normal', statusText: '正常', active: true },
+  { id: 3, name: '夜间低功耗', type: 'timer', typeText: '定时策略', description: '每天 23:00 自动关闭不必要的设备，进入低功耗睡眠模式', trigger: '每日 23:00', triggerTypeText: '定时触发', targetDevice: '客厅/书房设备', action: '关闭电视、音响、台灯，仅保留卧室设备', delay: 0, execCount: 1204, successRate: 100, lastExec: '今日 23:00', status: 'normal', statusText: '正常', active: true },
+  { id: 4, name: 'PM2.5 超标告警', type: 'threshold', typeText: '阈值告警', description: '当室内 PM2.5 超过 75μg/m³ 时，自动开启空气净化器', trigger: 'PM2.5 > 75μg/m³', triggerTypeText: '阈值触发', targetDevice: '全屋空气净化器', action: '开启空气净化器最高档', delay: 0, execCount: 89, successRate: 100, lastExec: '前日 10:30', status: 'normal', statusText: '正常', active: true },
+  { id: 5, name: '智能灯光感应', type: 'auto', typeText: '自动控制', description: '光照强度低于 100lux 且有人移动时，自动开启区域灯光', trigger: '光照 < 100lux + 人体感应有人', triggerTypeText: '复合触发', targetDevice: '对应区域灯光', action: '开启对应区域灯光至 60% 亮度', delay: 3, execCount: 2341, successRate: 97, lastExec: '今日 07:15', status: 'normal', statusText: '正常', active: true },
+  { id: 6, name: '暴雨防汛模式', type: 'threshold', typeText: '阈值告警', description: '当检测到室外暴雨天气时，自动关闭窗户、开启除湿机', trigger: '室外天气 = 暴雨', triggerTypeText: '天气触发', targetDevice: '窗户电机 + 除湿机', action: '关闭所有窗户，开启除湿机', delay: 0, execCount: 12, successRate: 100, lastExec: '上周三 08:20', status: 'normal', statusText: '正常', active: true },
+  { id: 7, name: '健康饮水提醒', type: 'timer', typeText: '定时策略', description: '白天每 2 小时提醒一次饮水，帮助养成健康饮水习惯', trigger: '每日 09:00-18:00 每 2 小时', triggerTypeText: '定时触发', targetDevice: '手机 App 推送', action: '发送饮水提醒通知', delay: 0, execCount: 523, successRate: 100, lastExec: '今日 15:00', status: 'normal', statusText: '正常', active: false },
+  { id: 8, name: '热水器定时加热', type: 'timer', typeText: '定时策略', description: '每天 06:30 和 21:00 自动加热热水器，其余时间保温模式', trigger: '每日 06:30 / 21:00', triggerTypeText: '定时触发', targetDevice: '热水器', action: '切换到加热模式（60°C）', delay: 0, execCount: 980, successRate: 99, lastExec: '今日 06:30', status: 'normal', statusText: '正常', active: true },
+  { id: 9, name: '烟雾告警联动', type: 'auto', typeText: '自动控制', description: '烟雾传感器检测到异常烟雾时，立刻打开所有窗户并推送告警', trigger: '烟雾传感器触发报警', triggerTypeText: '安防触发', targetDevice: '窗户电机 + 告警系统', action: '打开所有窗户 + 推送告警 + 拨打紧急联系人', delay: 0, execCount: 3, successRate: 100, lastExec: '上月 15 日 03:10', status: 'normal', statusText: '正常', active: true },
+  { id: 10, name: '回家模式', type: 'auto', typeText: '自动控制', description: '第一位家庭成员到家时，自动打开玄关灯、客厅灯和空调至舒适温度', trigger: '任一人员回家（定位进入家内）', triggerTypeText: '回家触发', targetDevice: '玄关灯 + 客厅灯 + 空调', action: '开玄关灯 30%、客厅灯 80%、空调 24°C', delay: 0, execCount: 845, successRate: 99, lastExec: '今日 18:30', status: 'normal', statusText: '正常', active: true },
+  { id: 11, name: '睡眠模式', type: 'auto', typeText: '自动控制', description: '夜间睡眠时段自动关闭客厅灯、调暗卧室灯、关闭窗帘、降低空调温度', trigger: '每日 22:00 自动触发', triggerTypeText: '定时触发', targetDevice: '客厅灯 + 卧室灯 + 窗帘 + 空调', action: '关客厅灯、卧室灯 10%、关窗帘、空调 20°C', delay: 0, execCount: 320, successRate: 98, lastExec: '昨日 22:00', status: 'normal', statusText: '正常', active: true },
+  { id: 12, name: '电费超支告警', type: 'threshold', typeText: '阈值告警', description: '当本月电费超过月度预算 80% 时发送告警，超过 100% 时关闭高耗能设备', trigger: '月度电费 > 预算 80% / 100%', triggerTypeText: '阈值触发', targetDevice: '全部 / 高耗能设备', action: '80%: 推送告警 / 100%: 关闭非必要高耗能设备', delay: 0, execCount: 24, successRate: 100, lastExec: '本月 5 日 09:00', status: 'normal', statusText: '正常', active: true },
+])
+
+const filteredAlarms = computed(() => {
+  let list = allAlarms.value.filter(a => a.type === alarmTab.value)
+  if (alarmSearch.value) { const q = alarmSearch.value.toLowerCase(); list = list.filter(a => a.content.toLowerCase().includes(q) || a.source.toLowerCase().includes(q)) }
+  if (alarmLevelFilter.value) list = list.filter(a => a.level === alarmLevelFilter.value)
+  if (alarmStatusFilter.value) list = list.filter(a => a.status === alarmStatusFilter.value)
+  return list
+})
+const paginatedAlarms = computed(() => filteredAlarms.value.slice((alarmPage.value - 1) * PAGE_SIZE, alarmPage.value * PAGE_SIZE))
+const alarmTotalPages = computed(() => Math.max(1, Math.ceil(filteredAlarms.value.length / PAGE_SIZE)))
+const visiblePages = computed(() => {
+  const tp = alarmTotalPages.value, cp = alarmPage.value
+  if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1)
+  const pages = [1]
+  if (cp > 3) pages.push('…')
+  for (let p = Math.max(2, cp - 1); p <= Math.min(tp - 1, cp + 1); p++) pages.push(p)
+  if (cp < tp - 2) pages.push('…')
+  pages.push(tp)
+  return pages
+})
+const paginatedStrategies = computed(() => strategies.value.slice((strategyPage.value - 1) * STRATEGY_PAGE_SIZE, strategyPage.value * STRATEGY_PAGE_SIZE))
+const strategyTotalPages = computed(() => Math.max(1, Math.ceil(strategies.value.length / STRATEGY_PAGE_SIZE)))
+const visibleStrategyPages = computed(() => {
+  const tp = strategyTotalPages.value, cp = strategyPage.value
+  if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1)
+  const pages = [1]
+  if (cp > 3) pages.push('…')
+  for (let p = Math.max(2, cp - 1); p <= Math.min(tp - 1, cp + 1); p++) pages.push(p)
+  if (cp < tp - 2) pages.push('…')
+  pages.push(tp)
+  return pages
+})
+watch([alarmSearch, alarmLevelFilter, alarmStatusFilter], () => { alarmPage.value = 1 })
 
 // 能耗排行数据
 const energyRank = ref([
@@ -2666,7 +3035,6 @@ onMounted(() => {
 
   // 能源排行实时模拟：每 8 秒微调一次
   energyTimer = setInterval(() => {
-    console.log('[energyTimer] tick', Date.now())
     // 电能排行
     energyRank.value.forEach(item => {
     item.val = Math.round((item.val + Math.random() * 0.05) * 100) / 100
