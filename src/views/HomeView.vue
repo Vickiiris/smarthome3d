@@ -2640,19 +2640,19 @@ onMounted(() => {
     console.log('[energyTimer] tick', Date.now())
     // 电能排行
     energyRank.value.forEach(item => {
-      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.1) * 100) / 100
+    item.val = Math.round((item.val + Math.random() * 0.05) * 100) / 100
       item.val = Math.max(0.1, item.val)
       item.pct = Math.round((item.val / 4) * 100)
     })
     // 水排行
     waterRank.value.forEach(item => {
-      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.02) * 100) / 100
+    item.val = Math.round((item.val + Math.random() * 0.005) * 1000) / 1000
       item.val = Math.max(0.01, item.val)
       item.pct = Math.round((item.val / 0.4) * 100)
     })
     // 燃气排行
     gasRank.value.forEach(item => {
-      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.01) * 100) / 100
+    item.val = Math.round((item.val + Math.random() * 0.003) * 1000) / 1000
       item.val = Math.max(0.01, item.val)
       item.pct = Math.round((item.val / 0.3) * 100)
     })
