@@ -1829,40 +1829,50 @@ function openSecurityControl(item) {
 }
 
 // 打开能源详情弹窗
+// 计算排行分时段数据（每次调用都用最新的 item.val）
+function computeRankPeriods(rankType, itemVal) {
+  const defs = {
+    electric: [
+      { label: '凌晨 00:00-06:00', factor: 0.15, pct: 15, color: '#81c784' },
+      { label: '早晨 06:00-09:00', factor: 0.18, pct: 18, color: '#4fc3f7' },
+      { label: '上午 09:00-12:00', factor: 0.12, pct: 12, color: '#00d4aa' },
+      { label: '中午 12:00-14:00', factor: 0.08, pct: 8,  color: '#ffd54f' },
+      { label: '下午 14:00-18:00', factor: 0.15, pct: 15, color: '#ce93d8' },
+      { label: '傍晚 18:00-21:00', factor: 0.22, pct: 22, color: '#ff7043' },
+      { label: '夜间 21:00-24:00', factor: 0.10, pct: 10, color: '#607d8b' },
+    ],
+    water: [
+      { label: '凌晨 00:00-06:00', factor: 0.05, pct: 5,  color: '#607d8b' },
+      { label: '早晨 06:00-09:00', factor: 0.20, pct: 20, color: '#4fc3f7' },
+      { label: '上午 09:00-12:00', factor: 0.10, pct: 10, color: '#00d4aa' },
+      { label: '中午 12:00-14:00', factor: 0.25, pct: 25, color: '#ffd54f' },
+      { label: '下午 14:00-18:00', factor: 0.05, pct: 5,  color: '#ce93d8' },
+      { label: '傍晚 18:00-21:00', factor: 0.30, pct: 30, color: '#ff7043' },
+      { label: '夜间 21:00-24:00', factor: 0.05, pct: 5,  color: '#81c784' },
+    ],
+    gas: [
+      { label: '凌晨 00:00-06:00', factor: 0.02, pct: 2,  color: '#607d8b' },
+      { label: '早晨 06:00-09:00', factor: 0.15, pct: 15, color: '#ffa726' },
+      { label: '上午 09:00-12:00', factor: 0.08, pct: 8,  color: '#ffcc80' },
+      { label: '中午 12:00-14:00', factor: 0.10, pct: 10, color: '#ffd54f' },
+      { label: '下午 14:00-18:00', factor: 0.05, pct: 5,  color: '#ce93d8' },
+      { label: '傍晚 18:00-21:00', factor: 0.55, pct: 55, color: '#ff7043' },
+      { label: '夜间 21:00-24:00', factor: 0.05, pct: 5,  color: '#81c784' },
+    ],
+  }
+  const decimals = rankType === 'electric' ? 2 : 3
+  return (defs[rankType] || []).map(d => ({
+    label: d.label, value: (itemVal * d.factor).toFixed(decimals), pct: d.pct, color: d.color
+  }))
+}
+
 function openEnergyDetail(type, item = null) {
   // 能耗排行点击：显示分时段耗能明细
   if (type.endsWith('-rank') && item) {
     const rankType = type.replace('-rank', '')
-    const periods = {
-      electric: [
-        { label: '凌晨 00:00-06:00', value: (item.val * 0.15).toFixed(2), pct: 15, color: '#81c784' },
-        { label: '早晨 06:00-09:00', value: (item.val * 0.18).toFixed(2), pct: 18, color: '#4fc3f7' },
-        { label: '上午 09:00-12:00', value: (item.val * 0.12).toFixed(2), pct: 12, color: '#00d4aa' },
-        { label: '中午 12:00-14:00', value: (item.val * 0.08).toFixed(2), pct: 8, color: '#ffd54f' },
-        { label: '下午 14:00-18:00', value: (item.val * 0.15).toFixed(2), pct: 15, color: '#ce93d8' },
-        { label: '傍晚 18:00-21:00', value: (item.val * 0.22).toFixed(2), pct: 22, color: '#ff7043' },
-        { label: '夜间 21:00-24:00', value: (item.val * 0.10).toFixed(2), pct: 10, color: '#607d8b' },
-      ],
-      water: [
-        { label: '凌晨 00:00-06:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#607d8b' },
-        { label: '早晨 06:00-09:00', value: (item.val * 0.20).toFixed(3), pct: 20, color: '#4fc3f7' },
-        { label: '上午 09:00-12:00', value: (item.val * 0.10).toFixed(3), pct: 10, color: '#00d4aa' },
-        { label: '中午 12:00-14:00', value: (item.val * 0.25).toFixed(3), pct: 25, color: '#ffd54f' },
-        { label: '下午 14:00-18:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#ce93d8' },
-        { label: '傍晚 18:00-21:00', value: (item.val * 0.30).toFixed(3), pct: 30, color: '#ff7043' },
-        { label: '夜间 21:00-24:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#81c784' },
-      ],
-      gas: [
-        { label: '凌晨 00:00-06:00', value: (item.val * 0.02).toFixed(3), pct: 2, color: '#607d8b' },
-        { label: '早晨 06:00-09:00', value: (item.val * 0.15).toFixed(3), pct: 15, color: '#ffa726' },
-        { label: '上午 09:00-12:00', value: (item.val * 0.08).toFixed(3), pct: 8, color: '#ffcc80' },
-        { label: '中午 12:00-14:00', value: (item.val * 0.10).toFixed(3), pct: 10, color: '#ffd54f' },
-        { label: '下午 14:00-18:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#ce93d8' },
-        { label: '傍晚 18:00-21:00', value: (item.val * 0.55).toFixed(3), pct: 55, color: '#ff7043' },
-        { label: '夜间 21:00-24:00', value: (item.val * 0.05).toFixed(3), pct: 5, color: '#81c784' },
-      ],
-    }
-    const units = { electric: 'kWh', water: 'm³', gas: 'm³' }
+    const units = { electric: 'kWh', water: 'm\u00b3', gas: 'm\u00b3' }
+    const rankSrc = rankType === 'water' ? waterRank.value : rankType === 'gas' ? gasRank.value : energyRank.value
+    const rankItem = rankSrc.find(r => r.name === item.name) || item
     selectedDevice.value = {
       id: type,
       name: item.name + ' 分时段耗能',
@@ -1870,8 +1880,10 @@ function openEnergyDetail(type, item = null) {
       type: 'energy',
       title: item.name + ' 分时段耗能',
       unit: units[rankType],
-      value: item.val,
-      periods: periods[rankType],
+      value: rankItem.val,
+      periods: computeRankPeriods(rankType, rankItem.val),
+      _rankType: rankType,
+      _rankItemName: item.name,
       desc: '今日各时段能耗明细',
     }
     showControlPanel.value = true
@@ -2710,6 +2722,16 @@ onMounted(() => {
       const data = energyData[etype]
       if (data) {
         selectedDevice.value = { ...selectedDevice.value, value: data.value, trend: data.trend, desc: data.desc }
+      }
+    }
+    // 排行弹窗打开中：用最新 item.val 重新计算分时段数据
+    if (showControlPanel.value && selectedDevice.value?._rankType) {
+      const rt = selectedDevice.value._rankType
+      const rn = selectedDevice.value._rankItemName
+      const src = rt === 'water' ? waterRank.value : rt === 'gas' ? gasRank.value : energyRank.value
+      const ri = src.find(r => r.name === rn)
+      if (ri) {
+        selectedDevice.value = { ...selectedDevice.value, value: ri.val, periods: computeRankPeriods(rt, ri.val) }
       }
     }
   }, 8000)
