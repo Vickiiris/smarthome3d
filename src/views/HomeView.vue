@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-logo">
@@ -19,6 +19,14 @@
           <span class="nav-label">{{ item.name }}</span>
         </div>
       </nav>
+      <!-- 场景模式 -->
+      <div class="scene-modes">
+        <div class="scene-modes-title">场景模式</div>
+        <button v-for="mode in sceneModes" :key="mode.id" class="scene-mode-btn" :class="{ active: activeSceneMode === mode.id }" @click="applySceneMode(mode)">
+          <span class="sm-icon">{{ mode.icon }}</span>
+          <span class="sm-label">{{ mode.label }}</span>
+        </button>
+      </div>
       <div class="sidebar-footer">
         <div class="user-info">
           <div class="avatar">Z</div>
@@ -176,7 +184,7 @@
               <div class="em-info">
                 <div class="em-label">今日用电</div>
                 <div class="em-value">{{ homeStore.stats.dailyEnergy ?? '8.5' }} <span class="em-unit">kWh</span></div>
-                <div class="em-trend up">↑ 5.2%</div>
+                <div class="em-trend" :class="electricTrend.dir">{{ electricTrend.label }}</div>
               </div>
             </div>
             <div class="energy-metric-card water" @click="openEnergyDetail('water')">
@@ -185,8 +193,8 @@
               </div>
               <div class="em-info">
                 <div class="em-label">今日用水</div>
-                <div class="em-value">0.8 <span class="em-unit">m³</span></div>
-                <div class="em-trend down">↓ 3.2%</div>
+                <div class="em-value">{{ energyLiveData.waterToday.toFixed(2) }} <span class="em-unit">m³</span></div>
+                <div class="em-trend" :class="waterTrend.dir">{{ waterTrend.label }}</div>
               </div>
             </div>
             <div class="energy-metric-card gas" @click="openEnergyDetail('gas')">
@@ -195,8 +203,8 @@
               </div>
               <div class="em-info">
                 <div class="em-label">今日燃气</div>
-                <div class="em-value">0.45 <span class="em-unit">m³</span></div>
-                <div class="em-trend up">↑ 2.1%</div>
+                <div class="em-value">{{ energyLiveData.gasToday.toFixed(2) }} <span class="em-unit">m³</span></div>
+                <div class="em-trend" :class="gasTrend.dir">{{ gasTrend.label }}</div>
               </div>
             </div>
             <div class="energy-metric-card cost" @click="openEnergyDetail('cost')">
@@ -205,8 +213,8 @@
               </div>
               <div class="em-info">
                 <div class="em-label">今日费用</div>
-                <div class="em-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + 0.8 * 3.5 + 0.45 * 2.8).toFixed(1) }}</div>
-                <div class="em-trend down">↓ 2.8%</div>
+                <div class="em-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.waterToday * 3.5 + energyLiveData.gasToday * 2.8).toFixed(1) }}</div>
+                <div class="em-trend" :class="costTrend.dir">{{ costTrend.label }}</div>
               </div>
             </div>
           </div>
@@ -291,7 +299,7 @@
               </div>
               <div class="cdc-body">
                 <div class="cdc-main">
-                  <span class="cdc-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30).toFixed(1) }}</span>
+                  <span class="cdc-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 + energyLiveData.waterToday * 3.5 * 30 + energyLiveData.gasToday * 2.8 * 30).toFixed(1) }}</span>
                   <span class="cdc-label">本月预估</span>
                 </div>
                 <div class="cdc-items">
@@ -310,13 +318,13 @@
               </div>
               <div class="cdc-body">
                 <div class="cdc-main">
-                  <span class="cdc-value">¥{{ (0.8 * 30 * 3.5).toFixed(1) }}</span>
+                  <span class="cdc-value">¥{{ (energyLiveData.waterToday * 30 * 3.5).toFixed(1) }}</span>
                   <span class="cdc-label">本月预估</span>
                 </div>
                 <div class="cdc-items">
-                  <div class="cdc-item"><span>生活用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.7).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>洗浴用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.2).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>厨房用水</span><span>¥{{ (0.8 * 30 * 3.5 * 0.1).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>生活用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.7).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>洗浴用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.2).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>厨房用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.1).toFixed(1) }}</span></div>
                 </div>
               </div>
             </div>
@@ -329,13 +337,13 @@
               </div>
               <div class="cdc-body">
                 <div class="cdc-main">
-                  <span class="cdc-value">¥{{ (0.45 * 30 * 2.8).toFixed(1) }}</span>
+                  <span class="cdc-value">¥{{ (energyLiveData.gasToday * 30 * 2.8).toFixed(1) }}</span>
                   <span class="cdc-label">本月预估</span>
                 </div>
                 <div class="cdc-items">
-                  <div class="cdc-item"><span>热水器</span><span>¥{{ (0.45 * 30 * 2.8 * 0.55).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>燃气灶</span><span>¥{{ (0.45 * 30 * 2.8 * 0.35).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>壁挂炉</span><span>¥{{ (0.45 * 30 * 2.8 * 0.1).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>热水器</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.55).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>燃气灶</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.35).toFixed(1) }}</span></div>
+                  <div class="cdc-item"><span>壁挂炉</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.1).toFixed(1) }}</span></div>
                 </div>
               </div>
             </div>
@@ -1161,6 +1169,19 @@
     @close="showSlidePanel = false"
     @update="onDeviceUpdate"
   />
+
+  <!-- Toast 通知容器 -->
+  <Teleport to="body">
+    <div class="toast-container">
+      <TransitionGroup name="toast-fade">
+        <div v-for="toast in homeStore.toasts" :key="toast.id" class="toast-item" :class="toast.type">
+          <span class="toast-icon">{{ toastIcon(toast.type) }}</span>
+          <span class="toast-msg">{{ toast.message }}</span>
+          <button class="toast-close" @click="homeStore.removeToast(toast.id)">×</button>
+        </div>
+      </TransitionGroup>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -1172,13 +1193,132 @@ import DeviceControlPanel from '@/components/DeviceControlPanel.vue'
 
 const homeStore = useHomeStore()
 const currentPage = ref('env')
+const activeSceneMode = ref('')
+
+// ========== Toast 图标映射 ==========
+function toastIcon(type) {
+  const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', danger: '🚨' }
+  return icons[type] || 'ℹ️'
+}
+
+// ========== 场景模式 ==========
+const sceneModes = [
+  {
+    id: 'home',
+    label: '回家模式',
+    icon: '🏠',
+    desc: '打开客厅灯、空调26°C、热水器',
+    actions: [
+      { name: '客厅灯开关', status: true, value: 100 },
+      { name: '客厅空调', status: true, value: 26, mode: 'cool' },
+      { name: '燃气热水器', status: true, value: 55 },
+      { name: '空气质量传感器', status: true },
+      { name: '门禁控制器', status: false },
+    ],
+  },
+  {
+    id: 'away',
+    label: '离家模式',
+    icon: '🔒',
+    desc: '关闭所有灯、空调，锁定门禁',
+    actions: [
+      { name: '客厅灯开关', status: false },
+      { name: '主卧灯开关', status: false },
+      { name: '次卧灯开关', status: false },
+      { name: '厨房灯开关', status: false },
+      { name: '卫生间灯开关', status: false },
+      { name: '阳台灯开关', status: false },
+      { name: '客厅空调', status: false },
+      { name: '主卧空调', status: false },
+      { name: '次卧空调', status: false },
+      { name: '客厅电视', status: false },
+      { name: '智能音箱', status: false },
+      { name: '燃气热水器', status: false },
+      { name: '洗碗机', status: false },
+      { name: '门禁控制器', status: true },
+    ],
+  },
+  {
+    id: 'sleep',
+    label: '睡眠模式',
+    icon: '🌙',
+    desc: '关闭所有灯，空调26°C，客厅灯留夜灯',
+    actions: [
+      { name: '客厅灯开关', status: true, value: 10 },
+      { name: '主卧灯开关', status: false },
+      { name: '次卧灯开关', status: false },
+      { name: '厨房灯开关', status: false },
+      { name: '卫生间灯开关', status: false },
+      { name: '阳台灯开关', status: false },
+      { name: '客厅空调', status: true, value: 26, mode: 'cool' },
+      { name: '主卧空调', status: true, value: 26, mode: 'cool' },
+      { name: '次卧空调', status: false },
+      { name: '客厅电视', status: false },
+      { name: '智能音箱', status: false },
+      { name: '燃气热水器', status: false },
+    ],
+  },
+]
+
+function applySceneMode(mode) {
+  activeSceneMode.value = mode.id
+  let changed = 0
+
+  mode.actions.forEach(action => {
+    const idx = deviceList.value.findIndex(d => d.name === action.name)
+    if (idx !== -1) {
+      const device = deviceList.value[idx]
+      if (device.status !== action.status || (action.value !== undefined && device.value !== action.value)) {
+        deviceList.value[idx] = {
+          ...device,
+          status: action.status,
+          value: action.value ?? device.value,
+          mode: action.mode ?? device.mode,
+          online: GATEWAY_TYPES.has(device.type)
+                    ? (device.online ?? true)
+                    : action.status,
+        }
+        changed++
+        // 灯光开关时同步 3D 场景灯光
+        if (device.type === 'light') {
+          const lightId = getLightIdForDevice(device.id)
+          if (lightId) threeScene.setLightStatus(lightId, action.status, action.value ?? 100)
+        }
+      }
+    }
+  })
+
+  homeStore.addToast({
+    message: `${mode.icon} ${mode.label}已启用，共调整 ${changed} 个设备`,
+    type: 'success',
+  })
+}
+
+// 设备 ID → 3D 灯光 ID 映射
+function getLightIdForDevice(deviceId) {
+  const map = {
+    'dev19': 'light-1', // 客厅灯
+    'dev12': 'light-2', // 主卧灯
+    'dev14': 'light-3', // 次卧灯
+    'dev21': 'light-4', // 厨房灯
+    'dev25': 'light-5', // 卫生间灯
+    'dev26': 'light-6', // 阳台灯
+  }
+  return map[deviceId] || null
+}
 const deviceSearch = ref('')
 const activeRoom = ref('all')
 const isFullscreen = ref(false)
 
 // 环境详情弹窗
 const envDetailVisible = ref(false)
-const envDetailItem = ref(null)
+const envDetailLabel = ref('')
+
+// 弹窗环境数据：从 envItems computed 实时计算，弹窗不存快照
+const envDetailItem = computed(() => {
+  if (!envDetailLabel.value) return null
+  return envItems.value.find(i => i.label === envDetailLabel.value) || null
+})
 
 // 右侧控制面板（点击顶牌显示）
 const showSlidePanel = ref(false)
@@ -1208,7 +1348,7 @@ const healthDetailMap = {
 }
 
 function showEnvDetail(item) {
-  envDetailItem.value = item
+  envDetailLabel.value = item.label
   envDetailVisible.value = true
 }
 
@@ -1300,10 +1440,16 @@ function closeEnvDetail() {
 
 // 健康指标详情弹窗
 const healthDetailVisible = ref(false)
-const healthDetailItem = ref(null)
+const healthDetailLabel = ref('')
+
+// 弹窗健康数据：从 healthItems ref 实时查找，不存快照
+const healthDetailItem = computed(() => {
+  if (!healthDetailLabel.value) return null
+  return healthItems.value.find(i => i.label === healthDetailLabel.value) || null
+})
 
 function openHealthDetail(item) {
-  healthDetailItem.value = item
+  healthDetailLabel.value = item.label
   healthDetailVisible.value = true
 }
 
@@ -1410,7 +1556,7 @@ function mountCanvas(targetPage) {
 
 const currentTime = ref('')
 const currentDate = ref('')
-let timeTimer
+let timeTimer, envTimer, healthTimer, energyTimer
 function updateTime() {
   const n = new Date()
   currentTime.value = n.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -1440,8 +1586,9 @@ function switchPage(id) {
     }, 150)
   }
   currentPage.value = id
-  if (id === 'energy') nextTick(() => initCharts())
   if (id !== 'health') nextTick(() => mountCanvas(id))
+  // energy 页面需要等 v-show 生效、DOM 可见后再初始化图表
+  if (id === 'energy') setTimeout(() => initCharts(), 100)
 }
 
 // 关闭所有弹窗/面板
@@ -1734,14 +1881,14 @@ function openEnergyDetail(type, item = null) {
   const energyData = {
     today: { title: '今日用电详情', unit: 'kWh', value: homeStore.stats.dailyEnergy ?? 8.5, trend: '+5.2%', desc: '今日累计用电量' },
     power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(1), trend: '', desc: '当前用电功率' },
-    total: { title: '累计用电', unit: 'kWh', value: homeStore.stats.totalEnergy ?? 235, trend: '', desc: '本月累计用电' },
-    saving: { title: '节能率', unit: '%', value: homeStore.stats.savingRate ?? 18, trend: '', desc: '相比历史平均节能比例' },
-    carbon: { title: '碳减排量', unit: 'kg', value: homeStore.stats.carbonReduction ?? 12.5, trend: '', desc: '相当于减少的二氧化碳排放' },
-    water: { title: '今日用水详情', unit: 'm³', value: 0.8, trend: '-3.2%', desc: '今日累计用水量' },
-    gas: { title: '今日燃气详情', unit: 'm³', value: 0.45, trend: '+2.1%', desc: '今日累计燃气用量' },
-    cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + 0.8 * 3.5 + 0.45 * 2.8).toFixed(1), trend: '-2.8%', desc: '今日电费+水费+燃气费' },
-    waterCost: { title: '今日水费详情', unit: '元', value: (0.8 * 3.5).toFixed(1), trend: '+1.5%', desc: '今日水费支出' },
-    gasCost: { title: '今日燃气费详情', unit: '元', value: (0.45 * 2.8).toFixed(1), trend: '-5.8%', desc: '今日燃气费支出' },
+    total: { title: '累计用电', unit: 'kWh', value: energyLiveData.value.totalEnergy, trend: '', desc: '本月累计用电' },
+    saving: { title: '节能率', unit: '%', value: energyLiveData.value.savingRate, trend: '', desc: '相比历史平均节能比例' },
+    carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放' },
+    water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday, trend: '-3.2%', desc: '今日累计用水量' },
+    gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday, trend: '+2.1%', desc: '今日累计燃气用量' },
+    cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: '-2.8%', desc: '今日电费+水费+燃气费' },
+    waterCost: { title: '今日水费详情', unit: '元', value: (energyLiveData.value.waterToday * 3.5).toFixed(1), trend: '+1.5%', desc: '今日水费支出' },
+    gasCost: { title: '今日燃气费详情', unit: '元', value: (energyLiveData.value.gasToday * 2.8).toFixed(1), trend: '-5.8%', desc: '今日燃气费支出' },
   }
   const data = energyData[type] || energyData.today
   const iconMap = { water: '💧', gas: '🔥', waterCost: '💧', gasCost: '🔥', cost: '💰' }
@@ -1756,6 +1903,8 @@ function openEnergyDetail(type, item = null) {
     trend: data.trend,
     desc: data.desc,
     room: '全屋',
+    // 存储类型标签，弹窗通过 computed 读取实时数据，不冻结快照
+    energyType: type,
   }
   showControlPanel.value = true
 }
@@ -1918,17 +2067,23 @@ function openDeviceControlFromTable(device) {
 
 // 设备详情弹窗
 const showDeviceDetail = ref(false)
-const deviceDetailItem = ref(null)
+const deviceDetailId = ref('')
+
+const iconMap = {
+  ac: '❄️', light: '💡', tv: '📺', speaker: '🔊',
+  security: '🔒', ventil: '🌀', washer: '🍽️', heater: '🚿',
+  sensor: '📡', outlet: '🔌',
+}
+
+// 弹窗设备数据：从 deviceList 实时查找，不存快照
+const deviceDetailItem = computed(() => {
+  if (!deviceDetailId.value) return null
+  const d = deviceList.value.find(d => d.id === deviceDetailId.value || d.name === deviceDetailId.value)
+  return d ? { ...d, icon: iconMap[d.type] || '📱' } : null
+})
 
 function openDeviceDetail(device) {
-  const iconMap = {
-    ac: '❄️', light: '💡', tv: '📺', speaker: '🔊',
-    security: '🔒', ventil: '🌀', washer: '🍽️', heater: '🚿',
-  }
-  deviceDetailItem.value = {
-    ...device,
-    icon: iconMap[device.type] || '📱',
-  }
+  deviceDetailId.value = device.id
   showDeviceDetail.value = true
 }
 
@@ -1938,10 +2093,15 @@ function closeDeviceDetail() {
 
 // 产品详情弹窗
 const showProductDetail = ref(false)
-const productDetailItem = ref(null)
+const productDetailId = ref(0)
+
+const productDetailItem = computed(() => {
+  if (!productDetailId.value) return null
+  return products.value.find(p => p.id === productDetailId.value) || null
+})
 
 function openProductDetail(product) {
-  productDetailItem.value = product
+  productDetailId.value = product.id
   showProductDetail.value = true
 }
 
@@ -2087,16 +2247,16 @@ const pagedDevices = computed(() => {
   return filteredDevices.value.slice(start, start + DEVICE_PAGE_SIZE)
 })
 
-const healthItems = [
+const healthItems = ref([
   { icon: '❤',  label: '心率',   value: '72次/分',   trend: 2,   color: '#ff6b6b', range: '正常: 60-100次/分',   pct: 72,  raw: 72 },
   { icon: '🩸', label: '血压',   value: '118/75mmHg', trend: 0,   color: '#8b5cf6', range: '正常: 90-139/60-89', pct: 85,  raw: 118 },
   { icon: '🌡', label: '体温',   value: '36.5°C',     trend: 0.1, color: '#ff9800', range: '正常: 36.0-37.2°C',  pct: 50,  raw: 36.5 },
   { icon: '🫁', label: '血氧',   value: '98%',        trend: 1,   color: '#4fc3f7', range: '正常: 95-100%',      pct: 98,  raw: 98 },
   { icon: '😴', label: '睡眠',   value: '7.5小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.5 },
-]
+])
 
 // 心率趋势数据 (24小时)
-const heartRateData = [
+const heartRateData = ref([
   { time: '00:00', value: 65 }, { time: '01:00', value: 62 }, { time: '02:00', value: 58 },
   { time: '03:00', value: 55 }, { time: '04:00', value: 58 }, { time: '05:00', value: 62 },
   { time: '06:00', value: 72 }, { time: '07:00', value: 68 }, { time: '08:00', value: 75 },
@@ -2105,14 +2265,15 @@ const heartRateData = [
   { time: '15:00', value: 76 }, { time: '16:00', value: 72 }, { time: '17:00', value: 68 },
   { time: '18:00', value: 75 }, { time: '19:00', value: 71 }, { time: '20:00', value: 78 },
   { time: '21:00', value: 73 }, { time: '22:00', value: 80 }, { time: '23:00', value: 75 },
-]
+])
 
 // 血压周数据
-const bpWeekData = [
+const bpWeekData = ref([
   { sys: 115, dia: 75 }, { sys: 120, dia: 78 }, { sys: 118, dia: 76 },
   { sys: 122, dia: 80 }, { sys: 116, dia: 74 }, { sys: 119, dia: 77 },
   { sys: 118, dia: 78 },
-]
+])
+
 
 // 心率 Tooltip
 const heartTooltip = ref({ visible: false, x: 0, y: 0, time: '', value: 0 })
@@ -2174,39 +2335,39 @@ function formatMetricValue(str) {
   return str.replace(/([^\u4e00-\u9fa5\u3000-\u303f]+)/g, '<span class="num">$1</span>')
 }
 
-const alarms = [
+const alarms = ref([
   { time: '08:30', content: '心率偏高提醒', level: 'warn', levelText: '警告', status: 'done',    statusText: '已处理' },
   { time: '14:15', content: '久坐提醒',     level: 'info', levelText: '提示', status: 'pending', statusText: '未处理' },
   { time: '昨日',  content: '睡眠时间不足', level: 'warn', levelText: '警告', status: 'done',    statusText: '已处理' },
   { time: '前日',  content: '饮水提醒',    level: 'info', levelText: '提示', status: 'done',    statusText: '已处理' },
-]
+])
 
 // 能耗排行数据
-const energyRank = [
+const energyRank = ref([
   { name: '空调', val: 3.2, pct: 100, color: '#4fc3f7', icon: '❄️', unit: 'kWh' },
   { name: '冰箱', val: 1.8, pct: 56,  color: '#81c784', icon: '🧊', unit: 'kWh' },
   { name: '照明', val: 0.9, pct: 28,  color: '#ffd54f', icon: '💡', unit: 'kWh' },
   { name: '电视', val: 0.5, pct: 16,  color: '#ce93d8', icon: '📺', unit: 'kWh' },
-]
-const waterRank = [
+])
+const waterRank = ref([
   { name: '淋浴', val: 0.35, pct: 100, color: '#4fc3f7', icon: '🚿', unit: 'm³' },
   { name: '洗衣机', val: 0.18, pct: 51,  color: '#81c784', icon: '🧺', unit: 'm³' },
   { name: '厨房', val: 0.12, pct: 34,  color: '#ffd54f', icon: '🍳', unit: 'm³' },
   { name: '洗手台', val: 0.08, pct: 23,  color: '#ce93d8', icon: '🚰', unit: 'm³' },
-]
-const gasRank = [
+])
+const gasRank = ref([
   { name: '热水器', val: 0.25, pct: 100, color: '#ff7043', icon: '🚿', unit: 'm³' },
   { name: '燃气灶', val: 0.15, pct: 60,  color: '#ffa726', icon: '🔥', unit: 'm³' },
   { name: '壁挂炉', val: 0.05, pct: 20,  color: '#ffcc80', icon: '🏠', unit: 'm³' },
-]
+])
 const rankTab = ref('electric')
 const currentRankList = computed(() => {
-  if (rankTab.value === 'water') return waterRank
-  if (rankTab.value === 'gas') return gasRank
-  return energyRank
+  if (rankTab.value === 'water') return waterRank.value
+  if (rankTab.value === 'gas') return gasRank.value
+  return energyRank.value
 })
 
-const products = [
+const products = ref([
   // 环境控制
   { id: 1,  icon: '❄️', name: '变频空调 KFR-35',    sub: '环境控制', vendor: '美的',     tag: '已接入', protocol: 'Wi-Fi', power: '220V AC', firmware: 'v3.2.1', connectedAt: '2024-06-10', signal: '强 (-38dBm)' },
   { id: 2,  icon: '🌀', name: '新风系统 FX-200',     sub: '环境控制', vendor: '海尔',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.0.8', connectedAt: '2024-07-22', signal: '中 (-65dBm)' },
@@ -2236,7 +2397,7 @@ const products = [
   // 能源管理
   { id: 22, icon: '🔌', name: '智能插座',            sub: '能源管理', vendor: '小米',     tag: '已接入', protocol: 'Zigbee 3.0', power: '220V AC', firmware: 'v2.0.3', connectedAt: '2024-09-18', signal: '强 (-46dBm)' },
   { id: 23, icon: '⚡', name: '智能电表',             sub: '能源管理', vendor: '正泰',     tag: '待接入', protocol: 'RS-485', power: '220V AC' },
-]
+])
 
 // 产品筛选 & 分页
 const productSubFilter = ref('')
@@ -2245,7 +2406,7 @@ const productPage = ref(1)
 const PRODUCT_PAGE_SIZE = 12
 
 const filteredProducts = computed(() => {
-  let list = products.filter(p => {
+  let list = products.value.filter(p => {
     const matchSub = !productSubFilter.value || p.sub === productSubFilter.value
     const matchTag = !productTagFilter.value || p.tag === productTagFilter.value
     return matchSub && matchTag
@@ -2272,8 +2433,43 @@ const waterPieChartRef = ref(null)
 const gasPieChartRef = ref(null)
 let lineChart = null, pieChart = null, waterChart = null, gasChart = null, waterPieChart = null, gasPieChart = null
 
+  // 能源图表数据源（ref，便于实时更新）
+  const chartData = ref({
+    energyLine: [1.8, 1.2, 2.0, 4.5, 3.8, 5.5, 2.8],
+    energyPie: [{ value: 45, name: '空调' }, { value: 25, name: '冰箱' }, { value: 15, name: '照明' }, { value: 15, name: '其他' }],
+    waterBar: [0.02, 0.01, 0.06, 0.18, 0.08, 0.22, 0.12],
+    waterPie: [{ value: 45, name: '淋浴' }, { value: 25, name: '洗衣' }, { value: 20, name: '厨房' }, { value: 10, name: '其他' }],
+    gasLine: [0.01, 0.01, 0.03, 0.05, 0.04, 0.20, 0.11],
+    gasPie: [{ value: 55, name: '热水器' }, { value: 35, name: '燃气灶' }, { value: 10, name: '壁挂炉' }],
+  })
+
+  // 能源弹窗实时数据源
+  const energyLiveData = ref({
+    waterToday: 0.80,
+    gasToday: 0.45,
+    savingRate: 18,
+    totalEnergy: 235,
+    carbonReduction: 12.5,
+  })
+
+  // 能源趋势数据（实时更新）
+  const electricTrend = ref({ dir: 'up', label: '↑ 5.2%', raw: 5.2 })
+  const waterTrend = ref({ dir: 'down', label: '↓ 3.2%', raw: 3.2 })
+  const gasTrend = ref({ dir: 'up', label: '↑ 2.1%', raw: 2.1 })
+  const costTrend = ref({ dir: 'down', label: '↓ 2.8%', raw: 2.8 })
+
+
+
+
+  // 辅助：根据趋势值生成新的 trend 对象（不可变，保证 Vue 响应式）
+  function makeTrend(newVal) {
+    return { dir: newVal >= 0 ? 'up' : 'down', label: (newVal >= 0 ? '↑ ' : '↓ ') + Math.abs(newVal).toFixed(1) + '%', raw: newVal }
+  }
+
+
 async function initCharts() {
   const ec = await import('echarts')
+  console.log('[initCharts] refs:', { lineChartRef: !!lineChartRef.value, pieChartRef: !!pieChartRef.value, waterChartRef: !!waterChartRef.value, gasChartRef: !!gasChartRef.value, existingLineChart: !!lineChart })
   if (lineChartRef.value && !lineChart) {
     lineChart = ec.init(lineChartRef.value)
     lineChart.setOption({
@@ -2282,7 +2478,7 @@ async function initCharts() {
       grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
       xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
-      series: [{ data: [1.8,1.2,2.0,4.5,3.8,5.5,2.8], type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
+      series: [{ data: chartData.value.energyLine, type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
     })
   }
   if (pieChartRef.value && !pieChart) {
@@ -2290,12 +2486,7 @@ async function initCharts() {
     pieChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
-      series: [{ type: 'pie', radius: ['50%','75%'], center: ['50%','50%'], data: [
-        { value: 45, name: '空调', itemStyle: { color: '#4fc3f7' } },
-        { value: 25, name: '冰箱', itemStyle: { color: '#81c784' } },
-        { value: 15, name: '照明', itemStyle: { color: '#ffd54f' } },
-        { value: 15, name: '其他', itemStyle: { color: '#ce93d8' } },
-      ], label: { color: '#94a3b8', fontSize: 12 }, labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } }]
+      series: [{ type: 'pie', radius: ['50%','75%'], center: ['50%','50%'], data: chartData.value.energyPie.map((d,i) => ({ ...d, itemStyle: { color: ['#4fc3f7','#81c784','#ffd54f','#ce93d8'][i] } })), label: { color: '#94a3b8', fontSize: 12 }, labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } }]
     })
   }
   // 用水趋势图（柱状图）
@@ -2308,7 +2499,7 @@ async function initCharts() {
       xAxis: { type: 'category', data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       series: [{ 
-        data: [0.02,0.01,0.06,0.18,0.08,0.22,0.12], 
+        data: chartData.value.waterBar, 
         type: 'bar', 
         barWidth: '50%',
         itemStyle: { 
@@ -2328,7 +2519,7 @@ async function initCharts() {
       xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       series: [{ 
-        data: [0.01,0.01,0.03,0.05,0.04,0.20,0.11], 
+        data: chartData.value.gasLine, 
         type: 'line', 
         smooth: true, 
         lineStyle: { color: '#ff7043', width: 3, type: 'dashed' }, 
@@ -2350,12 +2541,7 @@ async function initCharts() {
       series: [{ 
         type: 'bar', 
         barWidth: '50%',
-        data: [
-          { value: 10, itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
-          { value: 20, itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
-          { value: 25, itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
-          { value: 45, itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
-        ],
+        data: chartData.value.waterPie.map((d,i) => ({ value: d.value, itemStyle: { color: ['#ce93d8','#ffd54f','#81c784','#4fc3f7'][i], borderRadius: [0, 4, 4, 0] } })),
         label: { show: true, position: 'right', color: '#94a3b8', fontSize: 11, formatter: '{c}%' }
       }]
     })
@@ -2372,11 +2558,7 @@ async function initCharts() {
         center: ['50%','50%'],
         roseType: 'radius',
         itemStyle: { borderRadius: 5 },
-        data: [
-          { value: 55, name: '热水器', itemStyle: { color: '#ff7043' } },
-          { value: 35, name: '燃气灶', itemStyle: { color: '#ffa726' } },
-          { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
-        ], 
+        data: chartData.value.gasPie.map((d,i) => ({ ...d, itemStyle: { color: ['#ff7043','#ffa726','#ffcc80'][i] } })),
         label: { color: '#94a3b8', fontSize: 12 }, 
         labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } 
       }]
@@ -2389,10 +2571,155 @@ onMounted(() => {
   timeTimer = setInterval(updateTime, 1000)
   nextTick(() => mountCanvas('env'))
   window.addEventListener('resize', () => { lineChart?.resize(); pieChart?.resize(); waterChart?.resize(); gasChart?.resize(); waterPieChart?.resize(); gasPieChart?.resize() })
+
+  // 环境数据实时模拟：每 3 秒波动一次
+  envTimer = setInterval(() => {
+    const { alerts } = homeStore.simulateEnvData(1)
+    // 只弹出 danger 级别告警（避免 warning 过于频繁打扰）
+    alerts.forEach(a => {
+      if (a.type === 'danger') {
+        homeStore.addToast({ message: a.msg, type: a.type, duration: 5000 })
+      }
+    })
+  }, 3000)
+
+  // 健康数据实时模拟：每 4 秒波动一次
+  healthTimer = setInterval(() => {
+    const items = healthItems.value
+    // 心率：68-82 波动
+    const hr = Math.round(items[0].raw + (Math.random() - 0.5) * 6)
+    items[0].raw = Math.max(55, Math.min(110, hr))
+    items[0].value = items[0].raw + '次/分'
+    items[0].pct = Math.min(100, Math.max(0, ((items[0].raw - 40) / 80) * 100))
+    items[0].trend = Math.round((Math.random() - 0.5) * 6)
+
+    // 血压：收缩压 110-130，舒张压 68-85
+    const sys = Math.round(items[1].raw + (Math.random() - 0.5) * 6)
+    const dia = Math.round(sys * 0.64 + (Math.random() - 0.5) * 4)
+    items[1].raw = Math.max(90, Math.min(145, sys))
+    const diaVal = Math.max(55, Math.min(95, dia))
+    items[1].value = items[1].raw + '/' + diaVal + 'mmHg'
+    items[1].pct = Math.min(100, Math.max(0, ((items[1].raw - 80) / 80) * 100))
+    items[1].trend = Math.round((Math.random() - 0.5) * 4)
+
+    // 体温：36.0-37.2 微小波动
+    const temp = Math.round((items[2].raw + (Math.random() - 0.5) * 0.2) * 10) / 10
+    items[2].raw = Math.max(35.5, Math.min(38.0, temp))
+    items[2].value = items[2].raw + '°C'
+    items[2].pct = Math.min(100, Math.max(0, ((items[2].raw - 35) / 4) * 100))
+    items[2].trend = Math.round((Math.random() - 0.5) * 0.4 * 10) / 10
+
+    // 血氧：96-100
+    const spo2 = Math.round(items[3].raw + (Math.random() - 0.5) * 2)
+    items[3].raw = Math.max(92, Math.min(100, spo2))
+    items[3].value = items[3].raw + '%'
+    items[3].pct = items[3].raw
+    items[3].trend = Math.round((Math.random() - 0.5) * 3)
+
+    // 心率趋势数据：更新最后一个小时的数据点
+    const hour = new Date().getHours()
+    const lastIdx = heartRateData.value.length - 1
+    heartRateData.value[lastIdx].value = Math.max(50, Math.min(100, items[0].raw + Math.round((Math.random() - 0.5) * 4)))
+    heartRateData.value[lastIdx].time = String(hour).padStart(2, '0') + ':00'
+  }, 4000)
+
+  // 能源排行实时模拟：每 8 秒微调一次
+  energyTimer = setInterval(() => {
+    console.log('[energyTimer] tick', Date.now())
+    // 电能排行
+    energyRank.value.forEach(item => {
+      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.1) * 100) / 100
+      item.val = Math.max(0.1, item.val)
+      item.pct = Math.round((item.val / 4) * 100)
+    })
+    // 水排行
+    waterRank.value.forEach(item => {
+      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.02) * 100) / 100
+      item.val = Math.max(0.01, item.val)
+      item.pct = Math.round((item.val / 0.4) * 100)
+    })
+    // 燃气排行
+    gasRank.value.forEach(item => {
+      item.val = Math.round((item.val + (Math.random() - 0.5) * 0.01) * 100) / 100
+      item.val = Math.max(0.01, item.val)
+      item.pct = Math.round((item.val / 0.3) * 100)
+    })
+
+    // 能源图表实时更新
+    const cd = chartData.value
+    // 电能趋势折线：模拟最后一个时段变化
+    cd.energyLine = cd.energyLine.map(v => Math.max(0.5, Math.round((v + (Math.random() - 0.5) * 0.4) * 100) / 100))
+    lineChart?.setOption({ series: [{ data: [...cd.energyLine] }] })
+
+
+    // 电能占比饼图：根据设备状态微调
+    const acOn = deviceList.value.filter(d => (d.type === 'ac') && d.status).length
+    cd.energyPie[0].value = Math.max(20, 45 + acOn * 10 + Math.round((Math.random() - 0.5) * 5))
+    cd.energyPie[1].value = Math.max(10, 25 + Math.round((Math.random() - 0.5) * 3))
+    cd.energyPie[2].value = Math.max(5, 15 + Math.round((Math.random() - 0.5) * 3))
+    cd.energyPie[3].value = Math.max(3, 15 + Math.round((Math.random() - 0.5) * 3))
+    pieChart?.setOption({ series: [{ data: cd.energyPie }] })
+
+    // 用水柱状图：最后一个时段波动
+    cd.waterBar = cd.waterBar.map(v => Math.max(0.01, Math.round((v + (Math.random() - 0.5) * 0.03) * 100) / 100))
+    waterChart?.setOption({ series: [{ data: [...cd.waterBar] }] })
+
+
+    // 用水结构横向条形图
+    cd.waterPie.forEach(d => { d.value = Math.max(3, d.value + Math.round((Math.random() - 0.5) * 2)) })
+    waterPieChart?.setOption({ series: [{ data: cd.waterPie }] })
+
+    // 燃气虚线折线图
+    cd.gasLine = cd.gasLine.map(v => Math.max(0.005, Math.round((v + (Math.random() - 0.5) * 0.015) * 100) / 100))
+    gasChart?.setOption({ series: [{ data: [...cd.gasLine] }] })
+
+
+    // 燃气结构玫瑰图
+    cd.gasPie.forEach(d => { d.value = Math.max(2, d.value + Math.round((Math.random() - 0.5) * 2)) })
+    gasPieChart?.setOption({ series: [{ data: cd.gasPie }] })
+
+    // 能源弹窗数据实时更新
+    const eld = energyLiveData.value
+      eld.waterToday = Math.round((eld.waterToday + Math.random() * 0.03) * 100) / 100
+      // Water/gas only accumulate, never decrease
+      eld.gasToday = Math.round((eld.gasToday + Math.random() * 0.015) * 100) / 100
+
+    eld.savingRate = Math.round(15 + Math.random() * 10)
+    eld.totalEnergy = Math.round(eld.totalEnergy + (Math.random() - 0.3) * 0.5)
+    eld.totalEnergy = Math.max(100, eld.totalEnergy)
+    eld.carbonReduction = Math.round((eld.carbonReduction + (Math.random() - 0.4) * 0.3) * 10) / 10
+    eld.carbonReduction = Math.max(5, eld.carbonReduction)
+
+    // 实时更新趋势指标
+    electricTrend.value = makeTrend(Math.round((Math.random() - 0.4) * 8 * 10) / 10)
+    waterTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 6 * 10) / 10)
+    gasTrend.value = makeTrend(Math.round((Math.random() - 0.4) * 5 * 10) / 10)
+    costTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 7 * 10) / 10)
+
+    // 如果能源弹窗打开中，实时刷新弹窗数值
+    if (showControlPanel.value && selectedDevice.value?.id?.startsWith('energy-')) {
+      const etype = selectedDevice.value.id.replace('energy-', '')
+      const energyData = {
+        today: { title: '今日用电详情', unit: 'kWh', value: homeStore.stats.dailyEnergy ?? 8.5, trend: electricTrend.value.label, desc: '今日累计用电量' },
+        water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday, trend: waterTrend.value.label, desc: '今日累计用水量' },
+        gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday, trend: gasTrend.value.label, desc: '今日累计燃气用量' },
+        cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费' },
+        waterCost: { title: '今日水费详情', unit: '元', value: (energyLiveData.value.waterToday * 3.5).toFixed(1), trend: waterTrend.value.label, desc: '今日水费支出' },
+        gasCost: { title: '今日燃气费详情', unit: '元', value: (energyLiveData.value.gasToday * 2.8).toFixed(1), trend: gasTrend.value.label, desc: '今日燃气费支出' },
+      }
+      const data = energyData[etype]
+      if (data) {
+        selectedDevice.value = { ...selectedDevice.value, value: data.value, trend: data.trend, desc: data.desc }
+      }
+    }
+  }, 8000)
 })
 
 onUnmounted(() => {
   clearInterval(timeTimer)
+  clearInterval(envTimer)
+  clearInterval(healthTimer)
+  clearInterval(energyTimer)
   lineChart?.dispose()
   pieChart?.dispose()
   waterChart?.dispose()
@@ -2775,4 +3102,121 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
 }
 .eco-tip .tip-icon { font-size: 14px; }
+
+/* ===== 场景模式（侧边栏） ===== */
+.scene-modes {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.scene-modes-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+.scene-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+  text-align: left;
+}
+.scene-mode-btn:hover {
+  background: rgba(0, 212, 170, 0.08);
+  border-color: var(--border);
+  color: var(--text);
+}
+.scene-mode-btn.active {
+  background: var(--primary-dim);
+  border-color: rgba(0, 212, 170, 0.25);
+  color: var(--primary);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.1);
+}
+.scene-mode-btn .sm-icon {
+  font-size: 16px;
+  min-width: 22px;
+  text-align: center;
+}
+.scene-mode-btn .sm-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ===== Toast 通知系统 ===== */
+.toast-container {
+  position: fixed;
+  top: 70px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 400px;
+}
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(10, 20, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 212, 170, 0.05);
+  pointer-events: auto;
+}
+.toast-item.info { border-left: 4px solid var(--secondary); }
+.toast-item.success { border-left: 4px solid var(--success); }
+.toast-item.warning { border-left: 4px solid var(--warning); }
+.toast-item.danger { border-left: 4px solid var(--danger); }
+.toast-icon { font-size: 16px; flex-shrink: 0; }
+.toast-msg {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.toast-close {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+.toast-fade-enter-active { animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-fade-leave-active { animation: toastSlideOut 0.25s ease forwards; }
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
 </style>
