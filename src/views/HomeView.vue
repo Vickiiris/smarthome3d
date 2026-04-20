@@ -2725,7 +2725,7 @@ onMounted(() => {
       // Water/gas only accumulate, never decrease
       eld.gasToday = Math.round((eld.gasToday + Math.random() * 0.015) * 100) / 100
 
-    eld.savingRate = Math.round(15 + Math.random() * 10)
+    eld.savingRate = Math.max(10, Math.min(28, eld.savingRate + Math.round((Math.random() - 0.45) * 3)))
     eld.totalEnergy = Math.round(eld.totalEnergy + (Math.random() - 0.3) * 0.5)
     eld.totalEnergy = Math.max(100, eld.totalEnergy)
     eld.carbonReduction = Math.round((eld.carbonReduction + (Math.random() - 0.4) * 0.3) * 10) / 10
