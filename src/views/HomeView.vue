@@ -2463,11 +2463,25 @@ let lineChart = null, pieChart = null, waterChart = null, gasChart = null, water
   // 能源图表数据源（ref，便于实时更新）
   const chartData = ref({
     energyLine: [1.8, 1.2, 2.0, 4.5, 3.8, 5.5, 2.8],
-    energyPie: [{ value: 45, name: '空调' }, { value: 25, name: '冰箱' }, { value: 15, name: '照明' }, { value: 15, name: '其他' }],
+    energyPie: [
+      { value: 45, name: '空调', itemStyle: { color: '#4fc3f7' } },
+      { value: 25, name: '冰箱', itemStyle: { color: '#81c784' } },
+      { value: 15, name: '照明', itemStyle: { color: '#ffd54f' } },
+      { value: 15, name: '其他', itemStyle: { color: '#ce93d8' } },
+    ],
     waterBar: [0.02, 0.01, 0.06, 0.18, 0.08, 0.22, 0.12],
-    waterPie: [{ value: 45, name: '淋浴' }, { value: 25, name: '洗衣' }, { value: 20, name: '厨房' }, { value: 10, name: '其他' }],
+    waterPie: [
+      { value: 45, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+      { value: 25, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+      { value: 20, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
+      { value: 10, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
+    ],
     gasLine: [0.01, 0.01, 0.03, 0.05, 0.04, 0.20, 0.11],
-    gasPie: [{ value: 55, name: '热水器' }, { value: 35, name: '燃气灶' }, { value: 10, name: '壁挂炉' }],
+    gasPie: [
+      { value: 55, name: '热水器', itemStyle: { color: '#ff7043' } },
+      { value: 35, name: '燃气灶', itemStyle: { color: '#ffa726' } },
+      { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
+    ],
   })
 
   // 能源弹窗实时数据源
@@ -2513,7 +2527,7 @@ async function initCharts() {
     pieChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
-      series: [{ type: 'pie', radius: ['50%','75%'], center: ['50%','50%'], data: chartData.value.energyPie.map((d,i) => ({ ...d, itemStyle: { color: ['#4fc3f7','#81c784','#ffd54f','#ce93d8'][i] } })), label: { color: '#94a3b8', fontSize: 12 }, labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } }]
+      series: [{ type: 'pie', radius: ['50%','75%'], center: ['50%','50%'], data: chartData.value.energyPie, label: { color: '#94a3b8', fontSize: 12 }, labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } }]
     })
   }
   // 用水趋势图（柱状图）
@@ -2568,7 +2582,7 @@ async function initCharts() {
       series: [{ 
         type: 'bar', 
         barWidth: '50%',
-        data: chartData.value.waterPie.map((d,i) => ({ value: d.value, itemStyle: { color: ['#ce93d8','#ffd54f','#81c784','#4fc3f7'][i], borderRadius: [0, 4, 4, 0] } })),
+        data: chartData.value.waterPie,
         label: { show: true, position: 'right', color: '#94a3b8', fontSize: 11, formatter: '{c}%' }
       }]
     })
@@ -2585,7 +2599,7 @@ async function initCharts() {
         center: ['50%','50%'],
         roseType: 'radius',
         itemStyle: { borderRadius: 5 },
-        data: chartData.value.gasPie.map((d,i) => ({ ...d, itemStyle: { color: ['#ff7043','#ffa726','#ffcc80'][i] } })),
+        data: chartData.value.gasPie,
         label: { color: '#94a3b8', fontSize: 12 }, 
         labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } 
       }]
