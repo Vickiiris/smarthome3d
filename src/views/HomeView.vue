@@ -370,28 +370,42 @@
                 </div>
               </div>
             </div>
-            <div class="eco-contribute-card">
+            <div class="eco-contribute-card" @click="openEnergyDetail('carbon')">
               <div class="eco-header">
                 <span class="eco-icon">🌱</span>
                 <span class="eco-title">环保贡献</span>
+                <span class="eco-badge-tag">本月</span>
               </div>
               <div class="eco-stats">
-                <div class="eco-stat">
-                  <div class="eco-value">{{ homeStore.stats.carbonReduction ?? 12.5 }}</div>
+                <div class="eco-stat primary">
+                  <div class="eco-value">{{ energyLiveData.carbonReduction }}</div>
                   <div class="eco-unit">kg</div>
-                  <div class="eco-label">CO₂减排</div>
+                  <div class="eco-label">CO₂ 减排</div>
                 </div>
                 <div class="eco-divider"></div>
                 <div class="eco-stat">
-                  <div class="eco-value">{{ Math.floor((homeStore.stats.carbonReduction ?? 12.5) / 5) }}</div>
+                  <div class="eco-value">{{ Math.floor(energyLiveData.carbonReduction / 5) }}</div>
                   <div class="eco-unit">棵</div>
                   <div class="eco-label">相当于植树</div>
                 </div>
+                <div class="eco-divider"></div>
+                <div class="eco-stat">
+                  <div class="eco-value">{{ (energyLiveData.carbonReduction * 8.3).toFixed(0) }}</div>
+                  <div class="eco-unit">km</div>
+                  <div class="eco-label">少开车</div>
+                </div>
+              </div>
+              <div class="eco-progress-row">
+                <div class="eco-progress-label">本月节能目标 <span class="eco-progress-pct">{{ energyLiveData.savingRate }}%</span></div>
+                <div class="eco-progress-bar">
+                  <div class="eco-progress-fill" :style="{ width: Math.min(energyLiveData.savingRate, 100) + '%' }"></div>
+                </div>
+                <div class="eco-progress-sub">距离 30% 目标还差 {{ Math.max(0, 30 - energyLiveData.savingRate) }}%</div>
               </div>
               <div class="eco-tips">
                 <div class="eco-tip">
                   <span class="tip-icon">💡</span>
-                  <span>本月节能率 {{ homeStore.stats.savingRate ?? 18 }}%，继续保持！</span>
+                  <span>节能率高于 {{ energyLiveData.savingRate }}% 的家庭</span>
                 </div>
               </div>
             </div>
@@ -1895,7 +1909,7 @@ function openEnergyDetail(type, item = null) {
     power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(1), trend: '', desc: '当前用电功率' },
     total: { title: '累计用电', unit: 'kWh', value: energyLiveData.value.totalEnergy, trend: '', desc: '本月累计用电' },
     saving: { title: '节能率', unit: '%', value: energyLiveData.value.savingRate, trend: '', desc: '相比历史平均节能比例' },
-    carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放' },
+        carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
     water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday, trend: '-3.2%', desc: '今日累计用水量' },
     gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday, trend: '+2.1%', desc: '今日累计燃气用量' },
     cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: '-2.8%', desc: '今日电费+水费+燃气费' },
@@ -1917,6 +1931,7 @@ function openEnergyDetail(type, item = null) {
     room: '全屋',
     // 存储类型标签，弹窗通过 computed 读取实时数据，不冻结快照
     energyType: type,
+    _savingRate: data.savingRate || energyLiveData.value.savingRate,
   }
   showControlPanel.value = true
 }
@@ -2718,10 +2733,11 @@ onMounted(() => {
         cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费' },
         waterCost: { title: '今日水费详情', unit: '元', value: (energyLiveData.value.waterToday * 3.5).toFixed(1), trend: waterTrend.value.label, desc: '今日水费支出' },
         gasCost: { title: '今日燃气费详情', unit: '元', value: (energyLiveData.value.gasToday * 2.8).toFixed(1), trend: gasTrend.value.label, desc: '今日燃气费支出' },
+        carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
       }
       const data = energyData[etype]
       if (data) {
-        selectedDevice.value = { ...selectedDevice.value, value: data.value, trend: data.trend, desc: data.desc }
+        selectedDevice.value = { ...selectedDevice.value, value: data.value, trend: data.trend, desc: data.desc, _savingRate: data.savingRate || selectedDevice.value._savingRate }
       }
     }
     // 排行弹窗打开中：用最新 item.val 重新计算分时段数据
@@ -3085,33 +3101,71 @@ onUnmounted(() => {
 }
 .rank-icon { font-size: 16px; margin-right: 8px; }
 .eco-contribute-card {
-  background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.05) 100%);
+  background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.06) 50%, rgba(34,197,94,0.03) 100%);
   border: 1px solid rgba(34,197,94,0.2);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.eco-contribute-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.35);
 }
 .eco-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .eco-header .eco-icon { font-size: 20px; }
-.eco-header .eco-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.eco-header .eco-title { font-size: 15px; font-weight: 600; color: var(--text-1); flex: 1; }
+.eco-badge-tag {
+  font-size: 10px;
+  color: #22c55e;
+  background: rgba(34,197,94,0.15);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
 .eco-stats {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .eco-stat { text-align: center; }
-.eco-stat .eco-value { font-size: 32px; font-weight: 700; color: #22c55e; }
-.eco-stat .eco-unit { font-size: 13px; color: var(--text-3); margin-left: 2px; }
-.eco-stat .eco-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
-.eco-divider { width: 1px; height: 50px; background: rgba(34,197,94,0.2); }
+.eco-stat.primary .eco-value { color: #22c55e; text-shadow: 0 0 20px rgba(34,197,94,0.3); }
+.eco-stat .eco-value { font-size: 28px; font-weight: 700; color: #22c55e; margin-bottom: 2px; line-height: 1.1; }
+.eco-stat .eco-unit { font-size: 12px; color: var(--text-3); }
+.eco-stat .eco-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.eco-divider { width: 1px; height: 40px; background: rgba(34,197,94,0.15); }
+.eco-progress-row {
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.eco-progress-label { font-size: 12px; color: var(--text-2); display: flex; justify-content: space-between; margin-bottom: 8px; }
+.eco-progress-pct { color: #22c55e; font-weight: 600; }
+.eco-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.eco-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.eco-progress-sub { font-size: 11px; color: var(--text-3); margin-top: 6px; }
 .eco-tips { margin-top: auto; }
 .eco-tip {
   display: flex;
@@ -3120,7 +3174,7 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--text-2);
   background: rgba(255,255,255,0.03);
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
 }
 .eco-tip .tip-icon { font-size: 14px; }

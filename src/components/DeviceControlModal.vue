@@ -301,6 +301,55 @@
                   </div>
                 </div>
 
+                <!-- 环保贡献详情 -->
+                <div class="ed-carbon-detail" v-if="device.id === 'energy-carbon'">
+                  <div class="ed-section-title">🌿 环保贡献明细</div>
+                  <div class="ed-carbon-grid">
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">🏭</div>
+                      <div class="ed-carbon-val">{{ device.value }}<span class="ed-carbon-unit">kg</span></div>
+                      <div class="ed-carbon-label">CO₂ 减排量</div>
+                    </div>
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">🌳</div>
+                      <div class="ed-carbon-val">{{ Math.floor(device.value / 5) }}<span class="ed-carbon-unit">棵</span></div>
+                      <div class="ed-carbon-label">等效植树</div>
+                    </div>
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">🚗</div>
+                      <div class="ed-carbon-val">{{ (device.value * 8.3).toFixed(0) }}<span class="ed-carbon-unit">km</span></div>
+                      <div class="ed-carbon-label">少开车</div>
+                    </div>
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">💡</div>
+                      <div class="ed-carbon-val">{{ (device.value * 1.5).toFixed(1) }}<span class="ed-carbon-unit">kWh</span></div>
+                      <div class="ed-carbon-label">节约电能</div>
+                    </div>
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">💧</div>
+                      <div class="ed-carbon-val">{{ (device.value * 0.12).toFixed(1) }}<span class="ed-carbon-unit">m³</span></div>
+                      <div class="ed-carbon-label">节约用水</div>
+                    </div>
+                    <div class="ed-carbon-item">
+                      <div class="ed-carbon-icon">🔥</div>
+                      <div class="ed-carbon-val">{{ (device.value * 0.08).toFixed(1) }}<span class="ed-carbon-unit">m³</span></div>
+                      <div class="ed-carbon-label">节约燃气</div>
+                    </div>
+                  </div>
+                  <div class="ed-carbon-summary">
+                    <div class="ed-carbon-summary-title">📊 本月节能表现</div>
+                    <div class="ed-carbon-summary-row"><span>节能率</span><span class="highlight">{{ device._savingRate ?? 18 }}%</span></div>
+                    <div class="ed-carbon-summary-row"><span>月度目标</span><span>30%</span></div>
+                    <div class="ed-carbon-summary-row"><span>超越家庭比例</span><span class="highlight">72%</span></div>
+                    <div class="ed-carbon-summary-row"><span>连续节能</span><span>14 天</span></div>
+                    <div class="ed-carbon-progress">
+                      <div class="ed-carbon-progress-bar">
+                        <div class="ed-carbon-progress-fill" :style="{ width: Math.min(device._savingRate ?? 18, 100) + '%' }"></div>
+                      </div>
+                      <div class="ed-carbon-progress-label">距离 30% 目标还差 {{ Math.max(0, 30 - (device._savingRate ?? 18)) }}%</div>
+                    </div>
+                  </div>
+                </div>
                 <!-- 历史对比 -->
                 <div class="ed-chart">
                   <div class="ed-chart-title">📈 历史数据对比</div>
@@ -807,6 +856,71 @@ input[type=range] {
   text-align: center;
   margin-bottom: 20px;
 }
+
+/* 环保贡献弹窗 */
+.ed-carbon-detail {
+  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.03) 100%);
+  border: 1px solid rgba(34,197,94,0.15);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+}
+.ed-carbon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.ed-carbon-item {
+  text-align: center;
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(34,197,94,0.1);
+}
+.ed-carbon-icon { font-size: 22px; margin-bottom: 6px; }
+.ed-carbon-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #22c55e;
+  line-height: 1.2;
+}
+.ed-carbon-unit { font-size: 12px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+.ed-carbon-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.ed-carbon-summary {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ed-carbon-summary-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 12px; }
+.ed-carbon-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-2);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ed-carbon-summary-row:last-child { border-bottom: none; }
+.ed-carbon-summary-row .highlight { color: #22c55e; font-weight: 600; }
+.ed-carbon-progress { margin-top: 12px; }
+.ed-carbon-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ed-carbon-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.ed-carbon-progress-label { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+
 .ed-chart {
   background: var(--surface);
   border: 1px solid var(--border);
