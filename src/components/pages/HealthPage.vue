@@ -199,25 +199,31 @@
               <svg viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" class="steps-ring-bg"/>
                 <circle cx="50" cy="50" r="42" class="steps-ring-fill"
-                  :stroke-dasharray="`${Math.min(100,(todaySteps/10000)*100)*264/100} 264`"/>
+                  :stroke-dasharray="`${Math.min(100,(latestSteps/10000)*100)*264/100} 264`"/>
               </svg>
               <div class="steps-ring-inner">
-                <div class="steps-ring-pct">{{ Math.round((todaySteps/10000)*100) }}%</div>
+                <div class="steps-ring-pct">{{ Math.round((latestSteps/10000)*100) }}%</div>
                 <div class="steps-ring-goal">目标 10000</div>
               </div>
             </div>
             <div class="steps-stats-col">
               <div class="steps-stat-row">
                 <span class="ssr-label">今日步数</span>
-                <span class="ssr-val">{{ todaySteps.toLocaleString() }}</span>
+                <span class="ssr-val">{{ latestSteps.toLocaleString() }}</span>
+              </div>
+              <div class="steps-stat-row">
+                <span class="ssr-label">距目标</span>
+                <span class="ssr-val" :style="{ color: latestSteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
+                  {{ latestSteps >= 10000 ? '已达标 ✓' : (10000 - latestSteps).toLocaleString() + ' 步' }}
+                </span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">消耗热量</span>
-                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
+                <span class="ssr-val">{{ Math.round(latestSteps * 0.04) }} kcal</span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">行走距离</span>
-                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
+                <span class="ssr-val">{{ (latestSteps * 0.7 / 1000).toFixed(1) }} km</span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">本周合计</span>
@@ -238,23 +244,18 @@
           <span class="panel-time">昨夜 · {{ sleepData.total }}h · 评分 {{ sleepData.score }}</span>
         </div>
         <div class="hchart-body">
-          <div class="sleep-overview-row">
-            <div class="sleep-score-mini">
-              <svg viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="34" class="sleep-r-bg"/>
-                <circle cx="40" cy="40" r="34" class="sleep-r-fill"
-                  :stroke-dasharray="`${(sleepData.score/100)*213} 213`"
-                  :stroke="sleepData.score >= 85 ? '#00d4aa' : sleepData.score >= 70 ? '#f59e0b' : '#ef4444'"/>
-              </svg>
-              <div class="sleep-r-inner">{{ sleepData.score }}</div>
+          <div class="sleep-bar-section">
+            <div class="sleep-bar-header">
+              <div class="sleep-bar-legend" v-for="s in sleepStages" :key="s.name">
+                <span class="sbl-dot" :style="{ background: s.color }"></span>
+                <span class="sbl-name">{{ s.name }}</span>
+                <span class="sbl-min" :style="{ color: s.color }">{{ s.h }}h</span>
+                <span class="sbl-pct">{{ s.pct }}%</span>
+              </div>
             </div>
-            <div class="sleep-stages-col">
-              <div class="sleep-stage-item" v-for="s in sleepStages" :key="s.name">
-                <div class="ssi-bar-wrap">
-                  <div class="ssi-bar" :style="{ width: s.pct + '%', background: s.color }"></div>
-                </div>
-                <span class="ssi-name">{{ s.name }}</span>
-                <span class="ssi-min" :style="{ color: s.color }">{{ s.h }}h</span>
+            <div class="sleep-bar-track">
+              <div class="sleep-bar-seg" v-for="s in sleepStages" :key="s.name"
+                :style="{ width: s.pct + '%', background: s.color }">
               </div>
             </div>
           </div>
@@ -339,9 +340,9 @@ const latestBp = computed(() => {
   const parts = item.value.split('/')
   return { sys: parseInt(parts[0]), dia: parseInt(parts[1]) }
 })
-const todaySteps = computed(() => {
-  const item = props.healthItems.find(i => i.label === '步数')
-  return item ? Math.round(item.raw) : 0
+const latestSteps = computed(() => {
+  if (!props.stepsTrend || props.stepsTrend.length === 0) return 0
+  return Math.round(props.stepsTrend[props.stepsTrend.length - 1].value)
 })
 const weekTotal = computed(() => props.stepsTrend.reduce((s, v) => s + v.value, 0))
 const avgHeartRate = computed(() => {
@@ -385,8 +386,8 @@ function getMetricStatusText(item) {
 const healthTips = computed(() => [
   {
     icon: '🏃', title: '运动建议',
-    desc: todaySteps.value < 6000 ? `今日步数 ${todaySteps.value.toLocaleString()}，偏少，建议晚饭后散步 30 分钟` : '今日步数达标，继续保持每天运动习惯',
-    tag: todaySteps.value < 6000 ? '需运动' : '已达标', color: '#00d4aa'
+    desc: latestSteps.value < 6000 ? `今日步数 ${latestSteps.value.toLocaleString()}，偏少，建议晚饭后散步 30 分钟` : '今日步数达标，继续保持每天运动习惯',
+    tag: latestSteps.value < 6000 ? '需运动' : '已达标', color: '#00d4aa'
   },
   {
     icon: '😴', title: '睡眠建议',
@@ -605,26 +606,48 @@ function initSleepChart() {
   sleepChart.setOption({
     backgroundColor: chartBg,
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
       backgroundColor: 'rgba(5,13,24,0.97)',
       borderColor: 'rgba(255,255,255,0.12)',
       textStyle: { color: '#e2e8f0', fontSize: 12 },
-      formatter: (p) => `${p.name}<br/><span style="color:${p.color}">${p.value}h (${p.percent}%)</span>`
+      formatter: (items) => {
+        const segs = ['深睡', '浅睡', 'REM', '清醒']
+        const mins = [deep, light, rem, awake]
+        const colors = ['#9B59B6', '#BB8FCE', '#7FB3D3', '#F9E79F']
+        return segs.map((name, i) => `<span style="color:${colors[i]}">●</span> ${name}: <b>${mins[i]}分钟</b> (${Math.round(mins[i] / props.sleepData.total / 60 * 100)}%)`).join('<br/>')
+      }
     },
     legend: { show: false },
-    series: [{
-      type: 'pie', radius: ['42%', '70%'],
-      center: ['50%', '50%'],
-      data: [
-        { value: (deep / 60).toFixed(1), name: '深睡', itemStyle: { color: '#9B59B6' } },
-        { value: (light / 60).toFixed(1), name: '浅睡', itemStyle: { color: '#BB8FCE' } },
-        { value: (rem / 60).toFixed(1), name: 'REM', itemStyle: { color: '#7FB3D3' } },
-        { value: (awake / 60).toFixed(1), name: '清醒', itemStyle: { color: '#F9E79F' } },
-      ],
-      label: { show: false },
-      labelLine: { show: false },
-      emphasis: { scale: true, scaleSize: 6 }
-    }]
+    grid: { left: 0, right: 0, top: 8, bottom: 20, containLabel: false, height: 30 },
+    xAxis: { type: 'category', data: ['睡眠构成'], show: false },
+    yAxis: { type: 'category', data: ['时间'], axisLine: { show: false }, axisTick: { show: false }, show: false },
+    series: [
+      {
+        name: '深睡', type: 'bar', stack: 'sleep', barWidth: 30,
+        data: [[deep, '深睡']],
+        itemStyle: { color: '#9B59B6', borderRadius: [4, 0, 0, 4] },
+        label: { show: true, position: 'inside', formatter: (p) => deep > 15 ? `深睡 ${deep}min` : '', color: '#fff', fontSize: 11 }
+      },
+      {
+        name: '浅睡', type: 'bar', stack: 'sleep',
+        data: [[light, '浅睡']],
+        itemStyle: { color: '#BB8FCE' },
+        label: { show: true, position: 'inside', formatter: (p) => light > 15 ? `浅睡 ${light}min` : '', color: '#fff', fontSize: 11 }
+      },
+      {
+        name: 'REM', type: 'bar', stack: 'sleep',
+        data: [[rem, 'REM']],
+        itemStyle: { color: '#7FB3D3' },
+        label: { show: true, position: 'inside', formatter: (p) => rem > 15 ? `REM ${rem}min` : '', color: '#fff', fontSize: 11 }
+      },
+      {
+        name: '清醒', type: 'bar', stack: 'sleep',
+        data: [[awake, '清醒']],
+        itemStyle: { color: '#F9E79F', borderRadius: [0, 4, 4, 0] },
+        label: { show: true, position: 'inside', formatter: (p) => awake > 15 ? `清醒 ${awake}min` : '', color: '#333', fontSize: 11 }
+      }
+    ]
   })
 }
 
@@ -852,6 +875,25 @@ onMounted(() => {
 
 /* ===== 步数图表区域 ===== */
 .steps-overview-row { display: flex; gap: 20px; align-items: center; margin-bottom: 10px; }
+
+/* ===== 睡眠构成条（直观分段条） ===== */
+.sleep-bar-section { margin-bottom: 6px; }
+.sleep-bar-header {
+  display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.sleep-bar-legend {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-2);
+}
+.sbl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.sbl-name { color: var(--text-2); }
+.sbl-min { font-family: var(--font-mono); font-weight: 600; }
+.sbl-pct { color: var(--text-3); margin-left: 2px; }
+.sleep-bar-track {
+  display: flex; height: 24px; border-radius: 6px; overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+.sleep-bar-seg { height: 100%; transition: width 0.4s ease; }
 .steps-progress-ring { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
 .steps-progress-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .steps-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
