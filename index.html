@@ -235,6 +235,7 @@
       let vueReady = false
       let progressComplete = false
       let realProgress = 0
+      let loaderHidden = false // 防止重复隐藏
 
       // 进度动画 - 由外部真实进度控制
       const timer = setInterval(() => {
@@ -252,15 +253,28 @@
         pct.textContent = displayP + '%'
       }, 400)
 
-      // 检查是否可以隐藏
+      // 检查是否可以隐藏（必须等待真实模型加载完成）
       function checkHide() {
+        if (loaderHidden) return
         if (vueReady && progressComplete) {
+          loaderHidden = true
           setTimeout(() => {
             loader.classList.add('hidden')
             setTimeout(() => loader.remove(), 800)
           }, 300)
         }
       }
+
+      // 监听真实模型加载完成
+      window.addEventListener('__modelLoaded', () => {
+        realProgress = 100
+        fill.style.width = '100%'
+        pct.textContent = '100%'
+        status.textContent = '启动完成'
+        // 只有模型加载完成才算 progressComplete，不依赖模拟进度
+        progressComplete = true
+        checkHide()
+      })
 
       // Vue 挂载后标记 ready
       window.__hideLoader = function () {

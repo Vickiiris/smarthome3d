@@ -1,1101 +1,212 @@
 <template>
   <div class="app">
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M14 3L3 10v10l11 7 11-7V10L14 3z" stroke="white" stroke-width="2" fill="none"/>
-            <circle cx="14" cy="14" r="4" fill="white" opacity="0.8"/>
-          </svg>
-        </div>
-        <div class="logo-text">
-          <span class="logo-name">SMARTHOME3D</span>
-          <span class="logo-sub">智能家居</span>
-        </div>
-      </div>
-      <nav class="nav-list">
-        <div v-for="item in navItems" :key="item.id" class="nav-item" :class="{ active: currentPage === item.id }" @click="switchPage(item.id)">
-          <span class="nav-icon">{{ item.icon }}</span>
-          <span class="nav-label">{{ item.name }}</span>
-        </div>
-      </nav>
-      <!-- 场景模式 -->
-      <div class="scene-modes">
-        <div class="scene-modes-title">场景模式</div>
-        <button v-for="mode in sceneModes" :key="mode.id" class="scene-mode-btn" :class="{ active: activeSceneMode === mode.id }" @click="applySceneMode(mode)">
-          <span class="sm-icon">{{ mode.icon }}</span>
-          <span class="sm-label">{{ mode.label }}</span>
-        </button>
-      </div>
-      <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="avatar">Z</div>
-          <div class="user-text">
-            <span class="user-name">Zy</span>
-            <span class="user-role">管理员</span>
-          </div>
-        </div>
-      </div>
-    </aside>
+    <AppSidebar
+      :navItems="navItems"
+      :currentPage="currentPage"
+      :sceneModes="sceneModes"
+      :activeSceneMode="activeSceneMode"
+      @switchPage="switchPage"
+      @applySceneMode="applySceneMode"
+    />
 
     <main class="main">
-      <header class="top-bar">
-        <div class="topbar-left">
-          <h2 class="page-title">{{ currentTitle }}</h2>
-        </div>
-        <div class="topbar-right">
-          <div class="time-display">
-            <div class="time-main">{{ currentTime }}</div>
-            <div class="time-sub">{{ currentDate }}</div>
-          </div>
-        </div>
-      </header>
+      <TopBar :currentTitle="currentTitle" :currentTime="currentTime" :currentDate="currentDate" />
 
       <div class="content">
 
+        <!-- 共享 3D Canvas（由 mountCanvas 在页面间移动） -->
+        <canvas ref="canvasRef" class="three-canvas" style="display:none"></canvas>
+
         <!-- ===== 策略告警 ===== -->
-        <div v-show="currentPage === 'alarm'" class="page alarm-page">
-          <!-- 页面顶部：Tab + 搜索 + 筛选 -->
-          <div class="alarm-topbar">
-            <div class="alarm-tabs">
-              <button class="alarm-tab" :class="{ active: alarmTab === 'device' }" @click="switchAlarmTab('device')">
-                <span class="tab-icon">📱</span> 设备告警
-                <span class="tab-badge" v-if="allAlarms.filter(a => a.type === 'device' && a.status === 'pending').length">
-                  {{ allAlarms.filter(a => a.type === 'device' && a.status === 'pending').length }}
-                </span>
-              </button>
-              <button class="alarm-tab" :class="{ active: alarmTab === 'health' }" @click="switchAlarmTab('health')">
-                <span class="tab-icon">❤</span> 健康告警
-                <span class="tab-badge" v-if="allAlarms.filter(a => a.type === 'health' && a.status === 'pending').length">
-                  {{ allAlarms.filter(a => a.type === 'health' && a.status === 'pending').length }}
-                </span>
-              </button>
-              <button class="alarm-tab" :class="{ active: alarmTab === 'strategy' }" @click="switchAlarmTab('strategy')">
-                <span class="tab-icon">⚙️</span> 执行策略
-              </button>
-            </div>
-            <div class="alarm-controls">
-              <input class="filter-in" v-model="alarmSearch" placeholder="搜索告警内容…" @input="alarmPage = 1" />
-              <select class="filter-sel" v-model="alarmLevelFilter" @change="alarmPage = 1">
-                <option value="">全部级别</option>
-                <option value="danger">严重</option>
-                <option value="warn">警告</option>
-                <option value="info">提示</option>
-              </select>
-              <select class="filter-sel" v-model="alarmStatusFilter" @change="alarmPage = 1">
-                <option value="">全部状态</option>
-                <option value="pending">未处理</option>
-                <option value="done">已处理</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- ===== 设备告警 & 健康告警 列表 ===== -->
-          <template v-if="alarmTab === 'device' || alarmTab === 'health'">
-            <!-- 统计概览 -->
-            <div class="alarm-stats-row">
-              <div class="panel-card alarm-stat-card danger" @click="alarmLevelFilter = 'danger'; alarmStatusFilter = ''">
-                <div class="asc-icon">🚨</div>
-                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'danger').length }}</div>
-                <div class="asc-label">严重告警</div>
-              </div>
-              <div class="panel-card alarm-stat-card warn" @click="alarmLevelFilter = 'warn'; alarmStatusFilter = ''">
-                <div class="asc-icon">⚠️</div>
-                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'warn').length }}</div>
-                <div class="asc-label">警告</div>
-              </div>
-              <div class="panel-card alarm-stat-card info" @click="alarmLevelFilter = 'info'; alarmStatusFilter = ''">
-                <div class="asc-icon">ℹ️</div>
-                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.level === 'info').length }}</div>
-                <div class="asc-label">提示</div>
-              </div>
-              <div class="panel-card alarm-stat-card pending" @click="alarmStatusFilter = 'pending'; alarmLevelFilter = ''">
-                <div class="asc-icon">⏳</div>
-                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.status === 'pending').length }}</div>
-                <div class="asc-label">待处理</div>
-              </div>
-              <div class="panel-card alarm-stat-card done" @click="alarmStatusFilter = 'done'; alarmLevelFilter = ''">
-                <div class="asc-icon">✅</div>
-                <div class="asc-num">{{ allAlarms.filter(a => a.type === alarmTab && a.status === 'done').length }}</div>
-                <div class="asc-label">已处理</div>
-              </div>
-            </div>
-
-            <!-- 告警列表 -->
-            <div class="panel-card alarm-list-panel">
-              <div class="alarm-list-header">
-                <h3 class="panel-title">
-                  {{ alarmTab === 'device' ? '设备告警记录' : '健康告警记录' }}
-                  <span class="panel-subtitle">共 {{ filteredAlarms.length }} 条</span>
-                </h3>
-                <div class="alarm-list-actions">
-                  <button class="btn btn-sm btn-ghost" @click="markAllAlarmsDone" v-if="filteredAlarms.some(a => a.status === 'pending')">全部标记已处理</button>
-                  <button class="btn btn-sm btn-danger-outline" @click="clearDoneAlarms">清空已处理</button>
-                </div>
-              </div>
-              <div v-if="paginatedAlarms.length === 0" class="alarm-empty">
-                <div class="alarm-empty-icon">🎉</div>
-                <div class="alarm-empty-text">{{ filteredAlarms.length === 0 ? '暂无符合条件的告警' : '当前筛选条件下无告警' }}</div>
-              </div>
-              <div v-else class="alarm-items">
-                <div
-                  v-for="a in paginatedAlarms"
-                  :key="a.id"
-                  class="alarm-item"
-                  :class="[a.level, { done: a.status === 'done' }]"
-                >
-                  <div class="alarm-item-left">
-                    <div class="alarm-level-bar" :class="a.level"></div>
-                    <div class="alarm-item-icon-wrap" :class="a.level">
-                      <span>{{ a.level === 'danger' ? '🚨' : a.level === 'warn' ? '⚠️' : 'ℹ️' }}</span>
-                    </div>
-                    <div class="alarm-item-body">
-                      <div class="alarm-item-top">
-                        <span class="alarm-item-source">
-                          <span class="source-icon">{{ a.icon }}</span>
-                          {{ a.source }}
-                        </span>
-                        <span class="alarm-item-tag" :class="a.level">{{ a.levelText }}</span>
-                        <span class="alarm-item-status" :class="a.status">{{ a.statusText }}</span>
-                      </div>
-                      <div class="alarm-item-content">{{ a.content }}</div>
-                      <div class="alarm-item-meta">
-                        <span class="alarm-item-time">📅 {{ a.time }}</span>
-                        <span v-if="a.suggestion" class="alarm-item-suggestion">💡 {{ a.suggestion }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="alarm-item-right">
-                    <button v-if="a.status === 'pending'" class="btn btn-sm btn-primary" @click="resolveAlarm(a)">处理</button>
-                    <span v-else class="alarm-resolved-label">✓ 已处理</span>
-                  </div>
-                </div>
-              </div>
-              <!-- 分页 -->
-              <div v-if="alarmTotalPages > 1" class="pagination">
-                <button class="page-btn" :disabled="alarmPage === 1" @click="alarmPage--">&lt;</button>
-                <button
-                  v-for="p in visiblePages"
-                  :key="p"
-                  class="page-btn"
-                  :class="{ active: p === alarmPage, ellipsis: p === '…' }"
-                  :disabled="p === '…'"
-                  @click="p !== '…' && (alarmPage = p)"
-                >{{ p }}</button>
-                <button class="page-btn" :disabled="alarmPage === alarmTotalPages" @click="alarmPage++">&gt;</button>
-                <span class="page-info">第 {{ alarmPage }} / {{ alarmTotalPages }} 页</span>
-              </div>
-            </div>
-          </template>
-
-          <!-- ===== 执行策略 ===== -->
-          <template v-if="alarmTab === 'strategy'">
-            <div class="strategy-intro">
-              <div class="strategy-intro-icon">⚙️</div>
-              <div class="strategy-intro-text">系统共配置了 <strong>{{ strategies.length }}</strong> 条自动化策略，当前 <strong>{{ strategies.filter(s => s.active).length }}</strong> 条处于激活状态。策略按触发条件自动执行，无需人工干预。</div>
-            </div>
-            <div class="strategy-list">
-              <div
-                v-for="s in paginatedStrategies"
-                :key="s.id"
-                class="panel-card strategy-card"
-                :class="{ inactive: !s.active }"
-                @click="openStrategyDetail(s)"
-              >
-                <div class="strategy-card-header">
-                  <div class="strategy-icon-wrap" :class="s.type">
-                    <span>{{ s.type === 'auto' ? '🤖' : s.type === 'timer' ? '⏰' : s.type === 'threshold' ? '📊' : '🔗' }}</span>
-                  </div>
-                  <div class="strategy-info">
-                    <div class="strategy-name">{{ s.name }}</div>
-                    <div class="strategy-type-badge" :class="s.type">{{ s.typeText }}</div>
-                  </div>
-                  <div class="strategy-toggle">
-                    <button class="toggle-btn" :class="{ active: s.active }" @click.stop="s.active = !s.active">
-                      <span class="toggle-knob"></span>
-                    </button>
-                    <span class="toggle-label">{{ s.active ? '已启用' : '已禁用' }}</span>
-                  </div>
-                </div>
-                <div class="strategy-desc">{{ s.description }}</div>
-                <div class="strategy-footer">
-                  <div class="strategy-trigger">
-                    <span class="st-icon">🔔</span>
-                    <span>{{ s.trigger }}</span>
-                  </div>
-                  <div class="strategy-exec">
-                    <span class="st-icon">⚡</span>
-                    <span>{{ s.action }}</span>
-                  </div>
-                </div>
-                <div class="strategy-stats">
-                  <div class="ss-item">
-                    <span class="ss-num">{{ s.execCount }}</span>
-                    <span class="ss-label">执行次数</span>
-                  </div>
-                  <div class="ss-item">
-                    <span class="ss-num success">{{ s.successRate }}%</span>
-                    <span class="ss-label">成功率</span>
-                  </div>
-                  <div class="ss-item">
-                    <span class="ss-time">{{ s.lastExec }}</span>
-                    <span class="ss-label">上次执行</span>
-                  </div>
-                  <div class="ss-item">
-                    <span class="ss-status" :class="s.status === 'normal' ? 'success' : 'warn'">{{ s.statusText }}</span>
-                    <span class="ss-label">状态</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- 策略分页 -->
-            <div v-if="strategyTotalPages > 1" class="pagination">
-              <button class="page-btn" :disabled="strategyPage === 1" @click="strategyPage--">&lt;</button>
-              <button v-for="p in visibleStrategyPages" :key="p" class="page-btn" :class="{ active: p === strategyPage, ellipsis: p === '…' }" :disabled="p === '…'" @click="p !== '…' && (strategyPage = p)">{{ p }}</button>
-              <button class="page-btn" :disabled="strategyPage === strategyTotalPages" @click="strategyPage++">&gt;</button>
-              <span class="page-info">第 {{ strategyPage }} / {{ strategyTotalPages }} 页</span>
-            </div>
-          </template>
-
-          <!-- 策略详情弹窗 -->
-          <div v-if="strategyDetailVisible" class="env-detail-overlay" @click.self="strategyDetailVisible = false">
-            <div class="env-detail-panel strategy-detail-panel">
-              <div class="env-detail-header">
-                <div class="detail-title-row">
-                  <div class="strategy-icon-wrap large" :class="selectedStrategy?.type">
-                    <span>{{ selectedStrategy?.type === 'auto' ? '🤖' : selectedStrategy?.type === 'timer' ? '⏰' : selectedStrategy?.type === 'threshold' ? '📊' : '🔗' }}</span>
-                  </div>
-                  <div>
-                    <h2 class="detail-title">{{ selectedStrategy?.name }}</h2>
-                    <span class="strategy-type-badge" :class="selectedStrategy?.type">{{ selectedStrategy?.typeText }}</span>
-                  </div>
-                </div>
-                <button class="env-detail-close" @click="strategyDetailVisible = false">✕</button>
-              </div>
-              <div class="env-detail-body">
-                <div class="detail-section">
-                  <h4 class="detail-section-title">策略描述</h4>
-                  <p class="detail-text">{{ selectedStrategy?.description }}</p>
-                </div>
-                <div class="detail-section">
-                  <h4 class="detail-section-title">触发条件</h4>
-                  <div class="detail-row">
-                    <span class="detail-label">类型</span>
-                    <span class="detail-value">{{ selectedStrategy?.triggerTypeText }}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">条件</span>
-                    <span class="detail-value">{{ selectedStrategy?.trigger }}</span>
-                  </div>
-                </div>
-                <div class="detail-section">
-                  <h4 class="detail-section-title">执行动作</h4>
-                  <div class="detail-row">
-                    <span class="detail-label">设备</span>
-                    <span class="detail-value">{{ selectedStrategy?.targetDevice }}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">动作</span>
-                    <span class="detail-value">{{ selectedStrategy?.action }}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">延迟</span>
-                    <span class="detail-value">{{ selectedStrategy?.delay }} 秒后执行</span>
-                  </div>
-                </div>
-                <div class="detail-section">
-                  <h4 class="detail-section-title">运行统计</h4>
-                  <div class="detail-row">
-                    <span class="detail-label">执行次数</span>
-                    <span class="detail-value">{{ selectedStrategy?.execCount }}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">成功率</span>
-                    <span class="detail-value success">{{ selectedStrategy?.successRate }}%</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">上次执行</span>
-                    <span class="detail-value">{{ selectedStrategy?.lastExec }}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">当前状态</span>
-                    <span class="detail-value" :class="selectedStrategy?.status === 'normal' ? 'success' : 'warn'">{{ selectedStrategy?.statusText }}</span>
-                  </div>
-                </div>
-                <div class="detail-section">
-                  <h4 class="detail-section-title">启用 / 禁用</h4>
-                  <div class="detail-row">
-                    <span class="detail-label">状态</span>
-                    <div class="detail-value">
-                      <button class="toggle-btn" :class="{ active: selectedStrategy?.active }" @click="selectedStrategy && (selectedStrategy.active = !selectedStrategy.active)">
-                        <span class="toggle-knob"></span>
-                      </button>
-                      <span class="toggle-label" style="margin-left:8px">{{ selectedStrategy?.active ? '已启用' : '已禁用' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AlarmPage
+          :visible="currentPage === 'alarm'"
+          :alarmTab="alarmTab"
+          :alarmSearch="alarmSearch"
+          :alarmLevelFilter="alarmLevelFilter"
+          :alarmStatusFilter="alarmStatusFilter"
+          :alarmPage="alarmPage"
+          :strategyPage="strategyPage"
+          :strategyDetailVisible="strategyDetailVisible"
+          :selectedStrategy="selectedStrategy"
+          :allAlarms="allAlarms"
+          :strategies="strategies"
+          :filteredAlarms="filteredAlarms"
+          :paginatedAlarms="paginatedAlarms"
+          :alarmTotalPages="alarmTotalPages"
+          :visiblePages="visiblePages"
+          :paginatedStrategies="paginatedStrategies"
+          :strategyTotalPages="strategyTotalPages"
+          :visibleStrategyPages="visibleStrategyPages"
+          @switchAlarmTab="switchAlarmTab"
+          @update:alarmSearch="(v) => { alarmSearch = v; alarmPage = 1 }"
+          @update:alarmLevelFilter="(v) => { alarmLevelFilter = v; alarmPage = 1 }"
+          @update:alarmStatusFilter="(v) => { alarmStatusFilter = v; alarmPage = 1 }"
+          @update:alarmPage="(v) => alarmPage = v"
+          @update:strategyPage="(v) => strategyPage = v"
+          @resolveAlarm="resolveAlarm"
+          @markAllAlarmsDone="markAllAlarmsDone"
+          @clearDoneAlarms="clearDoneAlarms"
+          @openStrategyDetail="openStrategyDetail"
+          @closeStrategyDetail="strategyDetailVisible = false"
+          @toggleStrategy="(s) => s.active = !s.active"
+        />
 
         <!-- ===== 环境总览 ===== -->
-        <div v-show="currentPage === 'env'" class="page">
-          <div ref="envScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
-            <canvas ref="canvasRef" class="three-canvas"></canvas>
-            <div class="scene-overlay">
-              <div class="room-tabs">
-                <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="switchRoom('all')">全景</button>
-                <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="switchRoom(room.id)">{{ room.name }}</button>
-              </div>
-              <div class="overlay-right">
-                <button v-if="isFullscreen" class="fullscreen-btn" @click="toggleFullscreen" title="退出全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-                </button>
-                <button v-else class="fullscreen-btn" @click="toggleFullscreen" title="全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-header">
-            <h3 class="section-title">室内外环境</h3>
-            <span class="section-tag live"><span class="live-dot"></span>实时监测</span>
-          </div>
-          <div class="env-grid">
-            <div v-for="item in envItems" :key="item.label" class="env-card" :style="{ '--accent': item.color }" @click="showEnvDetail(item)">
-              <div class="env-icon">{{ item.icon }}</div>
-              <div class="env-info">
-                <span class="env-value" v-html="formatMetricValue(item.value)"></span>
-                <span class="env-label">{{ item.label }}</span>
-              </div>
-              <div class="env-bar"><div class="env-bar-fill" :style="{ width: item.pct + '%' }"></div></div>
-            </div>
-          </div>
-
-          <div class="bottom-grid">
-            <!-- 设备控制 -->
-            <div class="panel-card">
-              <div class="panel-header">
-                <h3 class="panel-title">设备控制</h3>
-                <div class="panel-tabs">
-                  <button class="panel-tab" :class="{ active: activeDeviceTab === 'light' }" @click="activeDeviceTab = 'light'">💡 照明</button>
-                  <button class="panel-tab" :class="{ active: activeDeviceTab === 'ac' }" @click="activeDeviceTab = 'ac'">❄️ 空调</button>
-                  <button class="panel-tab" :class="{ active: activeDeviceTab === 'entertainment' }" @click="activeDeviceTab = 'entertainment'">🎮 娱乐</button>
-                </div>
-              </div>
-              <!-- 照明/空调设备列表 -->
-              <div class="device-list" v-if="activeDeviceTab !== 'entertainment'">
-                <div v-for="device in envDevices" :key="device.id" class="device-item" @click="flyToDeviceRoom(device)">
-                  <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
-                  <div class="device-info">
-                    <span class="d-name">{{ device.name }}</span>
-                    <span class="d-room">{{ device.room }}</span>
-                  </div>
-                  <div class="device-right">
-                    <div class="toggle" :class="{ on: device.status }" @click.stop="toggleDevice(device)">
-                      <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </div>
-                    <button class="ctrl-btn" @click.stop="openDeviceControl(device)">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <!-- 娱乐设备列表 -->
-              <div class="device-list" v-if="activeDeviceTab === 'entertainment'">
-                <div v-for="device in entertainmentDevices" :key="device.id" class="device-item" @click="flyToDeviceRoom(device)">
-                  <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
-                  <div class="device-info">
-                    <span class="d-name">{{ device.name }}</span>
-                    <span class="d-room">{{ device.room }}</span>
-                  </div>
-                  <div class="device-right">
-                    <div class="toggle" :class="{ on: device.status }" @click.stop="toggleDevice(device)">
-                      <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </div>
-                    <button class="ctrl-btn" @click.stop="openDeviceControl(device)">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div v-if="entertainmentDevices.length === 0" class="device-empty">暂无娱乐设备</div>
-              </div>
-            </div>
-            <!-- 安防监控 -->
-            <div class="panel-card">
-              <div class="panel-header">
-                <h3 class="panel-title">安防监控</h3>
-                <span class="section-tag ok"><span class="ok-dot"></span>全部正常</span>
-              </div>
-              <div class="security-grid">
-                <div v-for="item in linkedSecurityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }" @click="openSecurityControl(item)">
-                  <div class="s-icon" :style="{ color: item.color }">{{ item.icon }}</div>
-                  <div class="s-info">
-                    <span class="s-label">{{ item.label }}</span>
-                    <span class="s-val" :style="{ color: item.color }">{{ item.value }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EnvPage
+          ref="envPageRef"
+          :visible="currentPage === 'env'"
+          :isFullscreen="isFullscreen"
+          :activeRoom="activeRoom"
+          :rooms="rooms"
+          :envItems="envItems"
+          :activeDeviceTab="activeDeviceTab"
+          :envDevices="envDevices"
+          :entertainmentDevices="entertainmentDevices"
+          :linkedSecurityItems="linkedSecurityItems"
+          :formatMetricValue="formatMetricValue"
+          :getDeviceColor="getDeviceColor"
+          @switchRoom="switchRoom"
+          @toggleFullscreen="toggleFullscreen"
+          @showEnvDetail="showEnvDetail"
+          @update:activeDeviceTab="(v) => activeDeviceTab = v"
+          @flyToDeviceRoom="flyToDeviceRoom"
+          @toggleDevice="toggleDevice"
+          @openDeviceControl="openDeviceControl"
+          @openSecurityControl="openSecurityControl"
+        />
 
         <!-- ===== 能源管理 ===== -->
-        <div v-show="currentPage === 'energy'" class="page">
-          <div ref="energyScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
-            <div class="scene-overlay">
-              <div class="room-tabs">
-                <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="switchRoom('all')">全景</button>
-                <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="switchRoom(room.id)">{{ room.name }}</button>
-              </div>
-              <div class="overlay-right">
-                <button v-if="isFullscreen" class="fullscreen-btn" @click="toggleFullscreen" title="退出全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-                </button>
-                <button v-else class="fullscreen-btn" @click="toggleFullscreen" title="全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 第一行：核心指标卡片 -->
-          <div class="energy-overview-row">
-            <div class="energy-metric-card electric" @click="openEnergyDetail('today')">
-              <div class="em-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              </div>
-              <div class="em-info">
-                <div class="em-label">今日用电</div>
-                <div class="em-value">{{ homeStore.stats.dailyEnergy ?? '8.5' }} <span class="em-unit">kWh</span></div>
-                <div class="em-trend" :class="electricTrend.dir">{{ electricTrend.label }}</div>
-              </div>
-            </div>
-            <div class="energy-metric-card water" @click="openEnergyDetail('water')">
-              <div class="em-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-              </div>
-              <div class="em-info">
-                <div class="em-label">今日用水</div>
-                <div class="em-value">{{ energyLiveData.waterToday.toFixed(2) }} <span class="em-unit">m³</span></div>
-                <div class="em-trend" :class="waterTrend.dir">{{ waterTrend.label }}</div>
-              </div>
-            </div>
-            <div class="energy-metric-card gas" @click="openEnergyDetail('gas')">
-              <div class="em-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
-              </div>
-              <div class="em-info">
-                <div class="em-label">今日燃气</div>
-                <div class="em-value">{{ energyLiveData.gasToday.toFixed(2) }} <span class="em-unit">m³</span></div>
-                <div class="em-trend" :class="gasTrend.dir">{{ gasTrend.label }}</div>
-              </div>
-            </div>
-            <div class="energy-metric-card cost" @click="openEnergyDetail('cost')">
-              <div class="em-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              </div>
-              <div class="em-info">
-                <div class="em-label">今日费用</div>
-                <div class="em-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.waterToday * 3.5 + energyLiveData.gasToday * 2.8).toFixed(1) }}</div>
-                <div class="em-trend" :class="costTrend.dir">{{ costTrend.label }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 第二行：趋势图表 -->
-          <div class="charts-row">
-            <div class="panel-card chart-lg">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                  用电趋势
-                </h3>
-                <span>24小时</span>
-              </div>
-              <div ref="lineChartRef" class="chart-box"></div>
-            </div>
-            <div class="panel-card chart-sm">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                  用电结构
-                </h3>
-              </div>
-              <div ref="pieChartRef" class="chart-box"></div>
-            </div>
-          </div>
-
-          <!-- 第三行：水气图表 -->
-          <div class="charts-row">
-            <div class="panel-card chart-lg">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                  用水趋势
-                </h3>
-                <span>24小时</span>
-              </div>
-              <div ref="waterChartRef" class="chart-box"></div>
-            </div>
-            <div class="panel-card chart-sm">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                  用水结构
-                </h3>
-              </div>
-              <div ref="waterPieChartRef" class="chart-box"></div>
-            </div>
-          </div>
-
-          <!-- 第四行：燃气图表 -->
-          <div class="charts-row">
-            <div class="panel-card chart-lg">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
-                  燃气趋势
-                </h3>
-                <span>24小时</span>
-              </div>
-              <div ref="gasChartRef" class="chart-box"></div>
-            </div>
-            <div class="panel-card chart-sm">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-                  燃气结构
-                </h3>
-              </div>
-              <div ref="gasPieChartRef" class="chart-box"></div>
-            </div>
-          </div>
-
-          <!-- 第五行：费用明细 -->
-          <div class="energy-cost-detail-row">
-            <div class="cost-detail-card" @click="openEnergyDetail('cost')">
-              <div class="cdc-header">
-                <div class="cdc-icon electric">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                </div>
-                <div class="cdc-title">电费明细</div>
-              </div>
-              <div class="cdc-body">
-                <div class="cdc-main">
-                  <span class="cdc-value">¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 + energyLiveData.waterToday * 3.5 * 30 + energyLiveData.gasToday * 2.8 * 30).toFixed(1) }}</span>
-                  <span class="cdc-label">本月预估</span>
-                </div>
-                <div class="cdc-items">
-                  <div class="cdc-item"><span>峰时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.6).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>平时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.3).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>谷时用电</span><span>¥{{ ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.1).toFixed(1) }}</span></div>
-                </div>
-              </div>
-            </div>
-            <div class="cost-detail-card" @click="openEnergyDetail('waterCost')">
-              <div class="cdc-header">
-                <div class="cdc-icon water">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                </div>
-                <div class="cdc-title">水费明细</div>
-              </div>
-              <div class="cdc-body">
-                <div class="cdc-main">
-                  <span class="cdc-value">¥{{ (energyLiveData.waterToday * 30 * 3.5).toFixed(1) }}</span>
-                  <span class="cdc-label">本月预估</span>
-                </div>
-                <div class="cdc-items">
-                  <div class="cdc-item"><span>生活用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.7).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>洗浴用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.2).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>厨房用水</span><span>¥{{ (energyLiveData.waterToday * 30 * 3.5 * 0.1).toFixed(1) }}</span></div>
-                </div>
-              </div>
-            </div>
-            <div class="cost-detail-card" @click="openEnergyDetail('gasCost')">
-              <div class="cdc-header">
-                <div class="cdc-icon gas">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
-                </div>
-                <div class="cdc-title">燃气费明细</div>
-              </div>
-              <div class="cdc-body">
-                <div class="cdc-main">
-                  <span class="cdc-value">¥{{ (energyLiveData.gasToday * 30 * 2.8).toFixed(1) }}</span>
-                  <span class="cdc-label">本月预估</span>
-                </div>
-                <div class="cdc-items">
-                  <div class="cdc-item"><span>热水器</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.55).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>燃气灶</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.35).toFixed(1) }}</span></div>
-                  <div class="cdc-item"><span>壁挂炉</span><span>¥{{ (energyLiveData.gasToday * 30 * 2.8 * 0.1).toFixed(1) }}</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 第六行：设备能耗排行 + 环保贡献 -->
-          <div class="energy-bottom-row">
-            <div class="panel-card rank-card">
-              <div class="panel-header"><h3 class="panel-title">能耗排行</h3><span>用电/用水/燃气</span></div>
-              <div class="rank-tabs">
-                <button class="rank-tab" :class="{ active: rankTab === 'electric' }" @click="rankTab = 'electric'">用电</button>
-                <button class="rank-tab" :class="{ active: rankTab === 'water' }" @click="rankTab = 'water'">用水</button>
-                <button class="rank-tab" :class="{ active: rankTab === 'gas' }" @click="rankTab = 'gas'">燃气</button>
-              </div>
-              <div class="rank-list">
-                <div v-for="(item, i) in currentRankList" :key="item.name" class="rank-item" @click="openEnergyDetail(rankTab + '-rank', item)">
-                  <div class="rank-num" :class="['g','s','b'][i] || ''">{{ i + 1 }}</div>
-                  <div class="rank-icon">{{ item.icon }}</div>
-                  <div class="rank-info">
-                    <span class="rank-name">{{ item.name }}</span>
-                    <div class="rank-bar-w"><div class="rank-bar" :style="{ width: item.pct + '%', background: item.color }"></div></div>
-                  </div>
-                  <span class="rank-val">{{ item.val }} {{ item.unit }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="eco-contribute-card" @click="openEnergyDetail('carbon')">
-              <div class="eco-header">
-                <span class="eco-icon">🌱</span>
-                <span class="eco-title">环保贡献</span>
-                <span class="eco-badge-tag">本月</span>
-              </div>
-              <div class="eco-stats">
-                <div class="eco-stat primary">
-                  <div class="eco-value">{{ energyLiveData.carbonReduction }}</div>
-                  <div class="eco-unit">kg</div>
-                  <div class="eco-label">CO₂ 减排</div>
-                </div>
-                <div class="eco-divider"></div>
-                <div class="eco-stat">
-                  <div class="eco-value">{{ Math.floor(energyLiveData.carbonReduction / 5) }}</div>
-                  <div class="eco-unit">棵</div>
-                  <div class="eco-label">相当于植树</div>
-                </div>
-                <div class="eco-divider"></div>
-                <div class="eco-stat">
-                  <div class="eco-value">{{ (energyLiveData.carbonReduction * 8.3).toFixed(0) }}</div>
-                  <div class="eco-unit">km</div>
-                  <div class="eco-label">少开车</div>
-                </div>
-              </div>
-              <div class="eco-progress-row">
-                <div class="eco-progress-label">本月节能目标 <span class="eco-progress-pct">{{ energyLiveData.savingRate }}%</span></div>
-                <div class="eco-progress-bar">
-                  <div class="eco-progress-fill" :style="{ width: Math.min(energyLiveData.savingRate, 100) + '%' }"></div>
-                </div>
-                <div class="eco-progress-sub">距离 30% 目标还差 {{ Math.max(0, 30 - energyLiveData.savingRate) }}%</div>
-              </div>
-              <div class="eco-tips">
-                <div class="eco-tip">
-                  <span class="tip-icon">💡</span>
-                  <span>节能率高于 {{ energyLiveData.savingRate }}% 的家庭</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EnergyPage
+          ref="energyPageRef"
+          :visible="currentPage === 'energy'"
+          :isFullscreen="isFullscreen"
+          :activeRoom="activeRoom"
+          :rooms="rooms"
+          :dailyEnergy="homeStore.stats.dailyEnergy ?? '8.5'"
+          :waterToday="energyLiveData.waterToday"
+          :gasToday="energyLiveData.gasToday"
+          :electricTrend="electricTrend"
+          :waterTrend="waterTrend"
+          :gasTrend="gasTrend"
+          :costTrend="costTrend"
+          :rankTab="rankTab"
+          :currentRankList="currentRankList"
+          :carbonReduction="energyLiveData.carbonReduction"
+          :savingRate="energyLiveData.savingRate"
+          @switchRoom="switchRoom"
+          @toggleFullscreen="toggleFullscreen"
+          @openEnergyDetail="openEnergyDetail"
+          @update:rankTab="(v) => rankTab = v"
+        />
 
         <!-- ===== 健康监测 ===== -->
-        <div v-show="currentPage === 'health'" class="page health-page">
-          <div class="health-hero">
-            <div class="person-card-lg">
-              <div class="person-avatar-lg">
-                <span>李</span>
-                <div class="avatar-ring"></div>
-              </div>
-              <div class="person-info-lg">
-                <h3 class="person-name-lg">李小溪</h3>
-                <p class="person-meta-lg">29岁 · 女 · 户主</p>
-                <div class="person-tags">
-                  <span class="ptag ok">健康良好</span>
-                  <span class="ptag">已绑定设备 3 台</span>
-                </div>
-              </div>
-              <div class="person-score">
-                <div class="score-ring">
-                  <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="bg"/><circle cx="50" cy="50" r="45" class="fill"/></svg>
-                  <div class="score-val">92</div>
-                </div>
-                <span class="score-label">健康评分</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-header">
-            <h3 class="section-title">核心指标</h3>
-            <span class="section-tag live"><span class="live-dot"></span>实时监测</span>
-          </div>
-          <div class="health-metrics">
-            <div v-for="item in healthItems" :key="item.label" class="metric-card" :style="{ '--accent': item.color }" @click="openHealthDetail(item)">
-              <div class="metric-header">
-                <span class="metric-icon">{{ item.icon }}</span>
-                <span class="metric-label">{{ item.label }}</span>
-              </div>
-              <div class="metric-body">
-                <span class="metric-value" v-html="formatMetricValue(item.value)"></span>
-                <span class="metric-trend" :class="item.trend >= 0 ? 'up' : 'dn'">{{ item.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(item.trend) }}</span>
-              </div>
-              <div class="metric-bar">
-                <div class="metric-bar-fill" :style="{ width: item.pct + '%', background: item.color }"></div>
-              </div>
-              <div class="metric-range" v-html="formatMetricValue(item.range)"></div>
-            </div>
-          </div>
-
-          <div class="health-charts-2col">
-            <!-- 心率趋势 -->
-            <div class="panel-card">
-              <div class="panel-header"><h3 class="panel-title">心率趋势</h3><span class="time-range">最近 24 小时</span></div>
-              <div class="heart-trend">
-                <div class="heart-main">
-                  <div class="heart-data-row">
-                    <div class="heart-stat">
-                      <span class="stat-value" style="color:#ff6b6b">72 <span class="stat-unit">次/分</span></span>
-                      <span class="stat-label">平均心率</span>
-                    </div>
-                    <div class="heart-stat">
-                      <span class="stat-value" style="color:#22c55e">65 <span class="stat-unit">次/分</span></span>
-                      <span class="stat-label">最低</span>
-                    </div>
-                    <div class="heart-stat">
-                      <span class="stat-value" style="color:#f59e0b">98 <span class="stat-unit">次/分</span></span>
-                      <span class="stat-label">最高</span>
-                    </div>
-                  </div>
-                  <div class="heart-status">
-                    <span class="status-badge normal">正常</span>
-                    <span class="heart-compare">较昨日 +2</span>
-                  </div>
-                </div>
-                <div class="heart-wave">
-                  <div class="wave-header">
-                    <div class="wave-icon-wrap">
-                      <span class="wave-icon">💓</span>
-                    </div>
-                    <div class="wave-label">
-                      <span class="trend-tag">最近 24 小时趋势</span>
-                    </div>
-                  </div>
-                  <div class="wave-bars">
-                    <div 
-                      class="wave-bar" 
-                      v-for="(h, i) in heartRateData" 
-                      :key="i" 
-                      :style="{ height: h.value / 100 * 60 + 'px', animationDelay: i * 0.1 + 's' }"
-                      @mouseenter="showHeartTooltip($event, h, i)"
-                      @mouseleave="hideHeartTooltip"
-                    ></div>
-                  </div>
-                  <!-- 心率 Tooltip -->
-                  <div v-if="heartTooltip.visible" class="chart-tooltip heart-tooltip" :style="{ left: heartTooltip.x + 'px', top: heartTooltip.y + 'px' }">
-                    <div class="tooltip-time">{{ heartTooltip.time }}</div>
-                    <div class="tooltip-value"><span class="tooltip-icon">💓</span> 心率: <strong>{{ heartTooltip.value }}</strong> 次/分</div>
-                    <div class="tooltip-status" :class="getHeartStatus(heartTooltip.value).class">{{ getHeartStatus(heartTooltip.value).text }}</div>
-                  </div>
-                  <div class="heart-time">
-                    <span>0时</span><span>6时</span><span>12时</span><span>18时</span><span>24时</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- 血压分布 -->
-            <div class="panel-card">
-              <div class="panel-header"><h3 class="panel-title">血压分布</h3><span class="time-range">本周</span></div>
-              <div class="bp-display">
-                <div class="bp-main">
-                  <div class="bp-value-group">
-                    <div class="bp-value sys">
-                      <span class="bp-num" style="font-size:24px">118</span>
-                      <span class="bp-unit">mmHg</span>
-                      <span class="bp-label">收缩压</span>
-                    </div>
-                    <span class="bp-slash">/</span>
-                    <div class="bp-value dia">
-                      <span class="bp-num" style="font-size:24px">78</span>
-                      <span class="bp-unit">mmHg</span>
-                      <span class="bp-label">舒张压</span>
-                    </div>
-                  </div>
-                  <div class="bp-status">
-                    <span class="status-badge normal">正常</span>
-                    <span class="bp-compare">较上周 -2</span>
-                  </div>
-                </div>
-                <div class="bp-trend">
-                  <div class="wave-header">
-                    <div class="wave-icon-wrap bp-icon">
-                      <span class="wave-icon">🩺</span>
-                    </div>
-                    <div class="wave-label">
-                      <span class="trend-tag">本周趋势</span>
-                    </div>
-                  </div>
-                  <div class="trend-bars">
-                    <div 
-                      v-for="(v, i) in bpWeekData" 
-                      :key="i" 
-                      class="trend-bar-wrap"
-                      @mouseenter="showBpTooltip($event, v, i)"
-                      @mouseleave="hideBpTooltip"
-                    >
-                      <div class="trend-bar-pair">
-                        <div class="trend-bar sys" :style="{ height: v.sys / 140 * 70 + 'px' }"></div>
-                        <div class="trend-bar dia" :style="{ height: v.dia / 100 * 70 + 'px' }"></div>
-                      </div>
-                      <span class="bp-day">{{ ['一','二','三','四','五','六','日'][i] }}</span>
-                    </div>
-                  </div>
-                  <!-- 血压 Tooltip -->
-                  <div v-if="bpTooltip.visible" class="chart-tooltip bp-tooltip" :style="{ left: bpTooltip.x + 'px', top: bpTooltip.y + 'px' }">
-                    <div class="tooltip-time">周{{ ['一','二','三','四','五','六','日'][bpTooltip.dayIndex] }}</div>
-                    <div class="tooltip-row"><span class="tooltip-dot sys"></span> 收缩压: <strong>{{ bpTooltip.sys }}</strong> mmHg</div>
-                    <div class="tooltip-row"><span class="tooltip-dot dia"></span> 舒张压: <strong>{{ bpTooltip.dia }}</strong> mmHg</div>
-                    <div class="tooltip-status" :class="getBpStatus(bpTooltip.sys, bpTooltip.dia).class">{{ getBpStatus(bpTooltip.sys, bpTooltip.dia).text }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel-card">
-            <div class="panel-header"><h3 class="panel-title">健康建议</h3></div>
-            <div class="health-tips">
-              <div class="tip-card"><div class="tip-icon">🏃</div><div class="tip-content"><h4>运动建议</h4><p>今日步数偏少，建议晚饭后散步 30 分钟</p></div></div>
-              <div class="tip-card"><div class="tip-icon">😴</div><div class="tip-content"><h4>睡眠建议</h4><p>近期睡眠质量良好，建议保持 22:30 前入睡</p></div></div>
-              <div class="tip-card"><div class="tip-icon">💧</div><div class="tip-content"><h4>饮水提醒</h4><p>今日饮水量 1200ml，建议再补充 800ml</p></div></div>
-            </div>
-          </div>
-
-        </div>
+        <HealthPage
+          :visible="currentPage === 'health'"
+          :healthItems="healthItems"
+          :heartRateData="heartRateData"
+          :bpWeekData="bpWeekData"
+          :heartTooltip="heartTooltip"
+          :bpTooltip="bpTooltip"
+          :formatMetricValue="formatMetricValue"
+          :getHeartStatus="getHeartStatus"
+          :getBpStatus="getBpStatus"
+          @openHealthDetail="openHealthDetail"
+          @showHeartTooltip="showHeartTooltip"
+          @hideHeartTooltip="hideHeartTooltip"
+          @showBpTooltip="showBpTooltip"
+          @hideBpTooltip="hideBpTooltip"
+        />
 
         <!-- ===== 设备管理 ===== -->
-        <div v-show="currentPage === 'device'" class="page">
-          <div ref="deviceScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
-            <div class="scene-overlay">
-              <div class="room-tabs">
-                <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="switchRoom('all')">全景</button>
-                <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="switchRoom(room.id)">{{ room.name }}</button>
-              </div>
-              <div class="overlay-right">
-                <button v-if="isFullscreen" class="fullscreen-btn" @click="toggleFullscreen" title="退出全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-                </button>
-                <button v-else class="fullscreen-btn" @click="toggleFullscreen" title="全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="filter-bar">
-            <input class="filter-in" v-model="deviceSearch" placeholder="搜索设备名称…" @input="devicePage = 1" />
-            <select class="filter-sel" v-model="deviceTypeFilter" @change="devicePage = 1">
-              <option value="">全部类型</option>
-              <option value="ac">空调/新风</option>
-              <option value="light">照明/开关</option>
-              <option value="outlet">插座</option>
-              <option value="sensor">传感器/安防</option>
-              <option value="appliance">家电</option>
-            </select>
-            <select class="filter-sel" v-model="deviceRoomFilter" @change="devicePage = 1">
-              <option value="">全部位置</option>
-              <option value="客厅">客厅</option>
-              <option value="主卧">主卧</option>
-              <option value="次卧">次卧</option>
-              <option value="厨房">厨房</option>
-              <option value="卫生间">卫生间</option>
-              <option value="阳台">阳台</option>
-              <option value="玄关">玄关</option>
-              <option value="全屋">全屋</option>
-            </select>
-            <button class="btn btn-ghost" @click="deviceSearch = ''; deviceTypeFilter = ''; deviceRoomFilter = ''; devicePage = 1">重置</button>
-            <button class="btn btn-accent" @click="openAddDevice">+ 新增</button>
-          </div>
-          <div class="panel-card" style="height: 740px; display: flex; flex-direction: column;">
-            <div class="panel-header"><h3 class="panel-title">设备列表</h3><span class="panel-count">{{ filteredDevices.length }} 台</span></div>
-            <div style="flex: 1; overflow-y: auto; min-height: 0;">
-              <table class="data-table">
-                <thead><tr><th>#</th><th>设备名</th><th>位置</th><th>厂商</th><th>IP</th><th>状态</th><th>操作</th></tr></thead>
-                <tbody>
-                  <tr v-for="(d, i) in pagedDevices" :key="d.id">
-                    <td class="num">{{ (devicePage - 1) * DEVICE_PAGE_SIZE + i + 1 }}</td>
-                    <td><span class="dot" :class="deviceOnline(d) ? 'on' : 'off'"></span> {{ d.name }}</td>
-                    <td>{{ d.room }}</td>
-                    <td>{{ d.vendor }}</td>
-                    <td class="ip">{{ d.ip }}</td>
-                    <td><span class="stag" :class="deviceOnline(d) ? 'on' : 'off'">{{ deviceOnline(d) ? '在线' : '离线' }}</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-primary" @click="openDeviceControlFromTable(d)">控制</button>
-                      <button class="btn btn-sm btn-ghost" @click="openDeviceDetail(d)">详情</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="pagination">
-              <button class="pg-btn" :disabled="devicePage <= 1" @click="devicePage--">&lt;</button>
-              <button
-                v-for="p in deviceTotalPages"
-                :key="p"
-                class="pg-btn"
-                :class="{ active: devicePage === p }"
-                @click="devicePage = p"
-              >{{ p }}</button>
-              <button class="pg-btn" :disabled="devicePage >= deviceTotalPages" @click="devicePage++">&gt;</button>
-            </div>
-          </div>
-        </div>
+        <DevicePage
+          ref="devicePageRef"
+          :visible="currentPage === 'device'"
+          :isFullscreen="isFullscreen"
+          :activeRoom="activeRoom"
+          :rooms="rooms"
+          :deviceSearch="deviceSearch"
+          :deviceTypeFilter="deviceTypeFilter"
+          :deviceRoomFilter="deviceRoomFilter"
+          :devicePage="devicePage"
+          :deviceTotalPages="deviceTotalPages"
+          :filteredDevices="filteredDevices"
+          :pagedDevices="pagedDevices"
+          :deviceOnline="deviceOnline"
+          @switchRoom="switchRoom"
+          @toggleFullscreen="toggleFullscreen"
+          @update:deviceSearch="(v) => { deviceSearch = v; devicePage = 1 }"
+          @update:deviceTypeFilter="(v) => { deviceTypeFilter = v; devicePage = 1 }"
+          @update:deviceRoomFilter="(v) => { deviceRoomFilter = v; devicePage = 1 }"
+          @update:devicePage="(v) => devicePage = v"
+          @resetFilters="() => { deviceSearch = ''; deviceTypeFilter = ''; deviceRoomFilter = ''; devicePage = 1 }"
+          @openAddDevice="openAddDevice"
+          @openDeviceControlFromTable="openDeviceControlFromTable"
+          @openDeviceDetail="openDeviceDetail"
+        />
 
         <!-- ===== 产品中心 ===== -->
-        <div v-show="currentPage === 'product'" class="page">
-          <div ref="productScene" class="scene-card" :class="{ fullscreen: isFullscreen }">
-            <div class="scene-overlay">
-              <div class="room-tabs">
-                <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="switchRoom('all')">全景</button>
-                <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="switchRoom(room.id)">{{ room.name }}</button>
-              </div>
-              <div class="overlay-right">
-                <button v-if="isFullscreen" class="fullscreen-btn" @click="toggleFullscreen" title="退出全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-                </button>
-                <button v-else class="fullscreen-btn" @click="toggleFullscreen" title="全屏">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="filter-bar">
-            <select class="filter-sel" v-model="productSubFilter" @change="productPage = 1">
-              <option value="">全部产品</option>
-              <option value="环境控制">环境控制</option>
-              <option value="照明控制">照明控制</option>
-              <option value="安防系统">安防系统</option>
-              <option value="家电控制">家电控制</option>
-              <option value="传感器">传感器</option>
-              <option value="能源管理">能源管理</option>
-            </select>
-            <select class="filter-sel" v-model="productTagFilter" @change="productPage = 1">
-              <option value="">全部状态</option>
-              <option value="已接入">已接入</option>
-              <option value="待接入">待接入</option>
-              <option value="未接入">未接入</option>
-            </select>
-            <button class="btn btn-primary">查询</button>
-            <button class="btn btn-ghost" @click="productSubFilter = ''; productTagFilter = ''; productPage = 1">重置</button>
-          </div>
-          <div class="product-grid">
-            <div v-for="p in pagedProducts" :key="p.id" class="product-card">
-              <div class="product-icon">{{ p.icon }}</div>
-              <div class="product-info">
-                <h4 class="product-name">{{ p.name }}</h4>
-                <p class="product-meta">{{ p.sub }} · {{ p.vendor }}</p>
-                <span class="product-tag" :class="{
-                  'tag-connected': p.tag === '已接入',
-                  'tag-pending': p.tag === '待接入',
-                  'tag-offline': p.tag === '未接入'
-                }">{{ p.tag }}</span>
-              </div>
-              <button class="btn btn-sm btn-ghost" @click="openProductDetail(p)">查看</button>
-            </div>
-          </div>
-          <div class="pagination">
-            <button class="pg-btn" :disabled="productPage <= 1" @click="productPage--">&lt;</button>
-            <button
-              v-for="p in productTotalPages"
-              :key="p"
-              class="pg-btn"
-              :class="{ active: productPage === p }"
-              @click="productPage = p"
-            >{{ p }}</button>
-            <button class="pg-btn" :disabled="productPage >= productTotalPages" @click="productPage++">&gt;</button>
-          </div>
-        </div>
+        <ProductPage
+          ref="productPageRef"
+          :visible="currentPage === 'product'"
+          :isFullscreen="isFullscreen"
+          :activeRoom="activeRoom"
+          :rooms="rooms"
+          :productSubFilter="productSubFilter"
+          :productTagFilter="productTagFilter"
+          :productPage="productPage"
+          :productTotalPages="productTotalPages"
+          :pagedProducts="pagedProducts"
+          @switchRoom="switchRoom"
+          @toggleFullscreen="toggleFullscreen"
+          @update:productSubFilter="(v) => { productSubFilter = v; productPage = 1 }"
+          @update:productTagFilter="(v) => { productTagFilter = v; productPage = 1 }"
+          @update:productPage="(v) => productPage = v"
+          @resetProductFilters="() => { productSubFilter = ''; productTagFilter = ''; productPage = 1 }"
+          @openProductDetail="openProductDetail"
+        />
 
       </div>
     </main>
   </div>
 
-  <!-- 环境详情弹窗 -->
-  <Teleport to="body">
-    <div v-if="envDetailVisible" class="env-detail-overlay" @click.self="closeEnvDetail">
-      <div class="env-detail-modal">
-        <div class="env-detail-header">
-          <div class="env-detail-icon">{{ envDetailItem?.icon }}</div>
-          <div class="env-detail-title">
-            <h3>{{ envDetailItem?.label }}</h3>
-            <span class="env-detail-value" :style="{ color: envDetailItem?.color }" v-html="formatMetricValue(envDetailItem?.value)"></span>
-          </div>
-          <button class="env-detail-close" @click="closeEnvDetail">✕</button>
-        </div>
-        <div class="env-detail-body" v-if="envDetailItem">
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">📖 参数说明</div>
-            <p>{{ envDetailMap[envDetailItem.label]?.desc }}</p>
-          </div>
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">📋 国家标准</div>
-            <p>{{ envDetailMap[envDetailItem.label]?.standard }}</p>
-          </div>
-          <div class="env-detail-section tips">
-            <div class="env-detail-section-title">💡 健康建议</div>
-            <p>{{ getHealthTips(envDetailItem.label, envDetailItem.raw ?? envDetailItem.value) }}</p>
-          </div>
-          <div class="env-detail-bar-wrap">
-            <div class="env-detail-bar-label">
-              <span>当前水平</span>
-              <span :style="{ color: envDetailItem.color }">{{ envDetailItem.pct }}%</span>
-            </div>
-            <div class="env-detail-bar">
-              <div class="env-detail-bar-fill" :style="{ width: envDetailItem.pct + '%', background: envDetailItem.color }"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-
-  <!-- 健康指标详情弹窗 -->
-  <Teleport to="body">
-    <div v-if="healthDetailVisible" class="env-detail-overlay" @click.self="closeHealthDetail">
-      <div class="env-detail-modal">
-        <div class="env-detail-header">
-          <div class="env-detail-icon">{{ healthDetailItem?.icon }}</div>
-          <div class="env-detail-title">
-            <h3>{{ healthDetailItem?.label }}</h3>
-            <span class="env-detail-value" :style="{ color: healthDetailItem?.color }" v-html="formatMetricValue(healthDetailItem?.value)"></span>
-          </div>
-          <button class="env-detail-close" @click="closeHealthDetail">✕</button>
-        </div>
-        <div class="env-detail-body" v-if="healthDetailItem">
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">📖 参数说明</div>
-            <p>{{ healthDetailMap[healthDetailItem.label]?.desc || '暂无说明' }}</p>
-          </div>
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">📋 国家标准</div>
-            <p>{{ healthDetailMap[healthDetailItem.label]?.standard || '暂无标准' }}</p>
-          </div>
-          <div class="env-detail-section tips">
-            <div class="env-detail-section-title">💡 健康建议</div>
-            <p>{{ getHealthTips(healthDetailItem.label, healthDetailItem.raw ?? healthDetailItem.value) }}</p>
-          </div>
-          <div class="env-detail-bar-wrap">
-            <div class="env-detail-bar-label">
-              <span>当前水平</span>
-              <span :style="{ color: healthDetailItem.color }">{{ healthDetailItem.pct ?? 70 }}%</span>
-            </div>
-            <div class="env-detail-bar">
-              <div class="env-detail-bar-fill" :style="{ width: (healthDetailItem.pct ?? 70) + '%', background: healthDetailItem.color }"></div>
-            </div>
-            <div class="env-detail-range">{{ healthDetailItem.range }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <!-- 所有弹窗 -->
+  <HomeModals
+    :envDetailVisible="envDetailVisible"
+    :envDetailItem="envDetailItem"
+    :envDetailMap="envDetailMap"
+    :getHealthTips="getHealthTips"
+    :formatMetricValue="formatMetricValue"
+    :healthDetailVisible="healthDetailVisible"
+    :healthDetailItem="healthDetailItem"
+    :healthDetailMap="healthDetailMap"
+    :showDeviceDetail="showDeviceDetail"
+    :deviceDetailItem="deviceDetailItem"
+    :showProductDetail="showProductDetail"
+    :productDetailItem="productDetailItem"
+    :addDeviceVisible="addDeviceVisible"
+    :addStep="addStep"
+    :addFormError="addFormError"
+    :successMsg="successMsg"
+    :newDevice="newDevice"
+    :roomOptions="roomOptions"
+    :deviceTypeOptions="deviceTypeOptions"
+    :scanning="scanning"
+    :scanProgress="scanProgress"
+    :scanStatus="scanStatus"
+    :scanResults="scanResults"
+    :scanSelected="scanSelected"
+    @closeEnvDetail="envDetailVisible = false"
+    @closeHealthDetail="healthDetailVisible = false"
+    @closeDeviceDetail="showDeviceDetail = false"
+    @closeProductDetail="showProductDetail = false"
+    @closeAddDevice="closeAddDevice"
+    @setAddStep="(v) => addStep = v"
+    @startScan="startScan"
+    @updateNewDevice="(k, v) => newDevice[k] = v"
+    @submitManualAdd="submitManualAdd"
+    @toggleScanSelect="toggleScanSelect"
+    @submitScanAdd="submitScanAdd"
+  />
 
   <!-- 设备控制弹窗 -->
   <DeviceControlModal
@@ -1106,351 +217,6 @@
     @update="onDeviceUpdate"
   />
 
-  <!-- ===== 新增设备弹窗 ===== -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="addDeviceVisible" class="env-detail-overlay" @click.self="closeAddDevice">
-        <div class="add-device-modal">
-
-          <!-- 方式选择页 -->
-          <template v-if="addStep === 'choose'">
-            <div class="env-detail-header">
-              <div class="env-detail-icon">📱</div>
-              <div class="env-detail-title">
-                <h3>新增设备</h3>
-                <span style="font-size:12px;color:var(--text-3)">选择添加方式</span>
-              </div>
-              <button class="env-detail-close" @click="closeAddDevice">✕</button>
-            </div>
-            <div class="add-choose-body">
-              <div class="add-method-card" @click="addStep = 'manual'">
-                <div class="amc-icon">✏️</div>
-                <div class="amc-info">
-                  <h4>自定义添加</h4>
-                  <p>手动填写设备名称、位置、厂商等信息</p>
-                </div>
-                <span class="amc-arrow">›</span>
-              </div>
-              <div class="add-method-card" @click="startScan">
-                <div class="amc-icon">📡</div>
-                <div class="amc-info">
-                  <h4>扫描当前网络</h4>
-                  <p>自动发现局域网内的智能设备</p>
-                </div>
-                <span class="amc-arrow">›</span>
-              </div>
-            </div>
-          </template>
-
-          <!-- 自定义添加表单 -->
-          <template v-if="addStep === 'manual'">
-            <div class="env-detail-header">
-              <button class="add-back-btn" @click="addStep = 'choose'">‹</button>
-              <div class="env-detail-icon">✏️</div>
-              <div class="env-detail-title">
-                <h3>自定义添加</h3>
-                <span style="font-size:12px;color:var(--text-3)">填写设备信息</span>
-              </div>
-              <button class="env-detail-close" @click="closeAddDevice">✕</button>
-            </div>
-            <div class="add-form-body">
-              <div class="add-form-grid">
-                <div class="add-form-item">
-                  <label class="add-form-label">设备名称 <span class="required">*</span></label>
-                  <input class="add-form-input" v-model="newDevice.name" placeholder="如：客厅空调" />
-                </div>
-                <div class="add-form-item">
-                  <label class="add-form-label">安装位置 <span class="required">*</span></label>
-                  <select class="add-form-input" v-model="newDevice.room">
-                    <option value="">请选择</option>
-                    <option v-for="r in roomOptions" :key="r" :value="r">{{ r }}</option>
-                  </select>
-                </div>
-                <div class="add-form-item">
-                  <label class="add-form-label">设备厂商</label>
-                  <input class="add-form-input" v-model="newDevice.vendor" placeholder="如：小米" />
-                </div>
-                <div class="add-form-item">
-                  <label class="add-form-label">设备类型 <span class="required">*</span></label>
-                  <select class="add-form-input" v-model="newDevice.type">
-                    <option value="">请选择</option>
-                    <option v-for="t in deviceTypeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
-                  </select>
-                </div>
-                <div class="add-form-item">
-                  <label class="add-form-label">IP 地址</label>
-                  <input class="add-form-input mono" v-model="newDevice.ip" placeholder="192.168.1.x" />
-                </div>
-                <div class="add-form-item">
-                  <label class="add-form-label">初始状态</label>
-                  <div class="add-toggle-row">
-                    <div class="toggle" :class="{ on: newDevice.status }" @click="newDevice.status = !newDevice.status">
-                      <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </div>
-                    <span style="font-size:12px;color:var(--text-2)">{{ newDevice.status ? '开启' : '关闭' }}</span>
-                  </div>
-                </div>
-              </div>
-              <div v-if="addFormError" class="add-form-error">{{ addFormError }}</div>
-              <div class="add-form-actions">
-                <button class="btn btn-ghost" @click="addStep = 'choose'">取消</button>
-                <button class="btn btn-primary" @click="submitManualAdd">确认添加</button>
-              </div>
-            </div>
-          </template>
-
-          <!-- 扫描网络 -->
-          <template v-if="addStep === 'scan'">
-            <div class="env-detail-header">
-              <button class="add-back-btn" @click="addStep = 'choose'">‹</button>
-              <div class="env-detail-icon">📡</div>
-              <div class="env-detail-title">
-                <h3>扫描当前网络</h3>
-                <span style="font-size:12px;color:var(--text-3)">{{ scanStatus }}</span>
-              </div>
-              <button class="env-detail-close" @click="closeAddDevice">✕</button>
-            </div>
-            <div class="add-scan-body">
-              <!-- 扫描动画 -->
-              <div v-if="scanning" class="scan-anim-wrap">
-                <div class="scan-ring">
-                  <div class="scan-pulse"></div>
-                  <div class="scan-icon">📡</div>
-                </div>
-                <p class="scan-tip">正在扫描 192.168.1.0/24 网段…</p>
-                <div class="scan-progress">
-                  <div class="scan-progress-fill" :style="{ width: scanProgress + '%' }"></div>
-                </div>
-                <span class="scan-pct">{{ scanProgress }}%</span>
-              </div>
-              <!-- 扫描结果 -->
-              <div v-else>
-                <div class="scan-result-header">
-                  <span class="scan-found">发现 {{ scanResults.length }} 台设备</span>
-                  <button class="btn btn-ghost btn-sm" @click="startScan">重新扫描</button>
-                </div>
-                <div class="scan-list">
-                  <div
-                    v-for="d in scanResults"
-                    :key="d.ip"
-                    class="scan-item"
-                    :class="{ selected: scanSelected.includes(d.ip), added: d.alreadyAdded }"
-                    @click="!d.alreadyAdded && toggleScanSelect(d.ip)"
-                  >
-                    <div class="scan-item-icon">{{ d.icon }}</div>
-                    <div class="scan-item-info">
-                      <span class="scan-item-name">{{ d.name }}</span>
-                      <span class="scan-item-meta">{{ d.ip }} · {{ d.vendor }}</span>
-                    </div>
-                    <div class="scan-item-right">
-                      <span v-if="d.alreadyAdded" class="scan-tag added">已添加</span>
-                      <span v-else class="scan-tag pending">未添加</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="add-form-actions">
-                  <button class="btn btn-ghost" @click="closeAddDevice">取消</button>
-                  <button
-                    class="btn btn-primary"
-                    :disabled="scanSelected.length === 0"
-                    @click="submitScanAdd"
-                  >添加选中 ({{ scanSelected.length }})</button>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- 添加成功 -->
-          <template v-if="addStep === 'success'">
-            <div class="add-success-body">
-              <div class="success-icon">✅</div>
-              <h3 class="success-title">添加成功</h3>
-              <p class="success-desc">{{ successMsg }}</p>
-              <button class="btn btn-primary" style="margin-top:16px" @click="closeAddDevice">完成</button>
-            </div>
-          </template>
-
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- 设备详情弹窗 -->
-  <Teleport to="body">
-    <div v-if="showDeviceDetail" class="env-detail-overlay" @click.self="closeDeviceDetail">
-      <div class="env-detail-modal device-detail-modal">
-        <div class="env-detail-header">
-          <div class="env-detail-icon">{{ deviceDetailItem?.icon }}</div>
-          <div class="env-detail-title">
-            <h3>{{ deviceDetailItem?.name }}</h3>
-            <span class="env-detail-value dd-online-status" :style="{ color: deviceDetailItem?.online ? '#22c55e' : '#6b7280' }">
-              {{ deviceDetailItem?.online ? '● 在线' : '● 离线' }}
-            </span>
-          </div>
-          <button class="env-detail-close" @click="closeDeviceDetail">✕</button>
-        </div>
-        <div class="env-detail-body" v-if="deviceDetailItem">
-          <div class="device-detail-grid">
-            <div class="dd-item">
-              <span class="dd-label">设备名称</span>
-              <span class="dd-value">{{ deviceDetailItem.name }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">安装位置</span>
-              <span class="dd-value">{{ deviceDetailItem.room }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">设备厂商</span>
-              <span class="dd-value">{{ deviceDetailItem.vendor }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">设备类型</span>
-              <span class="dd-value">{{ deviceTypeLabel(deviceDetailItem.type) }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">IP 地址</span>
-              <span class="dd-value mono">{{ deviceDetailItem.ip }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">运行状态</span>
-              <span class="dd-value" :style="{ color: deviceDetailItem.status ? '#22c55e' : '#94a3b8' }">
-                {{ deviceDetailItem.status ? '运行中' : '已关闭' }}
-              </span>
-            </div>
-          </div>
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">⏱ 累计使用时长</div>
-            <div class="dd-item" style="margin-top: 10px;">
-              <span class="dd-label">运行时长</span>
-              <span class="dd-value mono">{{ deviceUsageTime(deviceDetailItem) }}</span>
-            </div>
-          </div>
-          <div class="env-detail-section">
-            <div class="env-detail-section-title">⚡ 用电统计</div>
-            <div class="device-detail-grid" style="margin-top: 10px;">
-              <div class="dd-item">
-                <span class="dd-label">今日用电</span>
-                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).day }} kWh</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">本周用电</span>
-                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).week }} kWh</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">本月用电</span>
-                <span class="dd-value mono">{{ devicePowerStats(deviceDetailItem).month }} kWh</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-
-  <!-- 产品详情弹窗 -->
-  <Teleport to="body">
-    <div v-if="showProductDetail" class="env-detail-overlay" @click.self="showProductDetail = false">
-      <div class="env-detail-modal product-detail-modal">
-        <div class="env-detail-header">
-          <div class="env-detail-icon">{{ productDetailItem?.icon }}</div>
-          <div class="env-detail-title">
-            <h3>{{ productDetailItem?.name }}</h3>
-            <span class="product-tag" :class="{
-              'tag-connected': productDetailItem?.tag === '已接入',
-              'tag-pending':   productDetailItem?.tag === '待接入',
-              'tag-offline':   productDetailItem?.tag === '未接入'
-            }">{{ productDetailItem?.tag }}</span>
-          </div>
-          <button class="env-detail-close" @click="showProductDetail = false">✕</button>
-        </div>
-        <div class="env-detail-body" v-if="productDetailItem">
-          <!-- 基础信息 -->
-          <div class="device-detail-grid">
-            <div class="dd-item">
-              <span class="dd-label">产品名称</span>
-              <span class="dd-value">{{ productDetailItem.name }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">产品分类</span>
-              <span class="dd-value">{{ productDetailItem.sub }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">厂商</span>
-              <span class="dd-value">{{ productDetailItem.vendor }}</span>
-            </div>
-            <div class="dd-item">
-              <span class="dd-label">接入状态</span>
-              <span class="dd-value" :style="{ color: productStatusColor(productDetailItem.tag) }">{{ productDetailItem.tag }}</span>
-            </div>
-          </div>
-          <!-- 根据接入状态显示不同描述 -->
-          <div class="env-detail-section" v-if="productDetailItem.tag === '已接入'">
-            <div class="env-detail-section-title">✅ 已接入</div>
-            <p>该产品已成功接入智能家居系统，当前运行正常。您可以通过设备管理页面对其进行实时监控与控制，也可在3D场景中直接点击对应顶牌进行操作。</p>
-          </div>
-          <div class="env-detail-section" v-if="productDetailItem.tag === '已接入'">
-            <div class="env-detail-section-title">📊 运行数据</div>
-            <div class="device-detail-grid" style="margin-top:10px">
-              <div class="dd-item">
-                <span class="dd-label">接入时间</span>
-                <span class="dd-value mono">{{ productDetailItem.connectedAt || '2024-08-15' }}</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">固件版本</span>
-                <span class="dd-value mono">{{ productDetailItem.firmware || 'v2.1.4' }}</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">协议类型</span>
-                <span class="dd-value">{{ productDetailItem.protocol || 'Zigbee 3.0' }}</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">信号强度</span>
-                <span class="dd-value" style="color:#22c55e">{{ productDetailItem.signal || '强 (-42dBm)' }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="env-detail-section" v-if="productDetailItem.tag === '待接入'">
-            <div class="env-detail-section-title">⏳ 待接入</div>
-            <p>该产品已完成采购，正在等待配置接入。请按照以下步骤完成接入：</p>
-            <ol style="margin-top:10px; padding-left:18px; color:var(--text-2); font-size:13px; line-height:2">
-              <li>确保设备已通电并处于配网模式</li>
-              <li>在设备管理页点击「新增设备」→「扫描网络」</li>
-              <li>选中发现的设备并点击「添加选中」</li>
-              <li>完成后在设备列表中确认设备在线状态</li>
-            </ol>
-          </div>
-          <div class="env-detail-section" v-if="productDetailItem.tag === '待接入'">
-            <div class="env-detail-section-title">📋 产品规格</div>
-            <div class="device-detail-grid" style="margin-top:10px">
-              <div class="dd-item">
-                <span class="dd-label">通信协议</span>
-                <span class="dd-value">{{ productDetailItem.protocol || 'Wi-Fi / Zigbee' }}</span>
-              </div>
-              <div class="dd-item">
-                <span class="dd-label">供电方式</span>
-                <span class="dd-value">{{ productDetailItem.power || '220V AC' }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="env-detail-section" v-if="productDetailItem.tag === '未接入'">
-            <div class="env-detail-section-title">❌ 未接入</div>
-            <p>该产品当前未接入系统，可能原因如下：</p>
-            <ul style="margin-top:10px; padding-left:18px; color:var(--text-2); font-size:13px; line-height:2">
-              <li>设备未通电或已损坏</li>
-              <li>网关信号覆盖不足，设备超出范围</li>
-              <li>固件版本不兼容，需要升级</li>
-              <li>设备已被手动移除或重置</li>
-            </ul>
-          </div>
-          <div class="env-detail-section" v-if="productDetailItem.tag === '未接入'">
-            <div class="env-detail-section-title">🔧 排查建议</div>
-            <p style="color:var(--text-2); font-size:13px; line-height:1.8">检查设备电源和网络连接，尝试重置设备后重新配网。如问题持续，请联系厂商 <strong style="color:var(--primary)">{{ productDetailItem.vendor }}</strong> 技术支持获取帮助。</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-
   <!-- 右侧滑入控制面板 -->
   <DeviceControlPanel
     :visible="showSlidePanel"
@@ -1459,18 +225,8 @@
     @update="onDeviceUpdate"
   />
 
-  <!-- Toast 通知容器 -->
-  <Teleport to="body">
-    <div class="toast-container">
-      <TransitionGroup name="toast-fade">
-        <div v-for="toast in homeStore.toasts" :key="toast.id" class="toast-item" :class="toast.type">
-          <span class="toast-icon">{{ toastIcon(toast.type) }}</span>
-          <span class="toast-msg">{{ toast.message }}</span>
-          <button class="toast-close" @click="homeStore.removeToast(toast.id)">×</button>
-        </div>
-      </TransitionGroup>
-    </div>
-  </Teleport>
+  <!-- Toast 通知 -->
+  <ToastContainer :toasts="homeStore.toasts" @removeToast="homeStore.removeToast" />
 </template>
 
 <script setup>
@@ -1479,6 +235,16 @@ import { useHomeStore } from '@/stores/homeStore'
 import { useThreeScene } from '@/composables/useThreeScene'
 import DeviceControlModal from '@/components/DeviceControlModal.vue'
 import DeviceControlPanel from '@/components/DeviceControlPanel.vue'
+import AppSidebar from '@/components/pages/AppSidebar.vue'
+import TopBar from '@/components/pages/TopBar.vue'
+import ToastContainer from '@/components/pages/ToastContainer.vue'
+import AlarmPage from '@/components/pages/AlarmPage.vue'
+import EnvPage from '@/components/pages/EnvPage.vue'
+import EnergyPage from '@/components/pages/EnergyPage.vue'
+import HealthPage from '@/components/pages/HealthPage.vue'
+import DevicePage from '@/components/pages/DevicePage.vue'
+import ProductPage from '@/components/pages/ProductPage.vue'
+import HomeModals from '@/components/pages/HomeModals.vue'
 
 const homeStore = useHomeStore()
 const currentPage = ref('env')
@@ -1750,13 +516,6 @@ function closeHealthDetail() {
 const showControlPanel = ref(false)
 const selectedDevice = ref(null)
 
-// 场景容器 ref
-const envScene     = ref(null)
-const energyScene  = ref(null)
-const deviceScene  = ref(null)
-const productScene = ref(null)
-
-// 主 canvas ref
 const canvasRef = ref(null)
 const threeScene = useThreeScene(canvasRef)
 const { flyToRoom, resetView, onHotspotClick, activeRoomId } = threeScene
@@ -1824,23 +583,54 @@ function onDeviceUpdate(device) {
   }
 }
 
-let canvasPage = 'env'
+let canvasPage = '' // Start empty so first mountCanvas call will actually move the canvas
+
+// 子组件模板 ref（用于获取 scene-card 容器）
+const envPageRef     = ref(null)
+const energyPageRef  = ref(null)
+const devicePageRef  = ref(null)
+const productPageRef = ref(null)
 
 // 把 canvas 移入指定页面的 scene-card
 function mountCanvas(targetPage) {
-  if (targetPage === canvasPage) return
+  if (targetPage === canvasPage) {
+    // Even if same page, try to initialize if not done yet
+    if (!canvasRef.value?.parentElement) {
+      const canvas = canvasRef.value
+      if (!canvas) return
+      const targets= {
+        env: envPageRef.value?.sceneCardRef, energy: energyPageRef.value?.sceneCardRef,
+        device: devicePageRef.value?.sceneCardRef, product: productPageRef.value?.sceneCardRef,
+      }
+      const target = targets[targetPage]
+      if (!target) return
+      if (canvas.parentElement) canvas.parentElement.removeChild(canvas)
+      target.appendChild(canvas)
+      canvas.style.display = ''
+      canvasPage = targetPage
+    }
+    return
+  }
   const canvas = canvasRef.value
   if (!canvas) return
   const targets= {
-    env: envScene.value, energy: energyScene.value,
-    device: deviceScene.value, product: productScene.value,
+    env: envPageRef.value?.sceneCardRef, energy: energyPageRef.value?.sceneCardRef,
+    device: devicePageRef.value?.sceneCardRef, product: productPageRef.value?.sceneCardRef,
   }
   const target = targets[targetPage]
-  if (!target) return
+  if (!target) {
+    setTimeout(() => mountCanvas(targetPage), 100)
+    return
+  }
   if (canvas.parentElement) canvas.parentElement.removeChild(canvas)
   target.appendChild(canvas)
+  canvas.style.display = ''
   canvasPage = targetPage
-  nextTick(() => window.dispatchEvent(new Event('resize')))
+  // Delay initialization to ensure canvas is laid out
+  setTimeout(() => {
+    threeScene.initScene()
+    window.dispatchEvent(new Event('resize'))
+  }, 50)
 }
 
 const currentTime = ref('')
@@ -2821,12 +1611,7 @@ const pagedProducts = computed(() => {
   return filteredProducts.value.slice(start, start + PRODUCT_PAGE_SIZE)
 })
 
-const lineChartRef = ref(null)
-const pieChartRef  = ref(null)
-const waterChartRef = ref(null)
-const gasChartRef = ref(null)
-const waterPieChartRef = ref(null)
-const gasPieChartRef = ref(null)
+// Chart refs are now accessed via energyPageRef
 let lineChart = null, pieChart = null, waterChart = null, gasChart = null, waterPieChart = null, gasPieChart = null
 
   // 能源图表数据源（ref，便于实时更新）
@@ -2879,9 +1664,11 @@ let lineChart = null, pieChart = null, waterChart = null, gasChart = null, water
 
 async function initCharts() {
   const ec = await import('echarts')
-  console.log('[initCharts] refs:', { lineChartRef: !!lineChartRef.value, pieChartRef: !!pieChartRef.value, waterChartRef: !!waterChartRef.value, gasChartRef: !!gasChartRef.value, existingLineChart: !!lineChart })
-  if (lineChartRef.value && !lineChart) {
-    lineChart = ec.init(lineChartRef.value)
+  // Get DOM refs from energyPageRef
+  const refs = energyPageRef.value || {}
+  const { lineChartRef, pieChartRef, waterChartRef, gasChartRef, waterPieChartRef, gasPieChartRef } = refs
+  if (lineChartRef && !lineChart) {
+    lineChart = ec.init(lineChartRef)
     lineChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -2891,8 +1678,8 @@ async function initCharts() {
       series: [{ data: chartData.value.energyLine, type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
     })
   }
-  if (pieChartRef.value && !pieChart) {
-    pieChart = ec.init(pieChartRef.value)
+  if (pieChartRef && !pieChart) {
+    pieChart = ec.init(pieChartRef)
     pieChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -2900,8 +1687,8 @@ async function initCharts() {
     })
   }
   // 用水趋势图（柱状图）
-  if (waterChartRef.value && !waterChart) {
-    waterChart = ec.init(waterChartRef.value)
+  if (waterChartRef && !waterChart) {
+    waterChart = ec.init(waterChartRef)
     waterChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -2920,8 +1707,8 @@ async function initCharts() {
     })
   }
   // 燃气使用图（虚线折线图）
-  if (gasChartRef.value && !gasChart) {
-    gasChart = ec.init(gasChartRef.value)
+  if (gasChartRef && !gasChart) {
+    gasChart = ec.init(gasChartRef)
     gasChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -2940,8 +1727,8 @@ async function initCharts() {
     })
   }
   // 用水结构图（横向条形图）
-  if (waterPieChartRef.value && !waterPieChart) {
-    waterPieChart = ec.init(waterPieChartRef.value)
+  if (waterPieChartRef && !waterPieChart) {
+    waterPieChart = ec.init(waterPieChartRef)
     waterPieChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -2957,8 +1744,8 @@ async function initCharts() {
     })
   }
   // 燃气结构图（玫瑰图/南丁格尔图）
-  if (gasPieChartRef.value && !gasPieChart) {
-    gasPieChart = ec.init(gasPieChartRef.value)
+  if (gasPieChartRef && !gasPieChart) {
+    gasPieChart = ec.init(gasPieChartRef)
     gasPieChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
@@ -3149,7 +1936,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
 .app {
   animation: fadeIn 0.4s ease;
 }

@@ -23,6 +23,7 @@ export function useThreeScene(canvasRef) {
   const loadProgress = ref(0)
   const animationId = ref(0)
   const lightObjects = new Map()
+  const isInitialized = ref(false)
 
   const hotspotSprites = []
   const debugInfo = ref({ clickPos: '-', cameraPos: '-', cameraTarget: '-' })
@@ -55,7 +56,8 @@ export function useThreeScene(canvasRef) {
   }
 
   function initScene() {
-    if (!canvasRef.value) return
+    if (!canvasRef.value || !canvasRef.value.parentElement) return
+    if (isInitialized.value) return
     const _scene = new THREE.Scene()
     _scene.background = new THREE.Color(0x070f1f)
     scene.value = _scene
@@ -102,6 +104,7 @@ export function useThreeScene(canvasRef) {
     animate()
     window.addEventListener('resize', onResize)
     canvasRef.value.addEventListener('click', onCanvasClick)
+    isInitialized.value = true
   }
 
   // 使用 texture 文件夹下的图片创建顶牌
@@ -193,10 +196,6 @@ export function useThreeScene(canvasRef) {
 
     // 检测点击模型的位置
     const intersects = raycaster.intersectObject(model.value, true)
-    if (intersects.length > 0) {
-      const point = intersects[0].point
-      console.log(`[点击模型] 位置(${point.x.toFixed(3)}, ${point.y.toFixed(3)}, ${point.z.toFixed(3)}) | 相机 pos(${cam.position.x.toFixed(3)}, ${cam.position.y.toFixed(3)}, ${cam.position.z.toFixed(3)}) | target(${tgt.x.toFixed(3)}, ${tgt.y.toFixed(3)}, ${tgt.z.toFixed(3)})`)
-    }
 
     // 只检测可见的热点
     const visibleSprites = hotspotSprites.filter(h => h.sprite.visible).map(h => h.sprite)
@@ -262,45 +261,48 @@ export function useThreeScene(canvasRef) {
       pmremGenerator.dispose()
     })
   }
-    function loadModel(_scene) {
-      const dracoLoader = new DRACOLoader()
-      dracoLoader.setDecoderPath('/draco/')
-      const loader = new GLTFLoader()
-      loader.setDRACOLoader(dracoLoader)
-      loader.load('/models/model.glb',
-        (gltf) => {
-          const _model = gltf.scene
-          const box = new THREE.Box3().setFromObject(_model)
-          const center = box.getCenter(new THREE.Vector3())
-          const size = box.getSize(new THREE.Vector3())
-          const scale = 6 / Math.max(size.x, size.y, size.z)
-          _model.scale.setScalar(scale)
-          _model.position.sub(center.clone().multiplyScalar(scale))
-          _model.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true
-              child.receiveShadow = true
-              if (child.material instanceof THREE.MeshStandardMaterial)
-                child.material.envMapIntensity = 1
-            }
-          })
+
+  function loadModel(_scene) {
+    const dracoLoader = new DRACOLoader()
+    dracoLoader.setDecoderPath('/draco/')
+    const loader = new GLTFLoader()
+    loader.setDRACOLoader(dracoLoader)
+    loader.load('/models/model.glb',
+      (gltf) => {
+        const _model = gltf.scene
+        const box = new THREE.Box3().setFromObject(_model)
+        const center = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+        const scale = 6 / Math.max(size.x, size.y, size.z)
+        _model.scale.setScalar(scale)
+        _model.position.sub(center.clone().multiplyScalar(scale))
+        _model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+            if (child.material instanceof THREE.MeshStandardMaterial)
+              child.material.envMapIntensity = 1
+          }
+        })
         _scene.add(_model)
         model.value = _model
         createHotspots(_scene)
         _model.scale.setScalar(0)
-        gsap.to(_model.scale, { x: scale, y: scale, z: scale, duration: 1.2, ease: 'back.out(1.7)', onComplete: () => { isLoading.value = false } })
-  },
+        gsap.to(_model.scale, { x: scale, y: scale, z: scale, duration: 1.2, ease: 'back.out(1.7)', onComplete: () => {
+          isLoading.value = false
+          window.dispatchEvent(new Event('__modelLoaded'))
+        } })
+      },
       (p) => {
         if (p.total > 0) {
           const progress = Math.round(p.loaded / p.total * 100)
           loadProgress.value = progress
-          // 更新加载动画进度
           if (typeof window.__setLoaderProgress === 'function') {
             window.__setLoaderProgress(progress)
           }
         }
       },
-      (err) => { console.error(err); isLoading.value = false }
+      () => { isLoading.value = false }
     )
   }
 
@@ -356,8 +358,6 @@ export function useThreeScene(canvasRef) {
     gsap.to(controls.value.target, { x: target.x, y: target.y, z: target.z, duration, ease: 'power3.inOut' })
   }
 
-  function resetView() { flyTo(INITIAL_CAMERA.pos.clone(), INITIAL_CAMERA.target.clone()) }
-
   function flyToRoom(roomId) {
     const map = {
       'living-room': [-0.394, 2.713, 4.115, -0.48, 0, 1.06],
@@ -378,7 +378,10 @@ export function useThreeScene(canvasRef) {
     updateHotspotVisibility()
   }
 
-  onMounted(() => { initScene() })
+  onMounted(() => { 
+    // Canvas will be initialized by mountCanvas in HomeView when it's ready
+    // Don't auto-init here to avoid race condition
+  })
   onUnmounted(() => {
     cancelAnimationFrame(animationId.value)
     window.removeEventListener('resize', onResize)
@@ -393,7 +396,7 @@ export function useThreeScene(canvasRef) {
     isLoading, loadProgress, lightObjects,
     onHotspotClick, activeRoomId,
     setLightStatus, flyToRoom, resetView, flyTo,
-    resize, getRenderer,
+    resize, getRenderer, initScene,
   }
 }
 
