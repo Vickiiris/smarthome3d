@@ -105,16 +105,17 @@
           :healthItems="healthItems"
           :heartRateData="heartRateData"
           :bpWeekData="bpWeekData"
-          :heartTooltip="heartTooltip"
-          :bpTooltip="bpTooltip"
+          :spo2Trend="spo2TrendData"
+          :tempTrend="temperatureTrendData"
+          :stepsTrend="stepsTrendData"
+          :sleepData="sleepData"
           :formatMetricValue="formatMetricValue"
           :getHeartStatus="getHeartStatus"
           :getBpStatus="getBpStatus"
+          :getSpo2Status="getSpo2Status"
+          :getTempStatus="getTempStatus"
+          :getStepsStatus="getStepsStatus"
           @openHealthDetail="openHealthDetail"
-          @showHeartTooltip="showHeartTooltip"
-          @hideHeartTooltip="hideHeartTooltip"
-          @showBpTooltip="showBpTooltip"
-          @hideBpTooltip="hideBpTooltip"
         />
 
         <!-- ===== 设备管理 ===== -->
@@ -1367,6 +1368,47 @@ const bpWeekData = ref([
   { sys: 118, dia: 78 },
 ])
 
+// 血氧趋势数据 (24小时)
+const spo2TrendData = ref([
+  { time: '00:00', value: 98 }, { time: '01:00', value: 97 }, { time: '02:00', value: 97 },
+  { time: '03:00', value: 96 }, { time: '04:00', value: 97 }, { time: '05:00', value: 98 },
+  { time: '06:00', value: 98 }, { time: '07:00', value: 97 }, { time: '08:00', value: 98 },
+  { time: '09:00', value: 99 }, { time: '10:00', value: 98 }, { time: '11:00', value: 97 },
+  { time: '12:00', value: 98 }, { time: '13:00', value: 97 }, { time: '14:00', value: 98 },
+  { time: '15:00', value: 99 }, { time: '16:00', value: 98 }, { time: '17:00', value: 98 },
+  { time: '18:00', value: 97 }, { time: '19:00', value: 98 }, { time: '20:00', value: 99 },
+  { time: '21:00', value: 98 }, { time: '22:00', value: 97 }, { time: '23:00', value: 98 },
+])
+
+// 体温趋势数据 (24小时)
+const temperatureTrendData = ref([
+  { time: '00:00', value: 36.2 }, { time: '01:00', value: 36.1 }, { time: '02:00', value: 36.0 },
+  { time: '03:00', value: 36.0 }, { time: '04:00', value: 36.1 }, { time: '05:00', value: 36.2 },
+  { time: '06:00', value: 36.3 }, { time: '07:00', value: 36.4 }, { time: '08:00', value: 36.5 },
+  { time: '09:00', value: 36.6 }, { time: '10:00', value: 36.7 }, { time: '11:00', value: 36.8 },
+  { time: '12:00', value: 36.9 }, { time: '13:00', value: 37.0 }, { time: '14:00', value: 36.9 },
+  { time: '15:00', value: 36.8 }, { time: '16:00', value: 36.7 }, { time: '17:00', value: 36.6 },
+  { time: '18:00', value: 36.5 }, { time: '19:00', value: 36.4 }, { time: '20:00', value: 36.3 },
+  { time: '21:00', value: 36.2 }, { time: '22:00', value: 36.1 }, { time: '23:00', value: 36.0 },
+])
+
+// 步数趋势数据 (近7天)
+const stepsTrendData = ref([
+  { day: '周一', value: 8234 }, { day: '周二', value: 10521 }, { day: '周三', value: 6542 },
+  { day: '周四', value: 7896 }, { day: '周五', value: 11230 }, { day: '周六', value: 9876 },
+  { day: '周日', value: 3542 },
+])
+
+// 睡眠数据
+const sleepData = ref({
+  total: 7.8,
+  score: 88,
+  deep: 102,    // 深睡 分钟
+  light: 186,   // 浅睡 分钟
+  rem: 78,      // REM 分钟
+  awake: 102,   // 清醒 分钟
+})
+
 
 // 心率 Tooltip
 const heartTooltip = ref({ visible: false, x: 0, y: 0, time: '', value: 0 })
@@ -1419,6 +1461,25 @@ function getBpStatus(sys, dia) {
   if (sys <= 120 && dia <= 80) return { text: '理想', class: 'normal' }
   if (sys <= 139 || dia <= 89) return { text: '正常高值', class: 'warning' }
   return { text: '偏高', class: 'danger' }
+}
+
+function getSpo2Status(value) {
+  if (value >= 95) return { text: '正常', class: 'normal' }
+  if (value >= 90) return { text: '偏低', class: 'warning' }
+  return { text: '危险', class: 'danger' }
+}
+
+function getTempStatus(value) {
+  if (value < 36.1) return { text: '偏低', class: 'warning' }
+  if (value <= 37.2) return { text: '正常', class: 'normal' }
+  if (value <= 38.0) return { text: '低热', class: 'warning' }
+  return { text: '发烧', class: 'danger' }
+}
+
+function getStepsStatus(value) {
+  if (value >= 10000) return { text: '已达标', class: 'normal' }
+  if (value >= 6000) return { text: '进行中', class: 'warning' }
+  return { text: '不足', class: 'danger' }
 }
 
 // 格式化指标值：数字+英文单位用 mono 粗体，中文用默认字体
@@ -1818,6 +1879,18 @@ onMounted(() => {
     const lastIdx = heartRateData.value.length - 1
     heartRateData.value[lastIdx].value = Math.max(50, Math.min(100, items[0].raw + Math.round((Math.random() - 0.5) * 4)))
     heartRateData.value[lastIdx].time = String(hour).padStart(2, '0') + ':00'
+
+    // 血氧趋势：更新最后一个数据点
+    const spo2Idx = spo2TrendData.value.length - 1
+    spo2TrendData.value[spo2Idx].value = Math.max(92, Math.min(100, items[3].raw))
+
+    // 体温趋势：更新最后一个数据点
+    const tempIdx = temperatureTrendData.value.length - 1
+    temperatureTrendData.value[tempIdx].value = items[2].raw
+
+    // 步数：每次加1-3步，模拟行走（每4秒）
+    const stepsIdx = stepsTrendData.value.length - 1
+    stepsTrendData.value[stepsIdx].value = Math.min(15000, stepsTrendData.value[stepsIdx].value + Math.floor(Math.random() * 3) + 1)
   }, 4000)
 
   // 能源排行实时模拟：每 8 秒微调一次
