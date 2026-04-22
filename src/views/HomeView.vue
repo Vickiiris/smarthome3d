@@ -1865,6 +1865,7 @@ onMounted(() => {
   }, 3000)
 
   // 健康数据实时模拟：每 4 秒波动一次
+  let _prevHeart = 72, _prevSpo2 = 98, _prevTemp = 36.5
   healthTimer = setInterval(() => {
     const items = healthItems.value
     const hour = new Date().getHours()
@@ -1874,7 +1875,8 @@ onMounted(() => {
     items[0].raw = Math.max(55, Math.min(110, hr))
     items[0].value = items[0].raw + '次/分'
     items[0].pct = Math.min(100, Math.max(0, ((items[0].raw - 40) / 80) * 100))
-    items[0].trend = Math.round((Math.random() - 0.5) * 6)
+    items[0].trend = items[0].raw - _prevHeart
+    _prevHeart = items[0].raw
 
     // 血压：收缩压 110-130，舒张压 68-85
     const sys = Math.round(items[1].raw + (Math.random() - 0.5) * 6)
@@ -1883,21 +1885,23 @@ onMounted(() => {
     const diaVal = Math.max(55, Math.min(95, dia))
     items[1].value = items[1].raw + '/' + diaVal + 'mmHg'
     items[1].pct = Math.min(100, Math.max(0, ((items[1].raw - 80) / 80) * 100))
-    items[1].trend = Math.round((Math.random() - 0.5) * 4)
+    items[1].trend = 0
 
     // 体温：36.0-37.2 微小波动
     const temp = Math.round((items[2].raw + (Math.random() - 0.5) * 0.2) * 10) / 10
     items[2].raw = Math.max(35.5, Math.min(38.0, temp))
     items[2].value = items[2].raw + '°C'
     items[2].pct = Math.min(100, Math.max(0, ((items[2].raw - 35) / 4) * 100))
-    items[2].trend = Math.round((Math.random() - 0.5) * 0.4 * 10) / 10
+    items[2].trend = Math.round((items[2].raw - _prevTemp) * 10) / 10
+    _prevTemp = items[2].raw
 
     // 血氧：96-100
     const spo2 = Math.round(items[3].raw + (Math.random() - 0.5) * 2)
     items[3].raw = Math.max(92, Math.min(100, spo2))
     items[3].value = items[3].raw + '%'
     items[3].pct = items[3].raw
-    items[3].trend = Math.round((Math.random() - 0.5) * 3)
+    items[3].trend = items[3].raw - _prevSpo2
+    _prevSpo2 = items[3].raw
 
     // 步数：每次加1-3步，模拟行走（每4秒）
     items[5].raw = Math.min(15000, items[5].raw + Math.floor(Math.random() * 3) + 1)

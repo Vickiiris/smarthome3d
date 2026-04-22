@@ -58,8 +58,8 @@
         </div>
         <div class="hmetric-footer">
           <span class="hmetric-range" :style="{ color: item.color }" v-html="formatMetricValue(item.range)"></span>
-          <span class="hmetric-trend" :class="item.trend >= 0 ? 'up' : 'dn'">
-            {{ item.trend >= 0 ? '↑' : '↓' }}{{ Math.abs(item.trend) }}
+          <span class="hmetric-trend" :class="item.trend === 0 ? 'zero' : item.trend > 0 ? 'up' : 'dn'">
+            {{ item.trend === 0 ? '—' : item.trend > 0 ? '↑' : '↓' }}{{ item.trend === 0 ? '' : Math.abs(item.trend) }}
           </span>
         </div>
       </div>
@@ -154,7 +154,15 @@
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">状态</span>
-              <span class="hcm-val" :style="{ color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b', fontWeight: 'inherit' }">
+              <!-- 修改点：将 class 从 hcm-val 改为 hcm-unit，并保留动态颜色 -->
+              <span 
+                class="hcm-unit" 
+                :style="{ 
+                  color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b',
+                  fontWeight: '600', 
+                  fontSize: '14px' 
+                }"
+              >
                 {{ currentSpo2Stats.current >= 95 ? '正常' : '偏低' }}
               </span>
             </div>
@@ -225,12 +233,12 @@
             <div class="steps-stats-col">
               <div class="steps-stat-row">
                 <span class="ssr-label">今日步数</span>
-                <span class="ssr-val">{{ todaySteps.toLocaleString() }}</span>
+                <span class="ssr-val">{{ todaySteps.toLocaleString() + ' steps' }}</span>
               </div>
               <div class="steps-stat-row">
-                <span class="ssr-label">距目标</span>
-                <span class="ssr-val" :style="{ color: todaySteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
-                  {{ todaySteps >= 10000 ? '已达标 ✓' : (10000 - todaySteps).toLocaleString() + ' 步' }}
+                <span class="ssr-label">距离目标</span>
+                <span class="ssr-val">
+                  {{ todaySteps >= 10000 ? '✓ Done' : (10000 - todaySteps).toLocaleString() + ' left' }}
                 </span>
               </div>
               <div class="steps-stat-row">
@@ -242,7 +250,7 @@
                 <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
               </div>
               <div class="steps-stat-row" v-if="stepsPeriod !== '日'">
-                <span class="ssr-label">{{ stepsPeriod === '周' ? '本周日均' : '本月日均' }}</span>
+                <span class="ssr-label">平均步数</span>
                 <span class="ssr-val">{{ currentStepsStats.summary }}</span>
               </div>
             </div>
@@ -303,34 +311,27 @@
           <!-- 小米运动健康风格: 横向分段柱状图，4色堆叠条 -->
           <!-- 每行=1个时段(23:00~06:00)，每条柱由深睡/浅睡/REM/清醒四色分段叠加 -->
           <div class="xmsleep-timeline">
-            <!-- 左侧阶段图例 + 8个时段水平轴 -->
-            <div class="sl-row sl-header-row">
-              <span class="sl-label-cell"></span>
-              <span v-for="(seg, si) in sleepSegs" :key="si" class="sl-axis-lbl">{{ seg.hour }}</span>
-            </div>
-            <!-- 睡眠阶段行: 深睡/浅睡/REM/清醒，横向分段条 -->
-            <div v-for="stg in sleepStageDefs" :key="stg.name" class="sl-row">
-              <span class="sl-label-cell" :style="{ color: stg.color }">{{ stg.name }}</span>
-              <div class="sl-bar-row">
-                <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-seg-wrap">
-                  <div class="sl-seg"
-                    :style="{
-                      height: seg[stg.key + 'Pct'] + 'px',
-                      backgroundColor: seg[stg.key + 'Pct'] > 0 ? stg.color : 'transparent',
-                      minHeight: seg[stg.key + 'Pct'] > 0 ? '2px' : '0'
-                    }"
-                    :title="`${stg.name} ${seg.hour} ${seg[stg.key + 'Pct']}min`"
-                  ></div>
-                </div>
-              </div>
-            </div>
+            <!-- 时间轴: 8个时段标签 -->
+            <div class="sl-axis-lbl"></div>
+            <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-axis-lbl">{{ seg.hour }}</div>
+            <!-- 4个睡眠阶段行 -->
+            <div v-for="stg in sleepStageDefs" :key="stg.name" class="sl-label-cell" :style="{ color: stg.color }">{{ stg.name }}</div>
+            <!-- 4×8 网格格: 每格高度=该阶段在该时段的占比高度 -->
+            <template v-for="stg in sleepStageDefs" :key="stg.name">
+              <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-seg"
+                :style="{
+                  height: (seg[stg.key + 'H'] || 0) + 'px',
+                  backgroundColor: seg[stg.key + 'H'] > 0 ? stg.color : 'transparent',
+                  minHeight: seg[stg.key + 'H'] > 0 ? '2px' : '0'
+                }"
+              ></div>
+            </template>
             <!-- 底部图例 -->
             <div class="sl-legend">
               <div v-for="stg in sleepStageDefs" :key="stg.name" class="sl-legend-item">
                 <span class="sl-legend-dot" :style="{ background: stg.color }"></span>
                 <span class="sl-legend-name">{{ stg.name }}</span>
                 <span class="sl-legend-h">{{ (currentSleepData[stg.key === 'deep' ? 'deep' : stg.key === 'light' ? 'light' : stg.key === 'rem' ? 'rem' : 'awakeMin'] / 60).toFixed(1) }}h</span>
-                <span class="sl-legend-pct">{{ sleepStages.find(s => s.name === stg.name)?.pct }}%</span>
               </div>
             </div>
           </div>
@@ -465,12 +466,12 @@ const todaySteps = computed(() => {
 })
 const currentStepsStats = computed(() => {
   const arr = props.stepsTrend || []
-  if (stepsPeriod.value === '日') return { summary: (arr.reduce((s, v) => s + v.value, 0) / 10000).toFixed(1) + '万步' }
+  if (stepsPeriod.value === '日') return { summary: arr.reduce((s, v) => s + v.value, 0).toLocaleString() + ' 步' }
   if (stepsPeriod.value === '周') {
     const avg = arr.length ? Math.round(arr.reduce((s, v) => s + v.value, 0) / arr.length) : 0
-    return { summary: avg.toLocaleString() + ' 步/天' }
+    return { summary: avg.toLocaleString() + ' steps/day' }
   }
-  return { summary: '8,234 步/天' }
+  return { summary: '8,234 steps/day' }
 })
 
 // ===== 睡眠阶段数据 =====
@@ -497,49 +498,36 @@ const sleepStages = computed(() => {
   ]
 })
 
-// sleepSegs: 8个时段(23:00~06:00)，每段含各阶段分钟数和占百分比
-const sleepHourlyPcts = [
-  { deep: 0.15, light: 0.28, rem: 0.22, awake: 0.15 }, // 23:00
-  { deep: 0.40, light: 0.35, rem: 0.20, awake: 0.05 }, // 00:00
-  { deep: 0.35, light: 0.35, rem: 0.25, awake: 0.05 }, // 01:00
-  { deep: 0.50, light: 0.40, rem: 0.00, awake: 0.10 }, // 02:00
-  { deep: 0.30, light: 0.35, rem: 0.30, awake: 0.05 }, // 03:00
-  { deep: 0.50, light: 0.50, rem: 0.00, awake: 0.00 }, // 04:00
-  { deep: 0.30, light: 0.40, rem: 0.25, awake: 0.05 }, // 05:00
-  { deep: 0.10, light: 0.50, rem: 0.25, awake: 0.15 }, // 06:00
+// sleepSegs: CSS Grid布局，4行×8列，每格固定40px高
+// 各阶段高度 = (阶段全局占比) × (该时段结构占比) × 40px，最小2px
+const SLEEP_HOURLY_RAW = [
+  { deep: 9,  light: 17, rem: 13, awake: 21 },
+  { deep: 24, light: 21, rem: 12, awake:  3 },
+  { deep: 21, light: 21, rem: 15, awake:  3 },
+  { deep: 30, light: 24, rem:  0, awake:  6 },
+  { deep: 18, light: 21, rem: 18, awake:  3 },
+  { deep: 30, light: 30, rem:  0, awake:  0 },
+  { deep: 18, light: 24, rem: 15, awake:  3 },
+  { deep:  6, light: 30, rem: 15, awake:  9 },
 ]
-// 睡眠时段标签: 23:00~06:00 共8小时，每个时段=1小时
-const sleepHourlyHours = ['23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00']
-// 归一化: 固定每时段60分钟，按阶段比例分配，保证4色总高=60(1小时)
-const SLEEP_HOURLY_RAW = sleepHourlyPcts.map((p, i) => ({
-  hour: sleepHourlyHours[i],
-  deepMins:   Math.round(p.deep   * 60),
-  lightMins:  Math.round(p.light  * 60),
-  remMins:    Math.round(p.rem    * 60),
-  awakeMins: Math.round(p.awake * 60),
-  totalMins:  Math.round(p.deep   * 60) + Math.round(p.light * 60) + Math.round(p.rem * 60) + Math.round(p.awake * 60)
-}))
 const sleepSegs = computed(() => {
   const { deep, light, rem, awakeMin } = currentSleepData.value
   const totalStage = deep + light + rem + awakeMin
   if (!totalStage) return []
-  // 每小时柱: 4色分段，总高固定60分钟(=1小时)，各阶段按全局占比分配
-  return SLEEP_HOURLY_RAW.map(row => {
-    const raw = [
-      { k: 'deepPct',  v: Math.round((deep / totalStage) * 60) },
-      { k: 'lightPct', v: Math.round((light / totalStage) * 60) },
-      { k: 'remPct',   v: Math.round((rem / totalStage) * 60) },
-      { k: 'awakePct', v: Math.round((awakeMin / totalStage) * 60) },
-    ]
-    const total = raw.reduce((s, x) => s + x.v, 0)
-    // 保证和为60，如有残余(因round)加给最大值
-    const deficit = 60 - total
-    if (deficit !== 0) {
-      raw.sort((a, b) => b.v - a.v)[0].v += deficit
+  const hourKeys = ['23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00']
+  const MAX = 60
+  return SLEEP_HOURLY_RAW.map((row, i) => {
+    const deepH   = Math.round((deep    / totalStage) * row.deep   / MAX * 40)
+    const lightH  = Math.round((light   / totalStage) * row.light  / MAX * 40)
+    const remH    = Math.round((rem     / totalStage) * row.rem    / MAX * 40)
+    const awakeH = Math.round((awakeMin / totalStage) * row.awake / MAX * 40)
+    return {
+      hour: hourKeys[i],
+      deepH:   Math.max(2, deepH),
+      lightH:  Math.max(2, lightH),
+      remH:    Math.max(0, remH),
+      awakeH: Math.max(2, awakeH),
     }
-    const result = { hour: row.hour }
-    raw.forEach(x => { result[x.k] = x.v })
-    return result
   })
 })
 
@@ -663,6 +651,9 @@ function getTempData(period) {
   if (period === '周') return { data: TEMP_W.map((v, i) => ({ time: ['一','二','三','四','五','六','日'][i], value: v })), xKey: 'time' }
   return { data: TEMP_M.map((v, i) => ({ time: (i+1)+'日', value: v })), xKey: 'time' }
 }
+// 步数：周/月数据固定（不随实时更新变化）
+const STEPS_WEEK_FIXED = [7234, 8156, 6890, 9032, 7521, 10234, 6543]
+const STEPS_MONTH_FIXED = [12,11,10,8,9,13,11,10,8,7,9,12,10,9,8,10,12,11,9,8,10,12,11,10,9,8,7,10,12,11].map(v => v * 100)
 function getStepsData(period) {
   if (period === '日') {
     const today = props.stepsTrend?.length ? props.stepsTrend[props.stepsTrend.length - 1] : null
@@ -671,11 +662,11 @@ function getStepsData(period) {
     return { data: today ? [{ time: '今日', value: today.value }] : [], xKey: 'time' }
   }
   if (period === '月') return {
-    data: ['第1周','第2周','第3周','第4周'].map((w, i) => ({ time: w, value: [7234, 8156, 6890, 9032][i] })),
+    data: STEPS_MONTH_FIXED.map((v, i) => ({ time: (i + 1) + '日', value: v })),
     xKey: 'time'
   }
   return {
-    data: ['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => ({ time: d, value: [7234,8156,6890,9032,7521,10234,6543][i] })),
+    data: ['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => ({ time: d, value: STEPS_WEEK_FIXED[i] })),
     xKey: 'time'
   }
 }
@@ -996,7 +987,7 @@ onMounted(async () => {
 .hmetric-badge.warning { background: rgba(245,158,11,0.1); color: #f59e0b; border-color: rgba(245,158,11,0.2); }
 .hmetric-badge.danger { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.2); }
 .hmetric-value {
-  font-size: 22px; font-weight: 800; /* color 由 :style 内联设置，与 env-detail-value 一致 */
+  font-size: 22px;  /* color 由 :style 内联设置，与 env-detail-value 一致 */
   margin-bottom: 8px; line-height: 1;
 }
 .hmetric-value :deep(.num) { font-family: var(--font-mono); color: inherit; }
@@ -1008,6 +999,7 @@ onMounted(async () => {
 .hmetric-trend { font-size: 11px; font-weight: 600; }
 .hmetric-trend.up { color: #ef4444; }
 .hmetric-trend.dn { color: #22c55e; }
+.hmetric-trend.zero { color: var(--text-3); }
 
 /* ===== 图表行布局 ===== */
 .health-charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -1015,8 +1007,8 @@ onMounted(async () => {
 .bp-meta { gap: 0; align-items: center; }
 .hchart-meta-item { text-align: center; flex: 1; }
 .hcm-label { display: block; font-size: 10px; color: var(--text-3); margin-bottom: 2px; }
-.hcm-val { font-family: var(--font-mono); font-size: 20px; }
-.hcm-unit { font-size: 10px; margin-left: 2px; }
+.hcm-val { font-family: var(--font-mono); font-size: 20px; font-weight: 600; }
+.hcm-unit { font-size: 11px; margin-left: 2px; font-weight: 400; color: var(--text-3); }
 .bp-divider { font-size: 28px; color: var(--text-3); font-weight: 300; margin: 0 8px; }
 .hchart-area { width: 100%; height: 160px; }
 
@@ -1033,7 +1025,7 @@ onMounted(async () => {
 .steps-stat-row { display: flex; justify-content: space-between; align-items: center; }
 .ssr-label { font-size: 11px; color: var(--text-2); }
 .ssr-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
-.steps-chart-area { height: 120px; }
+.steps-chart-area { height: 200px; }
 
 /* ===== 睡眠分析 ===== */
 .xmsleep-header {
@@ -1059,24 +1051,23 @@ onMounted(async () => {
 .xs-label { font-size: 11px; color: var(--text-3); }
 .xs-val { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
 
-/* ===== 小米运动健康风格睡眠横向分段柱状图 ===== */
-/* 结构: 顶部时间轴 + 4个阶段行(深睡/浅睡/REM/清醒) + 底部图例 */
-/* 每行: 左侧阶段标签 + 8个时段柱(每柱由1色填充，高度=该阶段在该时段的分钟占比) */
-.sl-row { display: flex; align-items: center; margin-bottom: 6px; }
-.sl-header-row { margin-bottom: 3px; }
-.sl-label-cell { width: 40px; font-size: 11px; font-weight: 700; flex-shrink: 0; text-align: right; padding-right: 8px; }
-.sl-axis-lbl { flex: 1; font-size: 9px; color: var(--text-3); font-family: var(--font-mono); text-align: center; }
-.sl-bar-row { flex: 1; display: flex; align-items: stretch; height: auto; gap: 2px; padding: 0; }
-.sl-seg-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; border-radius: 2px; overflow: hidden; min-width: 0; min-height: 40px; }
-.sl-seg { width: 100%; flex-shrink: 0; border-radius: 2px; transition: height 0.4s ease; }
-.sl-seg:hover { filter: brightness(1.2); }
-/* 底部图例 */
-.sl-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
-.sl-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+/* ===== 睡眠分析 CSS Grid 4×8 布局 ===== */
+.xmsleep-timeline {
+  display: grid;
+  grid-template-columns: 36px repeat(8, 1fr);
+  grid-template-rows: 22px repeat(4, 40px);
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.sl-axis-lbl { font-size: 9px; color: var(--text-3); font-family: var(--font-mono); text-align: center; align-self: end; }
+.sl-label-cell { font-size: 10px; font-weight: 600; text-align: right; padding-right: 6px; align-self: center; }
+.sl-seg { border-radius: 3px; transition: filter 0.2s; min-width: 3px; }
+.sl-seg:hover { filter: brightness(1.25); }
+.sl-legend { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+.sl-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .sl-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 .sl-legend-name { color: var(--text-2); font-weight: 400; }
 .sl-legend-h { font-family: var(--font-mono); font-size: 11px; color: var(--text); font-weight: 400; }
-.sl-legend-pct { color: var(--text-3); font-size: 10px; font-weight: 400; }
 
 /* ===== 健康建议 ===== */
 .health-tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
