@@ -159,8 +159,7 @@
                 class="hcm-unit" 
                 :style="{ 
                   color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b',
-                  fontWeight: '600', 
-                  fontSize: '14px' 
+                  fontSize: '16px' 
                 }"
               >
                 {{ currentSpo2Stats.current >= 95 ? '正常' : '偏低' }}
@@ -219,6 +218,7 @@
         </div>
         <div class="hchart-body">
           <div class="steps-overview-row">
+           <div class="steps-header"> 
             <div class="steps-progress-ring">
               <svg viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" class="steps-ring-bg"/>
@@ -254,6 +254,7 @@
                 <span class="ssr-val">{{ currentStepsStats.summary }}</span>
               </div>
             </div>
+           </div> 
           </div>
           <div ref="stepsChartRef" class="hchart-area steps-chart-area"></div>
         </div>
@@ -308,30 +309,51 @@
             </div>
           </div>
 
-          <!-- 小米运动健康风格: 横向分段柱状图，4色堆叠条 -->
-          <!-- 每行=1个时段(23:00~06:00)，每条柱由深睡/浅睡/REM/清醒四色分段叠加 -->
-          <div class="xmsleep-timeline">
-            <!-- 时间轴: 8个时段标签 -->
-            <div class="sl-axis-lbl"></div>
-            <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-axis-lbl">{{ seg.hour }}</div>
-            <!-- 4个睡眠阶段行 -->
-            <div v-for="stg in sleepStageDefs" :key="stg.name" class="sl-label-cell" :style="{ color: stg.color }">{{ stg.name }}</div>
-            <!-- 4×8 网格格: 每格高度=该阶段在该时段的占比高度 -->
-            <template v-for="stg in sleepStageDefs" :key="stg.name">
-              <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-seg"
-                :style="{
-                  height: (seg[stg.key + 'H'] || 0) + 'px',
-                  backgroundColor: seg[stg.key + 'H'] > 0 ? stg.color : 'transparent',
-                  minHeight: seg[stg.key + 'H'] > 0 ? '2px' : '0'
-                }"
-              ></div>
-            </template>
-            <!-- 底部图例 -->
-            <div class="sl-legend">
-              <div v-for="stg in sleepStageDefs" :key="stg.name" class="sl-legend-item">
-                <span class="sl-legend-dot" :style="{ background: stg.color }"></span>
-                <span class="sl-legend-name">{{ stg.name }}</span>
-                <span class="sl-legend-h">{{ (currentSleepData[stg.key === 'deep' ? 'deep' : stg.key === 'light' ? 'light' : stg.key === 'rem' ? 'rem' : 'awakeMin'] / 60).toFixed(1) }}h</span>
+          <!-- 睡眠时间条: 整晚睡眠阶段，按时间顺序填色分段 ===== -->
+          <div class="stl-wrap">
+            <!-- 时间刻度尺 -->
+            <div class="stl-ruler">
+              <span>23:00</span>
+              <span>00:00</span>
+              <span>01:00</span>
+              <span>02:00</span>
+              <span>03:00</span>
+              <span>04:00</span>
+              <span>05:00</span>
+              <span>06:00</span>
+              <span class="stl-r-end">06:48</span>
+            </div>
+            <!-- 主时间条: 7段×不同宽度(分钟比例)，从上到下叠压填满100px高 -->
+            <div class="stl-band">
+              <div
+                v-for="seg in sleepBand"
+                :key="seg.id"
+                class="stl-seg"
+                :style="{ width: seg.w + '%', background: seg.color }"
+                @mouseenter="sleepTooltip = { show: true, x: $event.clientX, y: $event.clientY, seg }"
+                @mousemove="sleepTooltip = { ...sleepTooltip, x: $event.clientX, y: $event.clientY }"
+                @mouseleave="sleepTooltip.show = false"
+              >
+                <span class="stl-seg-label" v-if="seg.w > 12">{{ seg.min >= 60 ? Math.floor(seg.min/60) + 'h' + (seg.min%60 > 0 ? (seg.min%60)+'m' : '') : seg.min + 'm' }}</span>
+              </div>
+            </div>
+            <!-- 悬停 tooltip -->
+            <Teleport to="body">
+              <div v-if="sleepTooltip.show" class="stl-tooltip"
+                :style="{ left: sleepTooltip.x + 14 + 'px', top: sleepTooltip.y - 10 + 'px' }">
+                <div class="stl-tip-dot" :style="{ background: sleepTooltip.seg?.color }"></div>
+                <span class="stl-tip-stage">{{ sleepTooltip.seg?.label }}</span>
+                <span class="stl-tip-min">{{ sleepTooltip.seg?.min }}m</span>
+              </div>
+            </Teleport>
+            <!-- 底部3项指标 + 图例 -->
+            <div class="stl-bottom">
+              <div class="stl-metrics">
+                <div class="stl-m-item" v-for="m in sleepBandMetrics" :key="m.label">
+                  <span class="stl-m-dot" :style="{ background: m.color }"></span>
+                  <span class="stl-m-label">{{ m.label }}</span>
+                  <span class="stl-m-val">{{ m.val }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -356,6 +378,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+
+const sleepTooltip = ref({ show: false, x: 0, y: 0, seg: null })
 
 const props = defineProps({
   visible: { type: Boolean, required: true },
@@ -498,37 +522,54 @@ const sleepStages = computed(() => {
   ]
 })
 
-// sleepSegs: CSS Grid布局，4行×8列，每格固定40px高
-// 各阶段高度 = (阶段全局占比) × (该时段结构占比) × 40px，最小2px
-const SLEEP_HOURLY_RAW = [
-  { deep: 9,  light: 17, rem: 13, awake: 21 },
-  { deep: 24, light: 21, rem: 12, awake:  3 },
-  { deep: 21, light: 21, rem: 15, awake:  3 },
-  { deep: 30, light: 24, rem:  0, awake:  6 },
-  { deep: 18, light: 21, rem: 18, awake:  3 },
-  { deep: 30, light: 30, rem:  0, awake:  0 },
-  { deep: 18, light: 24, rem: 15, awake:  3 },
-  { deep:  6, light: 30, rem: 15, awake:  9 },
-]
-const sleepSegs = computed(() => {
+// sleepBand: 整晚睡眠时间条，按时间顺序排列
+// 结构: 入睡清醒(wake1) → 深睡+浅睡+REM循环 → 半夜清醒(wake2) → 深睡+浅睡+REM → 起床
+// sleepBand: 整晚睡眠时间条
+// 思路：先固定各 sub-segment 的实际分钟数，再按 分钟/总时长 算宽度比
+const sleepBand = computed(() => {
+  const { deep, light, rem, awakeMin, awakeCount } = currentSleepData.value
+  const perWake = awakeCount >= 2 ? Math.round(awakeMin / 2) : awakeMin
+  // 各 sub-segment 分钟（按真实睡眠结构分配）
+  const deep1 = Math.round(deep * 0.30)   // 入睡后第一段深睡
+  const light1 = Math.round(light * 0.25)  // 第一段浅睡
+  const rem1  = Math.round(rem  * 0.45)   // 第一段 REM（偏长）
+  const light2 = Math.round(light * 0.40)  // 中段浅睡
+  const deep2 = Math.round(deep * 0.45)   // 中段深睡
+  const rem2  = Math.round(rem  * 0.55)   // 第二段 REM（偏长）
+  const light3 = light - light1 - light2   // 末段浅睡 = 剩余
+  // 末尾深睡段 = 剩余（深1+深2约75%，末段约25%）
+  const deep3 = deep - deep1 - deep2
+  const wPerMin = (m) => m  // 每分钟对应 1 个百分比单位
+  const rawTotal = awakeMin + deep + light + rem
+  const segs = [
+    { id: 'wake1',  color: '#fbbf24', start: '23:00', end: '入睡', min: perWake,     label: '清醒', w: wPerMin(perWake),  isWake: true },
+    { id: 'deep1',  color: '#6366f1', start: '入睡',   end: '01:30', min: deep1,     label: '深睡', w: wPerMin(deep1)  },
+    { id: 'light1', color: '#818cf8', start: '深睡',   end: 'REM',   min: light1,    label: '浅睡', w: wPerMin(light1) },
+    { id: 'rem1',   color: '#a78bfa', start: 'REM',    end: '02:00', min: rem1,     label: 'REM',  w: wPerMin(rem1)   },
+    { id: 'light2', color: '#818cf8', start: '深睡',   end: '04:00', min: light2,   label: '浅睡', w: wPerMin(light2) },
+    { id: 'deep2',  color: '#6366f1', start: '04:00',  end: '05:00', min: deep2,    label: '深睡', w: wPerMin(deep2)  },
+  ]
+  if (awakeCount >= 2) {
+    segs.push({ id: 'wake2', color: '#fbbf24', start: '05:00', end: '05:30', min: perWake, label: '清醒', w: wPerMin(perWake), isWake: true })
+  }
+  segs.push(
+    { id: 'rem2',   color: '#a78bfa', start: 'REM',  end: '06:00', min: rem2,     label: 'REM',  w: wPerMin(rem2)   },
+    { id: 'deep3',  color: '#6366f1', start: '深睡', end: '06:30', min: deep3,    label: '深睡', w: wPerMin(deep3)  },
+    { id: 'light3', color: '#818cf8', start: '浅睡', end: '06:48', min: light3,   label: '浅睡', w: wPerMin(light3) },
+  )
+  // 归一化为百分比：w 的单位是分钟，最终 / rawTotal * 100
+  const toW = (m) => rawTotal > 0 ? Math.max(1.5, m / rawTotal * 100) : 0
+  return segs.map(s => ({ ...s, w: toW(s.w) }))
+})
+const sleepBandMetrics = computed(() => {
   const { deep, light, rem, awakeMin } = currentSleepData.value
-  const totalStage = deep + light + rem + awakeMin
-  if (!totalStage) return []
-  const hourKeys = ['23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00']
-  const MAX = 60
-  return SLEEP_HOURLY_RAW.map((row, i) => {
-    const deepH   = Math.round((deep    / totalStage) * row.deep   / MAX * 40)
-    const lightH  = Math.round((light   / totalStage) * row.light  / MAX * 40)
-    const remH    = Math.round((rem     / totalStage) * row.rem    / MAX * 40)
-    const awakeH = Math.round((awakeMin / totalStage) * row.awake / MAX * 40)
-    return {
-      hour: hourKeys[i],
-      deepH:   Math.max(2, deepH),
-      lightH:  Math.max(2, lightH),
-      remH:    Math.max(0, remH),
-      awakeH: Math.max(2, awakeH),
-    }
-  })
+  const h = (m) => m >= 60 ? Math.floor(m/60) + 'h' + (m%60 > 0 ? (m%60)+'m' : '') : m + 'm'
+  return [
+    { label: '深睡', color: '#6366f1', val: h(deep)    },
+    { label: '浅睡', color: '#818cf8', val: h(light)   },
+    { label: 'REM',  color: '#a78bfa', val: h(rem)     },
+    { label: '清醒', color: '#fbbf24', val: h(awakeMin) },
+  ]
 })
 
 // ===== 核心指标状态 ======
@@ -1013,6 +1054,11 @@ onMounted(async () => {
 .hchart-area { width: 100%; height: 160px; }
 
 /* ===== 步数 ===== */
+.steps-header {
+  display: flex; gap: 16px; align-items: center;
+  padding: 12px 16px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(155,89,182,0.15); border-radius: 12px; margin-bottom: 14px; width: 100%;
+}
 .steps-overview-row { display: flex; gap: 20px; align-items: center; margin-bottom: 10px; }
 .steps-progress-ring { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
 .steps-progress-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -1022,9 +1068,9 @@ onMounted(async () => {
 .steps-ring-pct { font-size: 18px; font-weight: 800; color: #00d4aa; font-family: var(--font-mono); line-height: 1; }
 .steps-ring-goal { font-size: 9px; color: var(--text-3); margin-top: 2px; }
 .steps-stats-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.steps-stat-row { display: flex; justify-content: space-between; align-items: center; }
-.ssr-label { font-size: 11px; color: var(--text-2); }
-.ssr-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
+.steps-stat-row { display: flex; align-items: center; gap: 15px; font-size: 12px; margin-bottom: 4px; }
+.ssr-label { font-size: 11px; color: var(--text-2); font-weight: 500; margin: 0; padding: 0;}
+.ssr-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--font-mono);  margin: 0; padding: 0;}
 .steps-chart-area { height: 200px; }
 
 /* ===== 睡眠分析 ===== */
@@ -1051,23 +1097,48 @@ onMounted(async () => {
 .xs-label { font-size: 11px; color: var(--text-3); }
 .xs-val { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
 
-/* ===== 睡眠分析 CSS Grid 4×8 布局 ===== */
-.xmsleep-timeline {
-  display: grid;
-  grid-template-columns: 36px repeat(8, 1fr);
-  grid-template-rows: 22px repeat(4, 40px);
-  gap: 2px;
-  margin-bottom: 10px;
+/* ===== 睡眠时间条: Apple Health 风格整晚分段 ===== */
+.stl-wrap { margin-bottom: 12px; }
+.stl-ruler {
+  display: flex; justify-content: space-between;
+  font-size: 9px; color: var(--text-3); font-family: var(--font-mono);
+  margin-bottom: 4px; padding: 0 2px;
 }
-.sl-axis-lbl { font-size: 9px; color: var(--text-3); font-family: var(--font-mono); text-align: center; align-self: end; }
-.sl-label-cell { font-size: 10px; font-weight: 600; text-align: right; padding-right: 6px; align-self: center; }
-.sl-seg { border-radius: 3px; transition: filter 0.2s; min-width: 3px; }
-.sl-seg:hover { filter: brightness(1.25); }
-.sl-legend { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
-.sl-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-.sl-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.sl-legend-name { color: var(--text-2); font-weight: 400; }
-.sl-legend-h { font-family: var(--font-mono); font-size: 11px; color: var(--text); font-weight: 400; }
+.stl-r-end { text-align: right; }
+.stl-band {
+  display: flex; height: 80px; gap: 1px; border-radius: 6px; overflow: hidden;
+}
+.stl-seg {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  transition: filter 0.2s; overflow: hidden; position: relative; min-width: 2px;
+}
+.stl-seg:hover { filter: brightness(1.2); }
+.stl-seg-label {
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.9);
+  font-family: var(--font-mono); text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  white-space: nowrap; line-height: 1;
+}
+/* ===== tooltip: ECharts 深色玻璃风格 ===== */
+.stl-tooltip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  font-size: 12px; color: #fff;
+}
+.stl-tip-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.stl-tip-stage { font-weight: 600; color: rgba(255,255,255,0.8); }
+.stl-tip-min { font-family: var(--font-mono); font-weight: 700; }
+.stl-bottom { display: flex; align-items: center; margin-top: 30px; }
+.stl-metrics { display: flex; gap: 16px; flex-wrap: wrap; }
+.stl-m-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.stl-m-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.stl-m-label { color: var(--text-2); }
+.stl-m-val { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text); }
 
 /* ===== 健康建议 ===== */
 .health-tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
