@@ -146,7 +146,7 @@
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">最低</span>
-              <span class="hcm-val" style="color:#94a3b8">{{ currentSpo2Stats.min }}</span>
+              <span class="hcm-val" style="color:var(--text-2)">{{ currentSpo2Stats.min }}</span>
               <span class="hcm-unit">%</span>
             </div>
             <div class="hchart-meta-item">
@@ -251,7 +251,12 @@
             <span class="panel-icon-txt" style="color:#9B59B6">🌙</span>
             睡眠分析
           </h3>
-          <span class="panel-time">昨夜</span>
+          <div class="panel-header">
+            <span class="panel-time">昨夜</span>
+            <div class="period-tabs">
+              <button v-for="p in periods" :key="p" class="ptab" :class="{ active: sleepPeriod === p }" @click="sleepPeriod = p">{{ p }}</button>
+            </div>
+          </div>
         </div>
         <div class="hchart-body">
           <!-- 小米健康风格：顶部睡眠评分 + 总时长 -->
@@ -446,6 +451,7 @@ const bpPeriod = ref('周')
 const spo2Period = ref('日')
 const tempPeriod = ref('日')
 const stepsPeriod = ref('日')
+const sleepPeriod = ref('日')
 
 // ===== 各指标日周月统计数据 =====
 const currentHeartStats = computed(() => {
@@ -478,20 +484,40 @@ const currentBpStats = computed(() => {
   return { sys: 120, dia: 77 }
 })
 
+// ===== spo2 周/月固定数据（不受 timer 实时更新影响）=====
+const SPO2_W = Array.from({ length: 7 }, (_, i) => ({ day: '周'+['一','二','三','四','五','六','日'][i], value: [97,98,96,97,98,97,98][i] }))
+const SPO2_M = Array.from({ length: 30 }, (_, i) => ({ day: i+1+'日', value: 96 + [1,0,2,1,0,1,2,0,1,2,1,0,2,1,0,2,1,0,1,2,0,1,2,0,1,0,2,1,0,2][i] }))
 const currentSpo2Stats = computed(() => {
-  const d = filteredSpo2.value
-  const cur = d.length ? d[d.length - 1].value : 98
-  const mn = d.length ? Math.min(...d.map(v => v.value)) : 96
-  return { current: cur, min: mn }
+  if (spo2Period.value === '日') {
+    const d = filteredSpo2.value
+    return { current: d.length ? d[d.length - 1].value : 98, min: d.length ? Math.min(...d.map(v => v.value)) : 96 }
+  }
+  if (spo2Period.value === '周') {
+    const vals = SPO2_W.map(v => v.value)
+    return { current: vals[vals.length - 1], min: Math.min(...vals) }
+  }
+  const vals = SPO2_M.map(v => v.value)
+  return { current: vals[vals.length - 1], min: Math.min(...vals) }
 })
 
+// ===== 体温周/月固定数据（不受 timer 实时更新影响）=====
+const TEMP_W = Array.from({ length: 7 }, (_, i) => ({ day: '周'+['一','二','三','四','五','六','日'][i], value: parseFloat((36.3 + [0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3][i]).toFixed(1)) }))
+const TEMP_M = Array.from({ length: 30 }, (_, i) => ({ day: i+1+'日', value: parseFloat((36.3 + [0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1,0.2,0.0,0.3,0.1][i]).toFixed(1)) }))
 const currentTempStats = computed(() => {
-  const d = filteredTemp.value
-  return {
-    current: d.length ? parseFloat(d[d.length - 1].value.toFixed(1)) : 36.5,
-    min: d.length ? parseFloat(Math.min(...d.map(v => v.value)).toFixed(1)) : 36.1,
-    max: d.length ? parseFloat(Math.max(...d.map(v => v.value)).toFixed(1)) : 36.8,
+  if (tempPeriod.value === '日') {
+    const d = filteredTemp.value
+    return {
+      current: d.length ? parseFloat(d[d.length - 1].value.toFixed(1)) : 36.5,
+      min: d.length ? parseFloat(Math.min(...d.map(v => v.value)).toFixed(1)) : 36.1,
+      max: d.length ? parseFloat(Math.max(...d.map(v => v.value)).toFixed(1)) : 36.8,
+    }
   }
+  if (tempPeriod.value === '周') {
+    const vals = TEMP_W.map(v => v.value)
+    return { current: vals[vals.length - 1], min: Math.min(...vals), max: Math.max(...vals) }
+  }
+  const vals = TEMP_M.map(v => v.value)
+  return { current: vals[vals.length - 1], min: Math.min(...vals), max: Math.max(...vals) }
 })
 
 // 今日步数 = stepsTrend 最后一天
@@ -559,7 +585,7 @@ const minTemp = computed(() => filteredTemp.value.length ? Math.min(...filteredT
 const maxTemp = computed(() => filteredTemp.value.length ? Math.max(...filteredTemp.value.map(v => v.value)) : 36.8)
 
 const sleepStages = computed(() => {
-  const { deep, light, rem, awakeMin } = props.sleepData
+  const { deep, light, rem, awakeMin } = currentSleepData.value
   const total = deep + light + rem + awakeMin
   return [
     { name: '深睡', h: (deep / 60).toFixed(1), pct: Math.round(deep / total * 100), color: '#7c3aed' },
@@ -569,9 +595,27 @@ const sleepStages = computed(() => {
   ]
 })
 
+// 睡眠按周期数据：sleepPeriod 变化时触发
+// watchSleepPeriod 用于让 Vue 追踪 sleepPeriod 的变化
+const sleepPeriodTracker = computed(() => sleepPeriod.value)
+const currentSleepData = computed(() => {
+  // 显式引用 tracker，使本 computed 依赖 sleepPeriod
+  const period = sleepPeriodTracker.value
+  const base = props.sleepData
+  if (period === '周') {
+    const f = 0.9 + Math.random() * 0.2
+    return { ...base, deep: Math.round(base.deep * f), light: Math.round(base.light * f), rem: Math.round(base.rem * f), awakeMin: Math.round(base.awakeMin * f) }
+  }
+  if (period === '月') {
+    const f = 0.85 + Math.random() * 0.3
+    return { ...base, deep: Math.round(base.deep * f), light: Math.round(base.light * f), rem: Math.round(base.rem * f), awakeMin: Math.round(base.awakeMin * f) }
+  }
+  return base
+})
+
 // 睡眠时间轴：按真实睡眠结构排列的夜间时段
 const sleepTimeline = computed(() => {
-  const { deep, light, rem, awakeMin, awakeCount } = props.sleepData
+  const { deep, light, rem, awakeMin, awakeCount } = currentSleepData.value
   // 典型睡眠结构：入睡→N2(浅睡)→N3(深睡)→N2→REM→N2→N3→N2→REM→清醒
   // 每段大约占总睡眠时间的比例
   const segs = [
@@ -599,7 +643,7 @@ const sleepTimeline = computed(() => {
 
 // 睡眠分析指标（小米健康风格：时长+状态）
 const sleepMetrics = computed(() => {
-  const { deep, light, rem, awakeMin, awakeCount } = props.sleepData
+  const { deep, light, rem, awakeMin, awakeCount } = currentSleepData.value
   const total = deep + light + rem + awakeMin
   const deepPct = total > 0 ? Math.round(deep / total * 100) : 0
   const remPct = total > 0 ? Math.round(rem / total * 100) : 0
@@ -663,7 +707,7 @@ const tooltipCfg = {
 const axisStyle = {
   axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
   axisTick: { show: false },
-  axisLabel: { color: '#94a3b8', fontSize: 11 }
+  axisLabel: { color: 'var(--text-2)', fontSize: 11 }
 }
 const gridBase = { left: '3%', right: '4%', top: '8%', bottom: '8%', containLabel: true }
 
@@ -712,17 +756,29 @@ function getChartData(period, type) {
 function updateHeartChart() {
   if (!heartChart) return
   const { data, xKey, yKey } = getChartData(heartPeriod.value, 'heart')
-  heartChart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+  heartChart.setOption({
+    xAxis: { data: data.map(v => v[xKey]) },
+    series: [{ data: data.map(v => v[yKey]) }],
+    tooltip: mkTooltip(data, xKey, yKey, ' bpm', '#ff6b6b'),
+  })
 }
 function updateSpo2Chart() {
   if (!spo2Chart) return
   const { data, xKey, yKey } = getChartData(spo2Period.value, 'spo2')
-  spo2Chart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+  spo2Chart.setOption({
+    xAxis: { data: data.map(v => v[xKey]) },
+    series: [{ data: data.map(v => v[yKey]) }],
+    tooltip: mkTooltip(data, xKey, yKey, '%', '#60a5fa'),
+  })
 }
 function updateTempChart() {
   if (!tempChart) return
   const { data, xKey, yKey } = getChartData(tempPeriod.value, 'temp')
-  tempChart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+  tempChart.setOption({
+    xAxis: { data: data.map(v => v[xKey]) },
+    series: [{ data: data.map(v => v[yKey]) }],
+    tooltip: mkTooltip(data, xKey, yKey, '°C', '#f97316'),
+  })
 }
 
 function updateBpChart() {
@@ -733,32 +789,80 @@ function updateBpChart() {
     series: [
       { data: d.sysData },
       { data: d.diaData }
-    ]
+    ],
+    tooltip: {
+      ...tooltipCfg,
+      formatter: (p) => {
+        const idx = p.dataIndex
+        const label = d.labels[idx] ?? ''
+        // 始终显示收缩压和舒张压（避免 seriesIndex 导致 undefined）
+        const sys = d.sysData[idx] ?? '--'
+        const dia = d.diaData[idx] ?? '--'
+        return `<div style="font-size:12px;line-height:1.8">`
+          + `<span style="color:var(--text-2)">${label}</span><br/>`
+          + `<span style="color:#ff6b6b;font-variant-numeric:tabular-nums;font-weight:600">收缩压 ${sys} mmHg</span><br/>`
+          + `<span style="color:#60a5fa;font-variant-numeric:tabular-nums;font-weight:600">舒张压 ${dia} mmHg</span></div>`
+      }
+    },
   })
 }
 
 function updateStepsChart() {
   if (!stepsChart) return
   const period = stepsPeriod.value
-  if (period === '日') {
-    // 显示7天数据，今天高亮
-    stepsChart.setOption({
-      xAxis: { data: props.stepsTrend.map(v => v.day) },
-      series: [{ data: props.stepsTrend.map(v => v.value) }]
-    })
-  } else if (period === '周') {
-    stepsChart.setOption({
-      xAxis: { data: props.stepsTrend.map(v => v.day) },
-      series: [{ data: props.stepsTrend.map(v => v.value) }]
-    })
-  } else {
-    // 月：补满30天
+
+  if (period === '月') {
     const full = [...props.stepsTrend]
-    while (full.length < 30) full.push({ day: '·', value: 0 })
+    const todayVal = full.length ? full[full.length - 1].value : 8547
+    while (full.length < 30) { full.push({ day: '', value: 0 }) }
+    const todayIdx = Math.min(6, full.length - 1)
+    const monthDays = Array.from({ length: 30 }, (_, i) => (i + 1) + '日')
+    const monthVals = full.map((v, i) => i === todayIdx ? todayVal : v.value || (5000 + Math.round(Math.random() * 5000)))
     stepsChart.setOption({
-      xAxis: { data: full.map((v, i) => i + 1 + '日') },
-      series: [{ data: full.map(v => v.value || (5000 + Math.round(Math.random() * 5000))) }]
+      xAxis: { data: monthDays },
+      series: [{ data: monthVals, tooltip: { show: true } }]
     })
+    return
+  }
+
+  if (period === '日') {
+    // 日视图：仅显示今日（stepsTrend 最后一天），单根柱子
+    const today = props.stepsTrend.length > 0 ? props.stepsTrend[props.stepsTrend.length - 1] : { day: '今日', value: 8547 }
+    stepsChart.setOption({
+      xAxis: { data: ['今日'] },
+      series: [{ data: [today.value] }]
+    })
+    return
+  }
+
+  // 周视图：7天柱状图
+  stepsChart.setOption({
+    xAxis: { data: props.stepsTrend.map(v => v.day) },
+    series: [{ data: props.stepsTrend.map(v => v.value) }]
+  })
+}
+
+// 睡眠周期切换：sleepStages / sleepTimeline / sleepMetrics 已是 computed，切换时强制重新计算
+function updateSleepUI() {
+  // sleepStages / sleepTimeline / sleepMetrics 都依赖 currentSleepData，后者依赖 sleepPeriod
+  // Vue computed 会自动更新，这里只是显式标记
+}
+
+// tooltip 工厂函数：闭包捕获原始 data[]，显示精确时间字段（非格式化后的 axisLabel）
+function mkTooltip(chartData, xKey, yKey, unit, color) {
+  return {
+    ...tooltipCfg,
+    formatter: (params) => {
+      const p = params[0]
+      // 从原始数据取精确时刻，fallback 到 axisValueLabel
+      const raw = chartData[p.dataIndex]
+      const t = raw && raw[xKey] !== undefined ? raw[xKey] : (p.axisValueLabel || p.name)
+      const v = p.value
+      return `<div style="font-size:12px;line-height:1.8">`
+        + `<span style="color:var(--text-2)">${t}</span><br/>`
+        + `<span style="color:${color};font-variant-numeric:tabular-nums;font-size:13px;font-weight:600">${v}${unit}</span>`
+        + `</div>`
+    }
   }
 }
 
@@ -770,18 +874,20 @@ function initHeartChart() {
   const vals = data.map(v => v[yKey])
   heartChart.setOption({
     backgroundColor: chartBg,
-    tooltip: { ...tooltipCfg },
+    tooltip: mkTooltip(data, xKey, yKey, ' bpm', '#ff6b6b'),
     grid: { ...gridBase },
     xAxis: {
       type: 'category', data: times,
       boundaryGap: false,
       ...axisStyle,
-      splitLine: { show: false }
+      splitLine: { show: false },
+      axisLabel: { color: 'var(--text-2)', fontSize: 11 }
     },
     yAxis: {
       type: 'value', min: 50, max: 110,
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      ...axisStyle
+      ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }
     },
     series: [{
       data: vals,
@@ -808,7 +914,7 @@ function initHeartChart() {
 function getBpChartData(period) {
   if (period === '日') {
     return {
-      labels: ['收缩压', '舒张压'],
+      labels: ['今天'],
       sysData: [118],
       diaData: [76],
     }
@@ -839,18 +945,27 @@ function initBpChart() {
       ...tooltipCfg,
       formatter: (p) => {
         const d = getBpChartData(bpPeriod.value)
-        return `${d.labels[p.axisIndex]}<br/><span style="color:#ff6b6b">收缩压 ${d.sysData[p.axisIndex]} mmHg</span><br/><span style="color:#60a5fa">舒张压 ${d.diaData[p.axisIndex]} mmHg</span>`
+        const idx = p.dataIndex
+        const label = d.labels[idx] ?? ''
+        const sys = d.sysData[idx] ?? '--'
+        const dia = d.diaData[idx] ?? '--'
+        return `<div style="font-size:12px;line-height:1.8">`
+          + `<span style="color:var(--text-2)">${label}</span><br/>`
+          + `<span style="color:#ff6b6b;font-variant-numeric:tabular-nums;font-weight:600">收缩压 ${sys} mmHg</span><br/>`
+          + `<span style="color:#60a5fa;font-variant-numeric:tabular-nums;font-weight:600">舒张压 ${dia} mmHg</span></div>`
       }
     },
     grid: { ...gridBase },
     legend: {
       data: ['收缩压', '舒张压'],
       top: 0, right: 10,
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: 'var(--text-2)', fontSize: 11 },
       itemWidth: 12, itemHeight: 8
     },
-    xAxis: { type: 'category', data: d.labels, ...axisStyle },
-    yAxis: { type: 'value', min: 60, max: 160, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle },
+    xAxis: { type: 'category', data: d.labels, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11 } },
+    yAxis: { type: 'value', min: 60, max: 160, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11, fontVariantNumeric: 'tabular-nums' } },
     series: [
       {
         name: '收缩压', data: d.sysData, type: 'bar', barWidth: '35%',
@@ -878,10 +993,12 @@ function initSpo2Chart() {
   const vals = data.map(v => v[yKey])
   spo2Chart.setOption({
     backgroundColor: chartBg,
-    tooltip: { ...tooltipCfg },
+    tooltip: mkTooltip(data, xKey, yKey, '%', '#60a5fa'),
     grid: { ...gridBase },
-    xAxis: { type: 'category', data: times, boundaryGap: false, ...axisStyle, splitLine: { show: false } },
-    yAxis: { type: 'value', min: 90, max: 100, splitNumber: 4, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle },
+    xAxis: { type: 'category', data: times, boundaryGap: false, splitLine: { show: false }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11 } },
+    yAxis: { type: 'value', min: 90, max: 100, splitNumber: 4, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11, fontVariantNumeric: 'tabular-nums' } },
     series: [{
       data: vals, type: 'line', smooth: 0.5,
       lineStyle: { color: '#60a5fa', width: 2.5 },
@@ -909,13 +1026,12 @@ function initTempChart() {
   const vals = data.map(v => v[yKey])
   tempChart.setOption({
     backgroundColor: chartBg,
-    tooltip: {
-      ...tooltipCfg,
-      formatter: (p) => `${p[0].name}<br/><span style="color:#f97316">体温 ${p[0].value}°C</span>`
-    },
+    tooltip: mkTooltip(data, xKey, yKey, '°C', '#f97316'),
     grid: { ...gridBase },
-    xAxis: { type: 'category', data: times, boundaryGap: false, ...axisStyle, splitLine: { show: false } },
-    yAxis: { type: 'value', min: 35.5, max: 37.8, splitNumber: 3, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle },
+    xAxis: { type: 'category', data: times, boundaryGap: false, splitLine: { show: false }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11 } },
+    yAxis: { type: 'value', min: 35.5, max: 37.8, splitNumber: 3, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11, fontVariantNumeric: 'tabular-nums' } },
     series: [{
       data: vals, type: 'line', smooth: 0.5,
       lineStyle: { color: '#f97316', width: 2.5 },
@@ -947,11 +1063,20 @@ function initStepsChart() {
     backgroundColor: chartBg,
     tooltip: {
       ...tooltipCfg,
-      formatter: (p) => `${p[0].name}<br/><span style="color:#00d4aa">${p[0].value.toLocaleString()} 步</span><br/><span style="color:#94a3b8">${p[0].value >= 10000 ? '✅ 已达标' : `距目标还差 ${(10000 - p[0].value).toLocaleString()} 步`}</span>`
+      formatter: (p) => {
+        const v = p[0].value, name = p[0].axisValueLabel || p[0].name
+        const color = '#34d399'
+        return `<div style="font-size:12px;line-height:1.8">`
+          + `<span style="color:var(--text-2)">${name}</span><br/>`
+          + `<span style="color:${color};font-variant-numeric:tabular-nums;font-size:13px;font-weight:600">${typeof v === 'number' ? v.toLocaleString() : v} 步</span><br/>`
+          + `<span style="color:var(--text-2);font-size:11px">${v >= 10000 ? '✅ 已达标' : `距目标还差 ${(10000 - v).toLocaleString()} 步`}</span></div>`
+      }
     },
     grid: { ...gridBase, left: '2%', right: '4%' },
-    xAxis: { type: 'category', data: days, ...axisStyle },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle },
+    xAxis: { type: 'category', data: days, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11 } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle,
+      axisLabel: { color: 'var(--text-2)', fontSize: 11, fontVariantNumeric: 'tabular-nums' } },
     series: [{
       data: vals, type: 'bar', barWidth: '55%',
       itemStyle: {
@@ -978,6 +1103,7 @@ async function initAllCharts() {
   initSpo2Chart()
   initTempChart()
   initStepsChart()
+  updateStepsChart() // 应用 stepsPeriod 的初始状态
 }
 
 function resizeCharts() {
@@ -1002,37 +1128,22 @@ watch(() => props.visible, async (v) => {
 
 watch(() => props.heartRateData, () => {
   if (!ec || !heartChart) return
-  const data = filteredHeartRate.value
-  heartChart.setOption({
-    xAxis: { data: data.map(v => v.time) },
-    series: [{ data: data.map(v => v.value) }]
-  })
+  nextTick(() => updateHeartChart())
 }, { deep: true })
 
 watch(() => props.spo2Trend, () => {
   if (!ec || !spo2Chart) return
-  const data = filteredSpo2.value
-  spo2Chart.setOption({
-    xAxis: { data: data.map(v => v.time) },
-    series: [{ data: data.map(v => v.value) }]
-  })
+  nextTick(() => updateSpo2Chart())
 }, { deep: true })
 
 watch(() => props.tempTrend, () => {
   if (!ec || !tempChart) return
-  const data = filteredTemp.value
-  tempChart.setOption({
-    xAxis: { data: data.map(v => v.time) },
-    series: [{ data: data.map(v => v.value) }]
-  })
+  nextTick(() => updateTempChart())
 }, { deep: true })
 
 watch(() => props.stepsTrend, () => {
   if (!ec || !stepsChart) return
-  stepsChart.setOption({
-    xAxis: { data: props.stepsTrend.map(v => v.day) },
-    series: [{ data: props.stepsTrend.map(v => v.value) }]
-  })
+  nextTick(() => updateStepsChart())
 }, { deep: true })
 
 // 周期切换 → 重新渲染图表
@@ -1041,6 +1152,7 @@ watch(bpPeriod, () => { nextTick(() => updateBpChart()) })
 watch(spo2Period, () => { nextTick(() => updateSpo2Chart()) })
 watch(tempPeriod, () => { nextTick(() => updateTempChart()) })
 watch(stepsPeriod, () => { nextTick(() => updateStepsChart()) })
+watch(sleepPeriod, () => { nextTick(() => updateSleepUI()) })
 
 onMounted(() => {
   window.addEventListener('resize', resizeCharts)
