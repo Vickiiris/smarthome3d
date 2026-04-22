@@ -1347,6 +1347,7 @@ const healthItems = ref([
   { icon: '🌡', label: '体温',   value: '36.5°C',     trend: 0.1, color: '#ff9800', range: '正常: 36.0-37.2°C',  pct: 50,  raw: 36.5 },
   { icon: '🫁', label: '血氧',   value: '98%',        trend: 1,   color: '#4fc3f7', range: '正常: 95-100%',      pct: 98,  raw: 98 },
   { icon: '😴', label: '睡眠',   value: '7.5小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.5 },
+  { icon: '👟', label: '步数',   value: '3542步',     trend: 0,   color: '#00d4aa', range: '目标: 10000步',      pct: 35,  raw: 3542 },
 ])
 
 // 心率趋势数据 (24小时)
@@ -1844,6 +1845,8 @@ onMounted(() => {
   // 健康数据实时模拟：每 4 秒波动一次
   healthTimer = setInterval(() => {
     const items = healthItems.value
+    const hour = new Date().getHours()
+
     // 心率：68-82 波动
     const hr = Math.round(items[0].raw + (Math.random() - 0.5) * 6)
     items[0].raw = Math.max(55, Math.min(110, hr))
@@ -1874,23 +1877,27 @@ onMounted(() => {
     items[3].pct = items[3].raw
     items[3].trend = Math.round((Math.random() - 0.5) * 3)
 
-    // 心率趋势数据：更新最后一个小时的数据点
-    const hour = new Date().getHours()
-    const lastIdx = heartRateData.value.length - 1
-    heartRateData.value[lastIdx].value = Math.max(50, Math.min(100, items[0].raw + Math.round((Math.random() - 0.5) * 4)))
-    heartRateData.value[lastIdx].time = String(hour).padStart(2, '0') + ':00'
+    // 步数：每次加1-3步，模拟行走（每4秒）
+    items[5].raw = Math.min(15000, items[5].raw + Math.floor(Math.random() * 3) + 1)
+    items[5].value = items[5].raw + '步'
+    items[5].pct = Math.min(100, Math.round((items[5].raw / 10000) * 100))
 
-    // 血氧趋势：更新最后一个数据点
-    const spo2Idx = spo2TrendData.value.length - 1
+    // 心率趋势数据：更新当前时段的数据点
+    const hrIdx = Math.min(hour, heartRateData.value.length - 1)
+    heartRateData.value[hrIdx].value = Math.max(50, Math.min(100, items[0].raw + Math.round((Math.random() - 0.5) * 4)))
+    heartRateData.value[hrIdx].time = String(hour).padStart(2, '0') + ':00'
+
+    // 血氧趋势：更新当前时段
+    const spo2Idx = Math.min(hour, spo2TrendData.value.length - 1)
     spo2TrendData.value[spo2Idx].value = Math.max(92, Math.min(100, items[3].raw))
 
-    // 体温趋势：更新最后一个数据点
-    const tempIdx = temperatureTrendData.value.length - 1
+    // 体温趋势：更新当前时段
+    const tempIdx = Math.min(hour, temperatureTrendData.value.length - 1)
     temperatureTrendData.value[tempIdx].value = items[2].raw
 
-    // 步数：每次加1-3步，模拟行走（每4秒）
+    // 步数趋势：更新当天（最后一项）
     const stepsIdx = stepsTrendData.value.length - 1
-    stepsTrendData.value[stepsIdx].value = Math.min(15000, stepsTrendData.value[stepsIdx].value + Math.floor(Math.random() * 3) + 1)
+    stepsTrendData.value[stepsIdx].value = items[5].raw
   }, 4000)
 
   // 能源排行实时模拟：每 8 秒微调一次
