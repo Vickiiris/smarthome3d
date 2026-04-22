@@ -154,7 +154,7 @@
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">状态</span>
-              <span class="hcm-val" :style="{ color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b' }">
+              <span class="hcm-val" :style="{ color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b', fontWeight: 'inherit' }">
                 {{ currentSpo2Stats.current >= 95 ? '正常' : '偏低' }}
               </span>
             </div>
@@ -211,6 +211,16 @@
         </div>
         <div class="hchart-body">
           <div class="steps-overview-row">
+            <div class="steps-stats-col">
+              <div class="steps-stat-row">
+                <span class="ssr-label">消耗热量</span>
+                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
+              </div>
+              <div class="steps-stat-row">
+                <span class="ssr-label">行走距离</span>
+                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
+              </div>
+            </div>
             <div class="steps-progress-ring">
               <svg viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" class="steps-ring-bg"/>
@@ -220,30 +230,6 @@
               <div class="steps-ring-inner">
                 <div class="steps-ring-pct">{{ Math.round((todaySteps/10000)*100) }}%</div>
                 <div class="steps-ring-goal">目标 10000</div>
-              </div>
-            </div>
-            <div class="steps-stats-col">
-              <div class="steps-stat-row">
-                <span class="ssr-label">今日步数</span>
-                <span class="ssr-val">{{ todaySteps.toLocaleString() }}</span>
-              </div>
-              <div class="steps-stat-row">
-                <span class="ssr-label">距目标</span>
-                <span class="ssr-val" :style="{ color: todaySteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
-                  {{ todaySteps >= 10000 ? '已达标 ✓' : (10000 - todaySteps).toLocaleString() + ' 步' }}
-                </span>
-              </div>
-              <div class="steps-stat-row">
-                <span class="ssr-label">消耗热量</span>
-                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
-              </div>
-              <div class="steps-stat-row">
-                <span class="ssr-label">行走距离</span>
-                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
-              </div>
-              <div class="steps-stat-row">
-                <span class="ssr-label">{{ stepsPeriod === '日' ? '本周合计' : stepsPeriod === '周' ? '本周日均' : '本月日均' }}</span>
-                <span class="ssr-val">{{ currentStepsStats.summary }}</span>
               </div>
             </div>
           </div>
@@ -257,11 +243,7 @@
           <h3 class="panel-title">
             <span class="panel-icon-txt" style="color:#9B59B6">🌙</span>
             睡眠分析
-            <span class="panel-time">昨夜</span>
           </h3>
-          <div class="period-tabs">
-            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: sleepPeriod === p }" @click="sleepPeriod = p">{{ p }}</button>
-          </div>
         </div>
         <div class="hchart-body">
           <!-- 小米健康风格: 顶部评分环 + 总时长 -->
@@ -486,13 +468,7 @@ const sleepStageDefs = [
 ]
 
 // 睡眠周/月固定数据
-const SLEEP_W = { total: 7.5, score: 85, deep: 96, light: 180, rem: 66, awakeMin: 18, awakeCount: 2 }
-const SLEEP_M = { total: 7.3, score: 82, deep: 88, light: 174, rem: 60, awakeMin: 22, awakeCount: 3 }
-const currentSleepData = computed(() => {
-  if (sleepPeriod.value === '周') return SLEEP_W
-  if (sleepPeriod.value === '月') return SLEEP_M
-  return props.sleepData
-})
+const currentSleepData = computed(() => props.sleepData)
 
 // sleepStages: 各阶段占比
 const sleepStages = computed(() => {
@@ -518,23 +494,38 @@ const sleepHourlyPcts = [
   { deep: 0.30, light: 0.40, rem: 0.25, awake: 0.05 }, // 05:00
   { deep: 0.10, light: 0.50, rem: 0.25, awake: 0.15 }, // 06:00
 ]
-const SLEEP_HOURS = ['23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00']
+// 睡眠时段标签: 23:00~06:00 共8小时，每个时段=1小时
+const sleepHourlyHours = ['23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00']
+// 归一化: 固定每时段60分钟，按阶段比例分配，保证4色总高=60(1小时)
+const SLEEP_HOURLY_RAW = sleepHourlyPcts.map((p, i) => ({
+  hour: sleepHourlyHours[i],
+  deepMins:   Math.round(p.deep   * 60),
+  lightMins:  Math.round(p.light  * 60),
+  remMins:    Math.round(p.rem    * 60),
+  awakeMins: Math.round(p.awake * 60),
+  totalMins:  Math.round(p.deep   * 60) + Math.round(p.light * 60) + Math.round(p.rem * 60) + Math.round(p.awake * 60)
+}))
 const sleepSegs = computed(() => {
   const { deep, light, rem, awakeMin } = currentSleepData.value
-  const total = deep + light + rem + awakeMin
-  return SLEEP_HOURS.map((hour, i) => {
-    const p = sleepHourlyPcts[i]
-    return {
-      hour,
-      deep:   Math.round(deep * p.deep),
-      light:  Math.round(light * p.light),
-      rem:    Math.round(rem * p.rem),
-      awake:  Math.round(awakeMin * p.awake),
-      deepPct:   total ? Math.round((deep * p.deep)   / total * 100) : 0,
-      lightPct:  total ? Math.round((light * p.light) / total * 100) : 0,
-      remPct:    total ? Math.round((rem * p.rem)    / total * 100) : 0,
-      awakePct:  total ? Math.round((awakeMin * p.awake) / total * 100) : 0,
+  const totalStage = deep + light + rem + awakeMin
+  if (!totalStage) return []
+  // 每小时柱: 4色分段，总高固定60分钟(=1小时)，各阶段按全局占比分配
+  return SLEEP_HOURLY_RAW.map(row => {
+    const raw = [
+      { k: 'deepPct',  v: Math.round((deep / totalStage) * 60) },
+      { k: 'lightPct', v: Math.round((light / totalStage) * 60) },
+      { k: 'remPct',   v: Math.round((rem / totalStage) * 60) },
+      { k: 'awakePct', v: Math.round((awakeMin / totalStage) * 60) },
+    ]
+    const total = raw.reduce((s, x) => s + x.v, 0)
+    // 保证和为60，如有残余(因round)加给最大值
+    const deficit = 60 - total
+    if (deficit !== 0) {
+      raw.sort((a, b) => b.v - a.v)[0].v += deficit
     }
+    const result = { hour: row.hour }
+    raw.forEach(x => { result[x.k] = x.v })
+    return result
   })
 })
 
@@ -1010,7 +1001,7 @@ onMounted(async () => {
 .bp-meta { gap: 0; align-items: center; }
 .hchart-meta-item { text-align: center; flex: 1; }
 .hcm-label { display: block; font-size: 10px; color: var(--text-3); margin-bottom: 2px; }
-.hcm-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700; }
+.hcm-val { font-family: var(--font-mono); font-size: 20px; }
 .hcm-unit { font-size: 10px; margin-left: 2px; }
 .bp-divider { font-size: 28px; color: var(--text-3); font-weight: 300; margin: 0 8px; }
 .hchart-area { width: 100%; height: 160px; }
