@@ -211,16 +211,6 @@
         </div>
         <div class="hchart-body">
           <div class="steps-overview-row">
-            <div class="steps-stats-col">
-              <div class="steps-stat-row">
-                <span class="ssr-label">消耗热量</span>
-                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
-              </div>
-              <div class="steps-stat-row">
-                <span class="ssr-label">行走距离</span>
-                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
-              </div>
-            </div>
             <div class="steps-progress-ring">
               <svg viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" class="steps-ring-bg"/>
@@ -230,6 +220,30 @@
               <div class="steps-ring-inner">
                 <div class="steps-ring-pct">{{ Math.round((todaySteps/10000)*100) }}%</div>
                 <div class="steps-ring-goal">目标 10000</div>
+              </div>
+            </div>
+            <div class="steps-stats-col">
+              <div class="steps-stat-row">
+                <span class="ssr-label">今日步数</span>
+                <span class="ssr-val">{{ todaySteps.toLocaleString() }}</span>
+              </div>
+              <div class="steps-stat-row">
+                <span class="ssr-label">距目标</span>
+                <span class="ssr-val" :style="{ color: todaySteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
+                  {{ todaySteps >= 10000 ? '已达标 ✓' : (10000 - todaySteps).toLocaleString() + ' 步' }}
+                </span>
+              </div>
+              <div class="steps-stat-row">
+                <span class="ssr-label">消耗热量</span>
+                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
+              </div>
+              <div class="steps-stat-row">
+                <span class="ssr-label">行走距离</span>
+                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
+              </div>
+              <div class="steps-stat-row" v-if="stepsPeriod !== '日'">
+                <span class="ssr-label">{{ stepsPeriod === '周' ? '本周日均' : '本月日均' }}</span>
+                <span class="ssr-val">{{ currentStepsStats.summary }}</span>
               </div>
             </div>
           </div>
@@ -301,11 +315,11 @@
                 <div v-for="(seg, si) in sleepSegs" :key="si" class="sl-seg-wrap">
                   <div class="sl-seg"
                     :style="{
-                      height: seg[stg.key + 'Pct'] + '%',
+                      height: seg[stg.key + 'Pct'] + 'px',
                       backgroundColor: seg[stg.key + 'Pct'] > 0 ? stg.color : 'transparent',
                       minHeight: seg[stg.key + 'Pct'] > 0 ? '2px' : '0'
                     }"
-                    :title="`${stg.name} ${seg.hour} ${seg[stg.key]}min`"
+                    :title="`${stg.name} ${seg.hour} ${seg[stg.key + 'Pct']}min`"
                   ></div>
                 </div>
               </div>
@@ -1052,17 +1066,17 @@ onMounted(async () => {
 .sl-header-row { margin-bottom: 3px; }
 .sl-label-cell { width: 40px; font-size: 11px; font-weight: 700; flex-shrink: 0; text-align: right; padding-right: 8px; }
 .sl-axis-lbl { flex: 1; font-size: 9px; color: var(--text-3); font-family: var(--font-mono); text-align: center; }
-.sl-bar-row { flex: 1; display: flex; align-items: stretch; height: 26px; gap: 2px; }
-.sl-seg-wrap { flex: 1; display: flex; align-items: flex-end; border-radius: 2px; overflow: hidden; min-width: 0; }
-.sl-seg { width: 100%; border-radius: 2px; transition: height 0.4s ease; }
+.sl-bar-row { flex: 1; display: flex; align-items: stretch; height: auto; gap: 2px; padding: 0; }
+.sl-seg-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; border-radius: 2px; overflow: hidden; min-width: 0; min-height: 40px; }
+.sl-seg { width: 100%; flex-shrink: 0; border-radius: 2px; transition: height 0.4s ease; }
 .sl-seg:hover { filter: brightness(1.2); }
 /* 底部图例 */
 .sl-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
 .sl-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
 .sl-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.sl-legend-name { color: var(--text-2); }
-.sl-legend-h { font-family: var(--font-mono); font-size: 11px; color: var(--text); }
-.sl-legend-pct { color: var(--text-3); font-size: 10px; }
+.sl-legend-name { color: var(--text-2); font-weight: 400; }
+.sl-legend-h { font-family: var(--font-mono); font-size: 11px; color: var(--text); font-weight: 400; }
+.sl-legend-pct { color: var(--text-3); font-size: 10px; font-weight: 400; }
 
 /* ===== 健康建议 ===== */
 .health-tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
