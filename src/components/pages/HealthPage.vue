@@ -241,40 +241,83 @@
             <span class="panel-icon-txt" style="color:#9B59B6">🌙</span>
             睡眠分析
           </h3>
-          <span class="panel-time">昨夜 · {{ sleepData.total }}h · 评分 {{ sleepData.score }}</span>
+          <span class="panel-time">昨夜</span>
         </div>
         <div class="hchart-body">
-          <!-- 睡眠结构：时间轴分段 -->
-          <div class="sleep-struct">
-            <div class="sleep-struct-header">
-              <span class="ss-time">{{ sleepTimeline.start }}</span>
-              <span class="ss-label">睡眠结构</span>
-              <span class="ss-time">{{ sleepTimeline.end }}</span>
-            </div>
-            <div class="sleep-struct-track">
-              <div class="sleep-struct-seg" v-for="(seg, idx) in sleepTimeline.segments" :key="idx"
-                :style="{ width: seg.pct + '%', background: seg.color }"
-                :title="seg.name + ' ' + seg.duration">
+          <!-- 小米健康风格：顶部睡眠评分 + 总时长 -->
+          <div class="xmsleep-header">
+            <div class="xmsleep-score-ring">
+              <svg viewBox="0 0 100 100" class="xmscore-svg">
+                <circle cx="50" cy="50" r="42" class="xmscore-track"/>
+                <circle cx="50" cy="50" r="42" class="xmscore-fill"
+                  :stroke="sleepData.score >= 85 ? '#00d4aa' : sleepData.score >= 70 ? '#f59e0b' : '#ef4444'"
+                  :stroke-dasharray="`${sleepData.score * 2.64} 264`"
+                />
+              </svg>
+              <div class="xmscore-num">
+                <span class="xmscore-val">{{ sleepData.score }}</span>
+                <span class="xmscore-label">分</span>
               </div>
             </div>
-            <div class="sleep-struct-legend">
-              <div class="ssl-item" v-for="s in sleepStages" :key="s.name">
-                <span class="ssl-dot" :style="{ background: s.color }"></span>
-                <span class="ssl-name">{{ s.name }}</span>
-                <span class="ssl-val">{{ s.h }}h</span>
-                <span class="ssl-pct">{{ s.pct }}%</span>
+            <div class="xmsleep-overview">
+              <div class="xmsleep-total">
+                <span class="xt-label">睡眠时长</span>
+                <span class="xt-val">{{ sleepData.total }}<span class="xt-unit">h</span></span>
+              </div>
+              <div class="xmsleep-stats">
+                <div class="xs-stat">
+                  <span class="xs-icon">🛏️</span>
+                  <span class="xs-label">入睡</span>
+                  <span class="xs-val">23:00</span>
+                </div>
+                <div class="xs-stat">
+                  <span class="xs-icon">☀️</span>
+                  <span class="xs-label">起床</span>
+                  <span class="xs-val">06:48</span>
+                </div>
+                <div class="xs-stat">
+                  <span class="xs-icon">⚡</span>
+                  <span class="xs-label">效率</span>
+                  <span class="xs-val" :style="{ color: sleepEfficiency >= 85 ? '#00d4aa' : '#f59e0b' }">
+                    {{ sleepEfficiency }}%
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-          <!-- 睡眠分析：关键指标 -->
-          <div class="sleep-analysis">
-            <div class="sa-item" v-for="m in sleepMetrics" :key="m.label">
-              <div class="sa-icon" :style="{ color: m.color }">{{ m.icon }}</div>
-              <div class="sa-info">
-                <div class="sa-label">{{ m.label }}</div>
-                <div class="sa-value" :style="{ color: m.color }">{{ m.value }}</div>
+          <!-- 小米睡眠时间线：夜间分段条 + 小时刻度 -->
+          <div class="xmsleep-timeline">
+            <div class="xtl-track">
+              <div class="xtl-seg" v-for="(seg, idx) in sleepTimeline.segments" :key="idx"
+                :style="{ width: seg.pct + '%', background: seg.color }"
+                :title="`${seg.name} ${seg.duration}分钟`">
               </div>
-              <div class="sa-badge" :style="{ background: m.badgeBg, color: m.badgeColor }">{{ m.badge }}</div>
+            </div>
+            <div class="xtl-ticks">
+              <span>23:00</span><span>00:00</span><span>01:00</span>
+              <span>02:00</span><span>03:00</span><span>04:00</span>
+              <span>05:00</span><span>06:00</span><span>06:48</span>
+            </div>
+            <div class="xtl-legend">
+              <div class="xl-item" v-for="s in sleepStages" :key="s.name">
+                <span class="xl-dot" :style="{ background: s.color }"></span>
+                <span class="xl-name">{{ s.name }}</span>
+                <span class="xl-val">{{ s.h }}h</span>
+                <span class="xl-pct">{{ s.pct }}%</span>
+              </div>
+            </div>
+          </div>
+          <!-- 小米风格睡眠指标网格 -->
+          <div class="xmsleep-metrics">
+            <div class="xm-metric-card" v-for="m in sleepMetrics" :key="m.label">
+              <div class="xmm-top">
+                <span class="xmm-icon">{{ m.icon }}</span>
+                <span class="xmm-label">{{ m.label }}</span>
+              </div>
+              <div class="xmm-val" :style="{ color: m.color }">{{ m.value }}</div>
+              <div class="xmm-bar">
+                <div class="xmm-fill" :style="{ width: m.pct + '%', background: m.color }"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -326,6 +369,22 @@ const props = defineProps({
 
 defineEmits(['openHealthDetail'])
 
+// ===== 按当前时段过滤趋势数据 =====
+const currentHour = () => new Date().getHours()
+
+const filteredHeartRate = computed(() => {
+  const h = currentHour()
+  return props.heartRateData.slice(0, h + 1)
+})
+const filteredSpo2 = computed(() => {
+  const h = currentHour()
+  return props.spo2Trend.slice(0, h + 1)
+})
+const filteredTemp = computed(() => {
+  const h = currentHour()
+  return props.tempTrend.slice(0, h + 1)
+})
+
 // Chart refs
 const heartChartRef = ref(null)
 const bpChartRef = ref(null)
@@ -363,14 +422,14 @@ const latestSteps = computed(() => {
 })
 const weekTotal = computed(() => props.stepsTrend.reduce((s, v) => s + v.value, 0))
 const avgHeartRate = computed(() => {
-  if (!props.heartRateData.length) return 72
-  return Math.round(props.heartRateData.reduce((s, v) => s + v.value, 0) / props.heartRateData.length)
+  if (!filteredHeartRate.value.length) return 72
+  return Math.round(filteredHeartRate.value.reduce((s, v) => s + v.value, 0) / filteredHeartRate.value.length)
 })
-const minHeartRate = computed(() => props.heartRateData.length ? Math.min(...props.heartRateData.map(v => v.value)) : 58)
-const maxHeartRate = computed(() => props.heartRateData.length ? Math.max(...props.heartRateData.map(v => v.value)) : 88)
-const minSpo2 = computed(() => props.spo2Trend.length ? Math.min(...props.spo2Trend.map(v => v.value)) : 96)
-const minTemp = computed(() => props.tempTrend.length ? Math.min(...props.tempTrend.map(v => v.value)) : 36.0)
-const maxTemp = computed(() => props.tempTrend.length ? Math.max(...props.tempTrend.map(v => v.value)) : 36.8)
+const minHeartRate = computed(() => filteredHeartRate.value.length ? Math.min(...filteredHeartRate.value.map(v => v.value)) : 58)
+const maxHeartRate = computed(() => filteredHeartRate.value.length ? Math.max(...filteredHeartRate.value.map(v => v.value)) : 88)
+const minSpo2 = computed(() => filteredSpo2.value.length ? Math.min(...filteredSpo2.value.map(v => v.value)) : 96)
+const minTemp = computed(() => filteredTemp.value.length ? Math.min(...filteredTemp.value.map(v => v.value)) : 36.0)
+const maxTemp = computed(() => filteredTemp.value.length ? Math.max(...filteredTemp.value.map(v => v.value)) : 36.8)
 
 const sleepStages = computed(() => {
   const { deep, light, rem, awake } = props.sleepData
@@ -383,11 +442,17 @@ const sleepStages = computed(() => {
   ]
 })
 
+const sleepEfficiency = computed(() => {
+  const { deep, light, rem, awake } = props.sleepData
+  const total = deep + light + rem + awake
+  return total > 0 ? Math.round((total - awake) / total * 100) : 0
+})
+
 // 睡眠时间轴：模拟从23:00到06:48的睡眠结构
 const sleepTimeline = computed(() => {
   const { deep, light, rem, awake } = props.sleepData
   const totalMin = deep + light + rem + awake
-  // 按真实睡眠顺序排列的片段（入睡前清醒→浅睡→深睡→浅睡→REM→浅睡→深睡→浅睡→REM→清醒）
+  // 按真实睡眠顺序排列的片段
   const segments = [
     { name: '清醒', duration: awake, color: '#fbbf24' },
     { name: '浅睡', duration: Math.round(light * 0.4), color: '#a78bfa' },
@@ -409,20 +474,17 @@ const sleepTimeline = computed(() => {
   }
 })
 
-// 睡眠分析指标
+// 睡眠分析指标（带 pct 用于进度条）
 const sleepMetrics = computed(() => {
-  const { deep, light, rem, awake, score, total } = props.sleepData
+  const { deep, light, rem, awake, score } = props.sleepData
   const totalMin = deep + light + rem + awake
   const deepPct = totalMin > 0 ? Math.round(deep / totalMin * 100) : 0
   const remPct = totalMin > 0 ? Math.round(rem / totalMin * 100) : 0
-  const efficiency = totalMin > 0 ? Math.round((totalMin - awake) / totalMin * 100) : 0
   return [
-    { icon: '🕐', label: '入睡时间', value: '23:00', color: '#a78bfa', badge: '正常', badgeBg: 'rgba(167,139,250,0.12)', badgeColor: '#a78bfa' },
-    { icon: '⏰', label: '醒来时间', value: '06:48', color: '#60a5fa', badge: '正常', badgeBg: 'rgba(96,165,250,0.12)', badgeColor: '#60a5fa' },
-    { icon: '💤', label: '深睡比例', value: deepPct + '%', color: deepPct >= 20 ? '#7c3aed' : '#f59e0b', badge: deepPct >= 20 ? '达标' : '偏少', badgeBg: deepPct >= 20 ? 'rgba(124,58,237,0.12)' : 'rgba(245,158,11,0.12)', badgeColor: deepPct >= 20 ? '#7c3aed' : '#f59e0b' },
-    { icon: '🧠', label: 'REM比例', value: remPct + '%', color: remPct >= 15 ? '#60a5fa' : '#f59e0b', badge: remPct >= 15 ? '达标' : '偏少', badgeBg: remPct >= 15 ? 'rgba(96,165,250,0.12)' : 'rgba(245,158,11,0.12)', badgeColor: remPct >= 15 ? '#60a5fa' : '#f59e0b' },
-    { icon: '⚡', label: '睡眠效率', value: efficiency + '%', color: efficiency >= 85 ? '#00d4aa' : '#f59e0b', badge: efficiency >= 85 ? '良好' : '偏低', badgeBg: efficiency >= 85 ? 'rgba(0,212,170,0.12)' : 'rgba(245,158,11,0.12)', badgeColor: efficiency >= 85 ? '#00d4aa' : '#f59e0b' },
-    { icon: '📊', label: '睡眠评分', value: score + '分', color: score >= 85 ? '#00d4aa' : score >= 70 ? '#f59e0b' : '#ef4444', badge: score >= 85 ? '优秀' : score >= 70 ? '一般' : '较差', badgeBg: score >= 85 ? 'rgba(0,212,170,0.12)' : score >= 70 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)', badgeColor: score >= 85 ? '#00d4aa' : score >= 70 ? '#f59e0b' : '#ef4444' },
+    { icon: '💤', label: '深睡时长', value: Math.round(deep / 60 * 10) / 10 + 'h', pct: deepPct * 2, color: '#7c3aed' },
+    { icon: '🌙', label: '浅睡时长', value: Math.round(light / 60 * 10) / 10 + 'h', pct: Math.round(light / totalMin * 100) * 2, color: '#a78bfa' },
+    { icon: '🧠', label: 'REM时长', value: Math.round(rem / 60 * 10) / 10 + 'h', pct: remPct * 2, color: '#60a5fa' },
+    { icon: '😴', label: '清醒次数', value: awake + '次', pct: Math.min(100, awake * 10), color: '#fbbf24' },
   ]
 })
 
@@ -485,8 +547,9 @@ const gridBase = { left: '3%', right: '4%', top: '8%', bottom: '8%', containLabe
 function initHeartChart() {
   if (!heartChartRef.value) return
   heartChart = ec.init(heartChartRef.value)
-  const times = props.heartRateData.map(v => v.time)
-  const vals = props.heartRateData.map(v => v.value)
+  const data = filteredHeartRate.value
+  const times = data.map(v => v.time)
+  const vals = data.map(v => v.value)
   heartChart.setOption({
     backgroundColor: chartBg,
     tooltip: { ...tooltipCfg },
@@ -565,8 +628,9 @@ function initBpChart() {
 function initSpo2Chart() {
   if (!spo2ChartRef.value) return
   spo2Chart = ec.init(spo2ChartRef.value)
-  const times = props.spo2Trend.map(v => v.time)
-  const vals = props.spo2Trend.map(v => v.value)
+  const data = filteredSpo2.value
+  const times = data.map(v => v.time)
+  const vals = data.map(v => v.value)
   spo2Chart.setOption({
     backgroundColor: chartBg,
     tooltip: { ...tooltipCfg },
@@ -595,8 +659,9 @@ function initSpo2Chart() {
 function initTempChart() {
   if (!tempChartRef.value) return
   tempChart = ec.init(tempChartRef.value)
-  const times = props.tempTrend.map(v => v.time)
-  const vals = props.tempTrend.map(v => v.value)
+  const data = filteredTemp.value
+  const times = data.map(v => v.time)
+  const vals = data.map(v => v.value)
   tempChart.setOption({
     backgroundColor: chartBg,
     tooltip: {
@@ -692,25 +757,28 @@ watch(() => props.visible, async (v) => {
 
 watch(() => props.heartRateData, () => {
   if (!ec || !heartChart) return
+  const data = filteredHeartRate.value
   heartChart.setOption({
-    xAxis: { data: props.heartRateData.map(v => v.time) },
-    series: [{ data: props.heartRateData.map(v => v.value) }]
+    xAxis: { data: data.map(v => v.time) },
+    series: [{ data: data.map(v => v.value) }]
   })
 }, { deep: true })
 
 watch(() => props.spo2Trend, () => {
   if (!ec || !spo2Chart) return
+  const data = filteredSpo2.value
   spo2Chart.setOption({
-    xAxis: { data: props.spo2Trend.map(v => v.time) },
-    series: [{ data: props.spo2Trend.map(v => v.value) }]
+    xAxis: { data: data.map(v => v.time) },
+    series: [{ data: data.map(v => v.value) }]
   })
 }, { deep: true })
 
 watch(() => props.tempTrend, () => {
   if (!ec || !tempChart) return
+  const data = filteredTemp.value
   tempChart.setOption({
-    xAxis: { data: props.tempTrend.map(v => v.time) },
-    series: [{ data: props.tempTrend.map(v => v.value) }]
+    xAxis: { data: data.map(v => v.time) },
+    series: [{ data: data.map(v => v.value) }]
   })
 }, { deep: true })
 
@@ -874,46 +942,90 @@ onMounted(() => {
   margin-bottom: 6px;
 }
 .ss-time { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
-.ss-label { font-size: 11px; color: var(--text-2); font-weight: 600; }
-.sleep-struct-track {
-  display: flex; height: 28px; border-radius: 6px; overflow: hidden;
+/* ===== 小米健康风格睡眠结构 ===== */
+.xmsleep-header {
+  display: flex; gap: 16px; align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(155,89,182,0.15);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+.xmsleep-score-ring { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+.xmscore-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.xmscore-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 7; }
+.xmscore-fill {
+  fill: none; stroke-width: 7;
+  stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: 50%;
+  transition: stroke-dasharray 0.8s ease;
+}
+.xmscore-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+}
+.xmscore-val { font-size: 26px; font-weight: 800; color: var(--text); font-family: var(--font-mono); line-height: 1; }
+.xmscore-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
+.xmsleep-overview { flex: 1; }
+.xmsleep-total { margin-bottom: 8px; }
+.xt-label { display: block; font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+.xt-val { font-size: 28px; font-weight: 800; color: var(--text); font-family: var(--font-mono); line-height: 1; }
+.xt-unit { font-size: 14px; color: var(--text-2); margin-left: 2px; }
+.xmsleep-stats { display: flex; gap: 14px; }
+.xs-stat { display: flex; align-items: center; gap: 4px; }
+.xs-icon { font-size: 13px; }
+.xs-label { font-size: 11px; color: var(--text-3); }
+.xs-val { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+
+/* 小米风格睡眠时间线 */
+.xmsleep-timeline { margin-bottom: 12px; }
+.xtl-track {
+  display: flex; height: 36px; border-radius: 8px; overflow: hidden;
   background: rgba(255,255,255,0.04);
 }
-.sleep-struct-seg {
+.xtl-seg {
   height: 100%; min-width: 2px;
   transition: width 0.4s ease;
-  position: relative;
 }
-.sleep-struct-seg:hover { filter: brightness(1.2); }
-.sleep-struct-legend {
-  display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap;
+.xtl-seg:hover { filter: brightness(1.2); }
+.xtl-ticks {
+  display: flex; justify-content: space-between;
+  padding: 4px 0 0;
+  font-size: 9px; color: var(--text-3);
+  font-family: var(--font-mono);
 }
-.ssl-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
-.ssl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.ssl-name { color: var(--text-2); }
-.ssl-val { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
-.ssl-pct { color: var(--text-3); margin-left: 1px; }
+.xtl-legend {
+  display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap;
+}
+.xl-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+.xl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.xl-name { color: var(--text-2); }
+.xl-val { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+.xl-pct { color: var(--text-3); }
 
-.sleep-analysis {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+/* 小米风格睡眠指标网格 */
+.xmsleep-metrics {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 8px;
 }
-.sa-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px;
+.xm-metric-card {
+  padding: 10px 12px;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background 0.2s;
 }
-.sa-item:hover { background: rgba(255,255,255,0.06); }
-.sa-icon { font-size: 16px; min-width: 20px; text-align: center; }
-.sa-info { flex: 1; min-width: 0; }
-.sa-label { font-size: 10px; color: var(--text-3); line-height: 1; margin-bottom: 3px; }
-.sa-value { font-size: 13px; font-weight: 700; font-family: var(--font-mono); line-height: 1; }
-.sa-badge {
-  font-size: 9px; padding: 2px 6px; border-radius: 10px;
-  white-space: nowrap; font-weight: 600;
+.xm-metric-card:hover { background: rgba(255,255,255,0.06); }
+.xmm-top { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.xmm-icon { font-size: 14px; }
+.xmm-label { font-size: 11px; color: var(--text-3); }
+.xmm-val { font-size: 18px; font-weight: 800; font-family: var(--font-mono); margin-bottom: 6px; line-height: 1; }
+.xmm-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.xmm-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; opacity: 0.7; }
+
+@media (max-width: 768px) {
+  .xmsleep-metrics { grid-template-columns: 1fr 1fr; }
+  .xmsleep-header { flex-wrap: wrap; }
 }
 .steps-progress-ring { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
 .steps-progress-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
