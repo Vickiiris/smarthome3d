@@ -1352,7 +1352,7 @@ const healthItems = ref([
   { icon: '🩸', label: '血压',   value: '118/75mmHg', trend: 0,   color: '#8b5cf6', range: '正常: 90-139/60-89', pct: 85,  raw: 118 },
   { icon: '🌡', label: '体温',   value: '36.5°C',     trend: 0.1, color: '#ff9800', range: '正常: 36.0-37.2°C',  pct: 50,  raw: 36.5 },
   { icon: '🫁', label: '血氧',   value: '98%',        trend: 1,   color: '#4fc3f7', range: '正常: 95-100%',      pct: 98,  raw: 98 },
-  { icon: '😴', label: '睡眠',   value: '7.5小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.5 },
+  { icon: '😴', label: '睡眠',   value: '7.8小时',    trend: 0,   color: '#4cd964', range: '正常: 7-9小时',      pct: 83,  raw: 7.8 },
   { icon: '👟', label: '步数',   value: '3542步',     trend: 0,   color: '#00d4aa', range: '目标: 10000步',      pct: 35,  raw: 3542 },
 ])
 
@@ -1408,12 +1408,16 @@ const stepsTrendData = ref([
   { day: '周五', value: 11230 },
   { day: '周六', value: 9876 },
   { day: '周日', value: 8547,
-    hourData: [
-      { hour: '08:00', value: 1234 }, { hour: '09:00', value: 2105 },
-      { hour: '10:00', value: 1876 }, { hour: '11:00', value: 956 },
-      { hour: '13:00', value: 0 },    { hour: '14:00', value: 1543 },
-      { hour: '15:00', value: 1023 },  { hour: '16:00', value: 810 },
-    ]
+    hourData: (() => {
+      const now = new Date().getHours()
+      const start = 8 // 从8点开始计步
+      const vals = [1234, 2105, 1876, 956, 543, 1543, 1023, 810, 654, 432, 321, 210, 156, 98, 65, 43]
+      const arr = []
+      for (let h = start; h <= now; h++) {
+        arr.push({ hour: String(h).padStart(2, '0') + ':00', value: vals[h - start] || Math.round(Math.random() * 500) })
+      }
+      return arr
+    })()
   },
 ])
 

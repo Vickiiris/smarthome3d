@@ -16,9 +16,9 @@
             <span class="hbadge hbadge-time"><span class="live-dot-sm"></span>实时监测</span>
           </div>
           <div class="health-hero-detail-row">
-            <span class="hhdr-item"><span class="hhdr-dot" style="background:#ff6b6b"></span>心率 72次/分</span>
-            <span class="hhdr-item"><span class="hhdr-dot" style="background:#60a5fa"></span>血氧 98%</span>
-            <span class="hhdr-item"><span class="hhdr-dot" style="background:#f97316"></span>体温 36.6°C</span>
+            <span class="hhdr-item"><span class="hhdr-dot" style="background:#ff6b6b"></span>心率 {{ healthItems.find(i => i.label === '心率')?.raw ?? 72 }}次/分</span>
+            <span class="hhdr-item"><span class="hhdr-dot" style="background:#60a5fa"></span>血氧 {{ healthItems.find(i => i.label === '血氧')?.raw ?? 98 }}%</span>
+            <span class="hhdr-item"><span class="hhdr-dot" style="background:#f97316"></span>体温 {{ healthItems.find(i => i.label === '体温')?.raw ?? 36.6 }}°C</span>
           </div>
         </div>
         <div class="health-score-ring">
@@ -992,7 +992,7 @@ onMounted(async () => {
 .hmetric-badge.danger { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.2); }
 .hmetric-value {
   font-size: 22px; font-weight: 800; /* color 由 :style 内联设置，与 env-detail-value 一致 */
-  font-family: var(--font-mono); margin-bottom: 8px; line-height: 1;
+  margin-bottom: 8px; line-height: 1;
 }
 .hmetric-value :deep(.num) { font-family: var(--font-mono); color: inherit; }
 .hmetric-bar-wrap { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
