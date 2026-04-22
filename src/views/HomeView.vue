@@ -401,6 +401,7 @@ const healthDetailMap = {
   '体温': { desc: '人体核心体温，反映基础代谢和免疫状态。', standard: '国标 GBZ 189：正常人体温范围 36.0~37.2°C；超过 37.3°C 属发热。', tips: '体温异常需关注是否感染或过度劳累；建议规律作息，适度锻炼增强免疫。' },
   '血氧': { desc: '血液中血红蛋白与氧气结合的比例，反映呼吸系统氧合能力。', standard: '国标 GB 9801：正常人血氧饱和度 ≥95%；低于 94% 需关注，低于 90% 属低氧血症。', tips: '血氧偏低建议增加室内通风，避免剧烈运动；持续偏低需就医排查呼吸系统问题。' },
   '睡眠': { desc: '每日睡眠时长和质量，影响身体修复、记忆巩固和免疫功能。', standard: '国标 GB/T 18883：中国成人建议每日睡眠 7~9小时；儿童青少年需 8~10小时。', tips: '睡眠不足会影响认知和免疫力，建议固定作息时间，睡前减少电子设备使用。' },
+  '步数': { desc: '每日行走步数，反映身体日常活动水平和代谢消耗。', standard: '世界卫生组织（WHO）建议：成年人每日步行 6000~10000 步，可降低心血管疾病和糖尿病风险。', tips: '步数不足建议利用碎片时间步行，如上下班步行一段距离、餐后散步等，循序渐进提升日均步数。' },
 }
 
 function showEnvDetail(item) {
@@ -485,6 +486,11 @@ function getHealthTips(label, value) {
       if (value < 7) return '睡眠不足，建议提前就寝，保证 7~9 小时睡眠。'
       if (value <= 9) return '睡眠充足，继续保持良好的作息习惯。'
       return '睡眠时间过长，可能与疲劳或健康问题有关，建议关注。'
+    case '步数':
+      if (value >= 10000) return '步数已达标，继续保持每天一万步的运动习惯。'
+      if (value >= 6000) return '步数基本达标，建议每天坚持步行，逐步提升至一万步。'
+      if (value >= 3000) return '步数偏少，建议增加日常步行，如饭后散步或短途步行通勤。'
+      return '步数严重不足，久坐危害大，建议从每天 3000 步开始，逐步增加到一万步。'
     default:
       return '保持当前状态，定期监测健康指标。'
   }
@@ -1393,11 +1399,22 @@ const temperatureTrendData = ref([
   { time: '21:00', value: 36.2 }, { time: '22:00', value: 36.1 }, { time: '23:00', value: 36.0 },
 ])
 
-// 步数趋势数据 (近7天)
+// 步数趋势数据 (近7天)，今天(最后一项)含 hourData 用于日视图柱状图
 const stepsTrendData = ref([
-  { day: '周一', value: 8234 }, { day: '周二', value: 10521 }, { day: '周三', value: 6542 },
-  { day: '周四', value: 7896 }, { day: '周五', value: 11230 }, { day: '周六', value: 9876 },
-  { day: '周日', value: 3542 },
+  { day: '周一', value: 8234 },
+  { day: '周二', value: 10521 },
+  { day: '周三', value: 6542 },
+  { day: '周四', value: 7896 },
+  { day: '周五', value: 11230 },
+  { day: '周六', value: 9876 },
+  { day: '周日', value: 8547,
+    hourData: [
+      { hour: '08:00', value: 1234 }, { hour: '09:00', value: 2105 },
+      { hour: '10:00', value: 1876 }, { hour: '11:00', value: 956 },
+      { hour: '13:00', value: 0 },    { hour: '14:00', value: 1543 },
+      { hour: '15:00', value: 1023 },  { hour: '16:00', value: 810 },
+    ]
+  },
 ])
 
 // 睡眠数据
@@ -1484,11 +1501,11 @@ function getStepsStatus(value) {
   return { text: '不足', class: 'danger' }
 }
 
-// 格式化指标值：数字+英文单位用 mono 粗体，中文用默认字体
+// 格式化指标值：数字+英文单位用 mono 粗体，中文单位用默认字体
 function formatMetricValue(str) {
   if (!str) return ''
-  // 按中文字符分割，非中文部分（数字+英文单位）用 mono 字体
-  return str.replace(/([^\u4e00-\u9fa5\u3000-\u303f]+)/g, '<span class="num">$1</span>')
+  // 数字和英文用 num 类（mono 字体），中文单位不加 span（继承 body 默认字体）
+  return str.replace(/([a-zA-Z0-9.,%°]+)/g, '<span class="num">$1</span>')
 }
 
 // ========== 策略告警页面 ==========
