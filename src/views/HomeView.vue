@@ -1404,10 +1404,11 @@ const stepsTrendData = ref([
 const sleepData = ref({
   total: 7.8,
   score: 88,
-  deep: 102,    // 深睡 分钟
-  light: 186,   // 浅睡 分钟
-  rem: 78,      // REM 分钟
-  awake: 102,   // 清醒 分钟
+  deep: 102,    // 深睡 分钟 (~1h42min)
+  light: 186,   // 浅睡 分钟 (~3h06min)
+  rem: 72,      // REM 分钟 (~1h12min)
+  awakeMin: 18, // 清醒总时长 分钟 (~18min)
+  awakeCount: 2,// 清醒次数
 })
 
 

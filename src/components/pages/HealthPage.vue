@@ -70,23 +70,25 @@
             <span class="panel-icon-txt" style="color:#ff6b6b">💓</span>
             心率趋势
           </h3>
-          <span class="panel-time">24h · 平均 {{ avgHeartRate }} 次/分</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: heartPeriod === p }" @click="heartPeriod = p">{{ p }}</button>
+          </div>
         </div>
         <div class="hchart-body">
           <div class="hchart-meta-row">
             <div class="hchart-meta-item">
               <span class="hcm-label">最低</span>
-              <span class="hcm-val" style="color:#22c55e">{{ minHeartRate }}</span>
+              <span class="hcm-val" style="color:#22c55e">{{ currentHeartStats.min }}</span>
               <span class="hcm-unit">次/分</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">平均</span>
-              <span class="hcm-val" style="color:#ff6b6b">{{ avgHeartRate }}</span>
+              <span class="hcm-val" style="color:#ff6b6b">{{ currentHeartStats.avg }}</span>
               <span class="hcm-unit">次/分</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">最高</span>
-              <span class="hcm-val" style="color:#f59e0b">{{ maxHeartRate }}</span>
+              <span class="hcm-val" style="color:#f59e0b">{{ currentHeartStats.max }}</span>
               <span class="hcm-unit">次/分</span>
             </div>
           </div>
@@ -100,19 +102,21 @@
             <span class="panel-icon-txt" style="color:#60a5fa">🩺</span>
             血压分布
           </h3>
-          <span class="panel-time">本周 · {{ latestBp.sys }}/{{ latestBp.dia }} mmHg</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: bpPeriod === p }" @click="bpPeriod = p">{{ p }}</button>
+          </div>
         </div>
         <div class="hchart-body">
           <div class="hchart-meta-row bp-meta">
             <div class="hchart-meta-item">
               <span class="hcm-label">收缩压</span>
-              <span class="hcm-val" style="color:#ff6b6b">{{ latestBp.sys }}</span>
+              <span class="hcm-val" style="color:#ff6b6b">{{ currentBpStats.sys }}</span>
               <span class="hcm-unit">mmHg</span>
             </div>
             <div class="bp-divider">/</div>
             <div class="hchart-meta-item">
               <span class="hcm-label">舒张压</span>
-              <span class="hcm-val" style="color:#60a5fa">{{ latestBp.dia }}</span>
+              <span class="hcm-val" style="color:#60a5fa">{{ currentBpStats.dia }}</span>
               <span class="hcm-unit">mmHg</span>
             </div>
           </div>
@@ -129,23 +133,25 @@
             <span class="panel-icon-txt" style="color:#60a5fa">🫁</span>
             血氧饱和度
           </h3>
-          <span class="panel-time">24h · 最新 {{ latestSpo2 }}%</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: spo2Period === p }" @click="spo2Period = p">{{ p }}</button>
+          </div>
         </div>
         <div class="hchart-body">
           <div class="hchart-meta-row">
             <div class="hchart-meta-item">
               <span class="hcm-label">当前</span>
-              <span class="hcm-val" style="color:#60a5fa">{{ latestSpo2 }}</span>
+              <span class="hcm-val" style="color:#60a5fa">{{ currentSpo2Stats.current }}</span>
               <span class="hcm-unit">%</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">最低</span>
-              <span class="hcm-val" style="color:#94a3b8">{{ minSpo2 }}</span>
+              <span class="hcm-val" style="color:#94a3b8">{{ currentSpo2Stats.min }}</span>
               <span class="hcm-unit">%</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">状态</span>
-              <span class="hcm-val" :style="{ color: latestSpo2 >= 95 ? '#22c55e' : '#f59e0b' }">{{ latestSpo2 >= 95 ? '正常' : '偏低' }}</span>
+              <span class="hcm-val" :style="{ color: currentSpo2Stats.current >= 95 ? '#22c55e' : '#f59e0b' }">{{ currentSpo2Stats.current >= 95 ? '正常' : '偏低' }}</span>
             </div>
           </div>
           <div ref="spo2ChartRef" class="hchart-area"></div>
@@ -158,23 +164,25 @@
             <span class="panel-icon-txt" style="color:#f97316">🌡</span>
             体温趋势
           </h3>
-          <span class="panel-time">24h · 当前 {{ latestTemp }}°C</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: tempPeriod === p }" @click="tempPeriod = p">{{ p }}</button>
+          </div>
         </div>
         <div class="hchart-body">
           <div class="hchart-meta-row">
             <div class="hchart-meta-item">
               <span class="hcm-label">当前</span>
-              <span class="hcm-val" style="color:#f97316">{{ latestTemp }}</span>
+              <span class="hcm-val" style="color:#f97316">{{ currentTempStats.current }}</span>
               <span class="hcm-unit">°C</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">最低</span>
-              <span class="hcm-val" style="color:#22c55e">{{ minTemp }}</span>
+              <span class="hcm-val" style="color:#22c55e">{{ currentTempStats.min }}</span>
               <span class="hcm-unit">°C</span>
             </div>
             <div class="hchart-meta-item">
               <span class="hcm-label">最高</span>
-              <span class="hcm-val" style="color:#f59e0b">{{ maxTemp }}</span>
+              <span class="hcm-val" style="color:#f59e0b">{{ currentTempStats.max }}</span>
               <span class="hcm-unit">°C</span>
             </div>
           </div>
@@ -191,7 +199,9 @@
             <span class="panel-icon-txt" style="color:#00d4aa">👟</span>
             步数统计
           </h3>
-          <span class="panel-time">近 7 天</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: stepsPeriod === p }" @click="stepsPeriod = p">{{ p }}</button>
+          </div>
         </div>
         <div class="hchart-body">
           <div class="steps-overview-row">
@@ -199,35 +209,35 @@
               <svg viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" class="steps-ring-bg"/>
                 <circle cx="50" cy="50" r="42" class="steps-ring-fill"
-                  :stroke-dasharray="`${Math.min(100,(latestSteps/10000)*100)*264/100} 264`"/>
+                  :stroke-dasharray="`${Math.min(100,(todaySteps/10000)*100)*264/100} 264`"/>
               </svg>
               <div class="steps-ring-inner">
-                <div class="steps-ring-pct">{{ Math.round((latestSteps/10000)*100) }}%</div>
+                <div class="steps-ring-pct">{{ Math.round((todaySteps/10000)*100) }}%</div>
                 <div class="steps-ring-goal">目标 10000</div>
               </div>
             </div>
             <div class="steps-stats-col">
               <div class="steps-stat-row">
                 <span class="ssr-label">今日步数</span>
-                <span class="ssr-val">{{ latestSteps.toLocaleString() }}</span>
+                <span class="ssr-val">{{ todaySteps.toLocaleString() }}</span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">距目标</span>
-                <span class="ssr-val" :style="{ color: latestSteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
-                  {{ latestSteps >= 10000 ? '已达标 ✓' : (10000 - latestSteps).toLocaleString() + ' 步' }}
+                <span class="ssr-val" :style="{ color: todaySteps >= 10000 ? '#00d4aa' : '#f59e0b' }">
+                  {{ todaySteps >= 10000 ? '已达标 ✓' : (10000 - todaySteps).toLocaleString() + ' 步' }}
                 </span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">消耗热量</span>
-                <span class="ssr-val">{{ Math.round(latestSteps * 0.04) }} kcal</span>
+                <span class="ssr-val">{{ Math.round(todaySteps * 0.04) }} kcal</span>
               </div>
               <div class="steps-stat-row">
                 <span class="ssr-label">行走距离</span>
-                <span class="ssr-val">{{ (latestSteps * 0.7 / 1000).toFixed(1) }} km</span>
+                <span class="ssr-val">{{ (todaySteps * 0.7 / 1000).toFixed(1) }} km</span>
               </div>
               <div class="steps-stat-row">
-                <span class="ssr-label">本周合计</span>
-                <span class="ssr-val">{{ (weekTotal / 10000).toFixed(1) }}万步</span>
+                <span class="ssr-label">{{ stepsPeriod === '日' ? '本周合计' : stepsPeriod === '周' ? '本周日均' : '本月日均' }}</span>
+                <span class="ssr-val">{{ currentStepsStats.summary }}</span>
               </div>
             </div>
           </div>
@@ -276,27 +286,71 @@
                   <span class="xs-val">06:48</span>
                 </div>
                 <div class="xs-stat">
-                  <span class="xs-icon">⚡</span>
-                  <span class="xs-label">效率</span>
-                  <span class="xs-val" :style="{ color: sleepEfficiency >= 85 ? '#00d4aa' : '#f59e0b' }">
-                    {{ sleepEfficiency }}%
-                  </span>
+                  <span class="xs-icon">😴</span>
+                  <span class="xs-label">清醒</span>
+                  <span class="xs-val">{{ sleepData.awakeCount }}次</span>
                 </div>
               </div>
             </div>
           </div>
-          <!-- 小米睡眠时间线：夜间分段条 + 小时刻度 -->
+          <!-- 小米睡眠时段柱状图：纵向各时段 -->
           <div class="xmsleep-timeline">
-            <div class="xtl-track">
-              <div class="xtl-seg" v-for="(seg, idx) in sleepTimeline.segments" :key="idx"
-                :style="{ width: seg.pct + '%', background: seg.color }"
-                :title="`${seg.name} ${seg.duration}分钟`">
-              </div>
+            <div class="sleep-bars-header">
+              <div class="sb-bar-spacer"></div>
+              <div class="sb-y-label">60'</div>
+              <div class="sb-y-label">30'</div>
+              <div class="sb-y-label">0'</div>
             </div>
-            <div class="xtl-ticks">
-              <span>23:00</span><span>00:00</span><span>01:00</span>
-              <span>02:00</span><span>03:00</span><span>04:00</span>
-              <span>05:00</span><span>06:00</span><span>06:48</span>
+            <div class="sleep-bars-row">
+              <span class="sb-hour-label">23:00</span>
+              <div class="sb-stacked-bar" title="23:00 睡眠结构">
+                <div class="sb-seg" style="height:8%;background:#fbbf24" title="清醒 3min"></div>
+                <div class="sb-seg" style="height:40%;background:#a78bfa" title="浅睡 12min"></div>
+                <div class="sb-seg" style="height:30%;background:#7c3aed" title="深睡 9min"></div>
+                <div class="sb-seg" style="height:22%;background:#60a5fa" title="REM 7min"></div>
+              </div>
+              <span class="sb-hour-label">00:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:5%;background:#a78bfa" title="浅睡 3min"></div>
+                <div class="sb-seg" style="height:55%;background:#7c3aed" title="深睡 33min"></div>
+                <div class="sb-seg" style="height:40%;background:#a78bfa" title="浅睡 24min"></div>
+              </div>
+              <span class="sb-hour-label">01:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:15%;background:#60a5fa" title="REM 9min"></div>
+                <div class="sb-seg" style="height:55%;background:#a78bfa" title="浅睡 33min"></div>
+                <div class="sb-seg" style="height:30%;background:#7c3aed" title="深睡 18min"></div>
+              </div>
+              <span class="sb-hour-label">02:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:5%;background:#fbbf24" title="清醒 3min"></div>
+                <div class="sb-seg" style="height:60%;background:#7c3aed" title="深睡 36min"></div>
+                <div class="sb-seg" style="height:35%;background:#a78bfa" title="浅睡 21min"></div>
+              </div>
+              <span class="sb-hour-label">03:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:10%;background:#60a5fa" title="REM 6min"></div>
+                <div class="sb-seg" style="height:45%;background:#a78bfa" title="浅睡 27min"></div>
+                <div class="sb-seg" style="height:45%;background:#7c3aed" title="深睡 27min"></div>
+              </div>
+              <span class="sb-hour-label">04:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:50%;background:#a78bfa" title="浅睡 30min"></div>
+                <div class="sb-seg" style="height:50%;background:#7c3aed" title="深睡 30min"></div>
+              </div>
+              <span class="sb-hour-label">05:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:10%;background:#fbbf24" title="清醒 6min"></div>
+                <div class="sb-seg" style="height:35%;background:#60a5fa" title="REM 21min"></div>
+                <div class="sb-seg" style="height:55%;background:#a78bfa" title="浅睡 33min"></div>
+              </div>
+              <span class="sb-hour-label">06:00</span>
+              <div class="sb-stacked-bar">
+                <div class="sb-seg" style="height:8%;background:#a78bfa" title="浅睡 5min"></div>
+                <div class="sb-seg" style="height:30%;background:#60a5fa" title="REM 18min"></div>
+                <div class="sb-seg" style="height:25%;background:#fbbf24" title="清醒 15min(早醒)"></div>
+                <div class="sb-seg" style="height:37%;background:#a78bfa" title="浅睡 22min"></div>
+              </div>
             </div>
             <div class="xtl-legend">
               <div class="xl-item" v-for="s in sleepStages" :key="s.name">
@@ -385,6 +439,79 @@ const filteredTemp = computed(() => {
   return props.tempTrend.slice(0, h + 1)
 })
 
+// ===== 日周月周期状态 =====
+const periods = ['日', '周', '月']
+const heartPeriod = ref('日')
+const bpPeriod = ref('周')
+const spo2Period = ref('日')
+const tempPeriod = ref('日')
+const stepsPeriod = ref('日')
+
+// ===== 各指标日周月统计数据 =====
+const currentHeartStats = computed(() => {
+  if (heartPeriod.value === '日') {
+    const d = filteredHeartRate.value
+    return {
+      avg: d.length ? Math.round(d.reduce((s, v) => s + v.value, 0) / d.length) : 72,
+      min: d.length ? Math.min(...d.map(v => v.value)) : 58,
+      max: d.length ? Math.max(...d.map(v => v.value)) : 88,
+    }
+  }
+  if (heartPeriod.value === '周') {
+    // 模拟周数据：每天一条代表值（取各天平均值）
+    const days = [62, 65, 70, 68, 72, 69, 74]
+    return { avg: 68, min: 55, max: 88 }
+  }
+  // 月
+  return { avg: 70, min: 52, max: 92 }
+})
+
+const currentBpStats = computed(() => {
+  if (bpPeriod.value === '周') {
+    const w = props.bpWeekData
+    return {
+      sys: w.length ? Math.round(w.reduce((s, v) => s + v.sys, 0) / w.length) : 118,
+      dia: w.length ? Math.round(w.reduce((s, v) => s + v.dia, 0) / w.length) : 76,
+    }
+  }
+  if (bpPeriod.value === '日') return { sys: 118, dia: 76 }
+  return { sys: 120, dia: 77 }
+})
+
+const currentSpo2Stats = computed(() => {
+  const d = filteredSpo2.value
+  const cur = d.length ? d[d.length - 1].value : 98
+  const mn = d.length ? Math.min(...d.map(v => v.value)) : 96
+  return { current: cur, min: mn }
+})
+
+const currentTempStats = computed(() => {
+  const d = filteredTemp.value
+  return {
+    current: d.length ? parseFloat(d[d.length - 1].value.toFixed(1)) : 36.5,
+    min: d.length ? parseFloat(Math.min(...d.map(v => v.value)).toFixed(1)) : 36.1,
+    max: d.length ? parseFloat(Math.max(...d.map(v => v.value)).toFixed(1)) : 36.8,
+  }
+})
+
+// 今日步数 = stepsTrend 最后一天
+const todaySteps = computed(() => {
+  if (!props.stepsTrend || props.stepsTrend.length === 0) return 0
+  return Math.round(props.stepsTrend[props.stepsTrend.length - 1].value)
+})
+const currentStepsStats = computed(() => {
+  const arr = props.stepsTrend || []
+  if (stepsPeriod.value === '日') {
+    return { summary: (arr.reduce((s, v) => s + v.value, 0) / 10000).toFixed(1) + '万步' }
+  }
+  if (stepsPeriod.value === '周') {
+    const avg = arr.length ? Math.round(arr.reduce((s, v) => s + v.value, 0) / arr.length) : 0
+    return { summary: avg.toLocaleString() + ' 步/天' }
+  }
+  // 月：模拟 30 天日均
+  return { summary: '8,234 步/天' }
+})
+
 // Chart refs
 const heartChartRef = ref(null)
 const bpChartRef = ref(null)
@@ -432,59 +559,55 @@ const minTemp = computed(() => filteredTemp.value.length ? Math.min(...filteredT
 const maxTemp = computed(() => filteredTemp.value.length ? Math.max(...filteredTemp.value.map(v => v.value)) : 36.8)
 
 const sleepStages = computed(() => {
-  const { deep, light, rem, awake } = props.sleepData
-  const total = deep + light + rem + awake
+  const { deep, light, rem, awakeMin } = props.sleepData
+  const total = deep + light + rem + awakeMin
   return [
     { name: '深睡', h: (deep / 60).toFixed(1), pct: Math.round(deep / total * 100), color: '#7c3aed' },
     { name: '浅睡', h: (light / 60).toFixed(1), pct: Math.round(light / total * 100), color: '#a78bfa' },
     { name: 'REM', h: (rem / 60).toFixed(1), pct: Math.round(rem / total * 100), color: '#60a5fa' },
-    { name: '清醒', h: (awake / 60).toFixed(1), pct: Math.round(awake / total * 100), color: '#fbbf24' },
+    { name: '清醒', h: (awakeMin / 60).toFixed(1), pct: Math.round(awakeMin / total * 100), color: '#fbbf24' },
   ]
 })
 
-const sleepEfficiency = computed(() => {
-  const { deep, light, rem, awake } = props.sleepData
-  const total = deep + light + rem + awake
-  return total > 0 ? Math.round((total - awake) / total * 100) : 0
-})
-
-// 睡眠时间轴：模拟从23:00到06:48的睡眠结构
+// 睡眠时间轴：按真实睡眠结构排列的夜间时段
 const sleepTimeline = computed(() => {
-  const { deep, light, rem, awake } = props.sleepData
-  const totalMin = deep + light + rem + awake
-  // 按真实睡眠顺序排列的片段
-  const segments = [
-    { name: '清醒', duration: awake, color: '#fbbf24' },
-    { name: '浅睡', duration: Math.round(light * 0.4), color: '#a78bfa' },
-    { name: '深睡', duration: Math.round(deep * 0.5), color: '#7c3aed' },
-    { name: '浅睡', duration: Math.round(light * 0.2), color: '#a78bfa' },
-    { name: 'REM', duration: Math.round(rem * 0.5), color: '#60a5fa' },
-    { name: '深睡', duration: Math.round(deep * 0.5), color: '#7c3aed' },
-    { name: '浅睡', duration: Math.round(light * 0.4), color: '#a78bfa' },
-    { name: 'REM', duration: Math.round(rem * 0.5), color: '#60a5fa' },
-    { name: '清醒', duration: Math.round(awake * 0.3), color: '#fbbf24' },
+  const { deep, light, rem, awakeMin, awakeCount } = props.sleepData
+  // 典型睡眠结构：入睡→N2(浅睡)→N3(深睡)→N2→REM→N2→N3→N2→REM→清醒
+  // 每段大约占总睡眠时间的比例
+  const segs = [
+    { name: '清醒',   duration: Math.round(awakeMin * 0.2), color: '#fbbf24' }, // 入睡困难
+    { name: '浅睡',   duration: Math.round(light * 0.25),   color: '#a78bfa' }, // 入睡期
+    { name: '深睡',   duration: Math.round(deep * 0.4),      color: '#7c3aed' }, // 核心深睡
+    { name: '浅睡',   duration: Math.round(light * 0.25),   color: '#a78bfa' }, // 中间过渡
+    { name: 'REM',    duration: Math.round(rem * 0.5),      color: '#60a5fa' }, // 第一段REM
+    { name: '浅睡',   duration: Math.round(light * 0.3),    color: '#a78bfa' }, // 周期间浅睡
+    { name: '深睡',   duration: Math.round(deep * 0.6),      color: '#7c3aed' }, // 后半夜深睡更长
+    { name: '浅睡',   duration: Math.round(light * 0.2),    color: '#a78bfa' },
+    { name: 'REM',    duration: Math.round(rem * 0.5),      color: '#60a5fa' }, // 后段REM
+    { name: '清醒',   duration: Math.round(awakeMin * 0.8), color: '#fbbf24' }, // 早醒
   ]
+  const totalMin = deep + light + rem + awakeMin
   return {
     start: '23:00',
     end: '06:48',
-    segments: segments.map(s => ({
+    segments: segs.map(s => ({
       ...s,
-      pct: totalMin > 0 ? Math.max(2, (s.duration / totalMin) * 100) : 0
+      pct: totalMin > 0 ? Math.max(1.5, (s.duration / totalMin) * 100) : 0
     }))
   }
 })
 
-// 睡眠分析指标（带 pct 用于进度条）
+// 睡眠分析指标（小米健康风格：时长+状态）
 const sleepMetrics = computed(() => {
-  const { deep, light, rem, awake, score } = props.sleepData
-  const totalMin = deep + light + rem + awake
-  const deepPct = totalMin > 0 ? Math.round(deep / totalMin * 100) : 0
-  const remPct = totalMin > 0 ? Math.round(rem / totalMin * 100) : 0
+  const { deep, light, rem, awakeMin, awakeCount } = props.sleepData
+  const total = deep + light + rem + awakeMin
+  const deepPct = total > 0 ? Math.round(deep / total * 100) : 0
+  const remPct = total > 0 ? Math.round(rem / total * 100) : 0
   return [
-    { icon: '💤', label: '深睡时长', value: Math.round(deep / 60 * 10) / 10 + 'h', pct: deepPct * 2, color: '#7c3aed' },
-    { icon: '🌙', label: '浅睡时长', value: Math.round(light / 60 * 10) / 10 + 'h', pct: Math.round(light / totalMin * 100) * 2, color: '#a78bfa' },
-    { icon: '🧠', label: 'REM时长', value: Math.round(rem / 60 * 10) / 10 + 'h', pct: remPct * 2, color: '#60a5fa' },
-    { icon: '😴', label: '清醒次数', value: awake + '次', pct: Math.min(100, awake * 10), color: '#fbbf24' },
+    { icon: '💤', label: '深睡时长', value: (deep / 60).toFixed(1) + 'h', color: '#7c3aed' },
+    { icon: '🌙', label: '浅睡时长', value: (light / 60).toFixed(1) + 'h', color: '#a78bfa' },
+    { icon: '🧠', label: 'REM时长', value: (rem / 60).toFixed(1) + 'h', color: '#60a5fa' },
+    { icon: '⏱️', label: '清醒次数', value: awakeCount + '次', color: '#fbbf24' },
   ]
 })
 
@@ -513,7 +636,7 @@ const healthTips = computed(() => [
   },
   {
     icon: '😴', title: '睡眠建议',
-    desc: props.sleepData.score >= 85 ? '近期睡眠质量良好，建议保持 22:30 前入睡' : '睡眠效率偏低，建议睡前减少电子设备使用',
+    desc: props.sleepData.score >= 85 ? '近期睡眠质量良好，建议保持 22:30 前入睡' : '睡眠质量偏低，建议睡前减少电子设备使用',
     tag: props.sleepData.score >= 85 ? '状态好' : '需改善', color: '#9B59B6'
   },
   {
@@ -544,12 +667,107 @@ const axisStyle = {
 }
 const gridBase = { left: '3%', right: '4%', top: '8%', bottom: '8%', containLabel: true }
 
+// 获取各周期图表数据
+function getChartData(period, type) {
+  if (type === 'heart') {
+    if (period === '日') return { data: filteredHeartRate.value, xKey: 'time', yKey: 'value' }
+    if (period === '周') return {
+      data: [
+        { time: '周一', value: 68 }, { time: '周二', value: 72 }, { time: '周三', value: 65 },
+        { time: '周四', value: 70 }, { time: '周五', value: 73 }, { time: '周六', value: 69 },
+        { time: '周日', value: 71 }
+      ],
+      xKey: 'time', yKey: 'value'
+    }
+    return {
+      data: Array.from({ length: 30 }, (_, i) => ({ time: i + 1 + '日', value: 62 + Math.round(Math.random() * 12) })),
+      xKey: 'time', yKey: 'value'
+    }
+  }
+  if (type === 'spo2') {
+    if (period === '日') return { data: filteredSpo2.value, xKey: 'time', yKey: 'value' }
+    if (period === '周') return {
+      data: Array.from({ length: 7 }, (_, i) => ({ time: ['一','二','三','四','五','六','日'][i], value: 96 + Math.round(Math.random() * 3) })),
+      xKey: 'time', yKey: 'value'
+    }
+    return {
+      data: Array.from({ length: 30 }, (_, i) => ({ time: i + 1 + '日', value: 95 + Math.round(Math.random() * 4) })),
+      xKey: 'time', yKey: 'value'
+    }
+  }
+  if (type === 'temp') {
+    if (period === '日') return { data: filteredTemp.value, xKey: 'time', yKey: 'value' }
+    if (period === '周') return {
+      data: ['一','二','三','四','五','六','日'].map((d, i) => ({ time: d, value: (36.2 + Math.random() * 0.5).toFixed(1) })),
+      xKey: 'time', yKey: 'value'
+    }
+    return {
+      data: Array.from({ length: 30 }, (_, i) => ({ time: i + 1 + '日', value: (36.1 + Math.random() * 0.6).toFixed(1) })),
+      xKey: 'time', yKey: 'value'
+    }
+  }
+  return { data: [], xKey: 'time', yKey: 'value' }
+}
+
+function updateHeartChart() {
+  if (!heartChart) return
+  const { data, xKey, yKey } = getChartData(heartPeriod.value, 'heart')
+  heartChart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+}
+function updateSpo2Chart() {
+  if (!spo2Chart) return
+  const { data, xKey, yKey } = getChartData(spo2Period.value, 'spo2')
+  spo2Chart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+}
+function updateTempChart() {
+  if (!tempChart) return
+  const { data, xKey, yKey } = getChartData(tempPeriod.value, 'temp')
+  tempChart.setOption({ xAxis: { data: data.map(v => v[xKey]) }, series: [{ data: data.map(v => v[yKey]) }] })
+}
+
+function updateBpChart() {
+  if (!bpChart) return
+  const d = getBpChartData(bpPeriod.value)
+  bpChart.setOption({
+    xAxis: { data: d.labels },
+    series: [
+      { data: d.sysData },
+      { data: d.diaData }
+    ]
+  })
+}
+
+function updateStepsChart() {
+  if (!stepsChart) return
+  const period = stepsPeriod.value
+  if (period === '日') {
+    // 显示7天数据，今天高亮
+    stepsChart.setOption({
+      xAxis: { data: props.stepsTrend.map(v => v.day) },
+      series: [{ data: props.stepsTrend.map(v => v.value) }]
+    })
+  } else if (period === '周') {
+    stepsChart.setOption({
+      xAxis: { data: props.stepsTrend.map(v => v.day) },
+      series: [{ data: props.stepsTrend.map(v => v.value) }]
+    })
+  } else {
+    // 月：补满30天
+    const full = [...props.stepsTrend]
+    while (full.length < 30) full.push({ day: '·', value: 0 })
+    stepsChart.setOption({
+      xAxis: { data: full.map((v, i) => i + 1 + '日') },
+      series: [{ data: full.map(v => v.value || (5000 + Math.round(Math.random() * 5000))) }]
+    })
+  }
+}
+
 function initHeartChart() {
   if (!heartChartRef.value) return
   heartChart = ec.init(heartChartRef.value)
-  const data = filteredHeartRate.value
-  const times = data.map(v => v.time)
-  const vals = data.map(v => v.value)
+  const { data, xKey, yKey } = getChartData(heartPeriod.value, 'heart')
+  const times = data.map(v => v[xKey])
+  const vals = data.map(v => v[yKey])
   heartChart.setOption({
     backgroundColor: chartBg,
     tooltip: { ...tooltipCfg },
@@ -587,15 +805,42 @@ function initHeartChart() {
   })
 }
 
+function getBpChartData(period) {
+  if (period === '日') {
+    return {
+      labels: ['收缩压', '舒张压'],
+      sysData: [118],
+      diaData: [76],
+    }
+  }
+  if (period === '周') {
+    const days = ['一', '二', '三', '四', '五', '六', '日']
+    return {
+      labels: days.map(d => '周' + d),
+      sysData: props.bpWeekData.map(v => v.sys),
+      diaData: props.bpWeekData.map(v => v.dia),
+    }
+  }
+  // 月
+  return {
+    labels: Array.from({ length: 30 }, (_, i) => i + 1 + '日'),
+    sysData: Array.from({ length: 30 }, () => 112 + Math.round(Math.random() * 14)),
+    diaData: Array.from({ length: 30 }, () => 72 + Math.round(Math.random() * 12)),
+  }
+}
+
 function initBpChart() {
   if (!bpChartRef.value) return
   bpChart = ec.init(bpChartRef.value)
-  const days = ['一', '二', '三', '四', '五', '六', '日']
+  const d = getBpChartData(bpPeriod.value)
   bpChart.setOption({
     backgroundColor: chartBg,
     tooltip: {
       ...tooltipCfg,
-      formatter: (p) => `周${days[p.axisIndex]}<br/><span style="color:#ff6b6b">收缩压 ${props.bpWeekData[p.axisIndex]?.sys ?? '-'} mmHg</span><br/><span style="color:#60a5fa">舒张压 ${props.bpWeekData[p.axisIndex]?.dia ?? '-'} mmHg</span>`
+      formatter: (p) => {
+        const d = getBpChartData(bpPeriod.value)
+        return `${d.labels[p.axisIndex]}<br/><span style="color:#ff6b6b">收缩压 ${d.sysData[p.axisIndex]} mmHg</span><br/><span style="color:#60a5fa">舒张压 ${d.diaData[p.axisIndex]} mmHg</span>`
+      }
     },
     grid: { ...gridBase },
     legend: {
@@ -604,18 +849,18 @@ function initBpChart() {
       textStyle: { color: '#94a3b8', fontSize: 11 },
       itemWidth: 12, itemHeight: 8
     },
-    xAxis: { type: 'category', data: days.map(d => '周' + d), ...axisStyle },
+    xAxis: { type: 'category', data: d.labels, ...axisStyle },
     yAxis: { type: 'value', min: 60, max: 160, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, ...axisStyle },
     series: [
       {
-        name: '收缩压', data: props.bpWeekData.map(v => v.sys), type: 'bar', barWidth: '35%',
+        name: '收缩压', data: d.sysData, type: 'bar', barWidth: '35%',
         itemStyle: {
           color: new ec.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#ff6b6b' }, { offset: 1, color: 'rgba(255,107,107,0.3)' }]),
           borderRadius: [4, 4, 0, 0]
         }
       },
       {
-        name: '舒张压', data: props.bpWeekData.map(v => v.dia), type: 'bar', barWidth: '35%',
+        name: '舒张压', data: d.diaData, type: 'bar', barWidth: '35%',
         itemStyle: {
           color: new ec.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#60a5fa' }, { offset: 1, color: 'rgba(96,165,250,0.3)' }]),
           borderRadius: [4, 4, 0, 0]
@@ -628,9 +873,9 @@ function initBpChart() {
 function initSpo2Chart() {
   if (!spo2ChartRef.value) return
   spo2Chart = ec.init(spo2ChartRef.value)
-  const data = filteredSpo2.value
-  const times = data.map(v => v.time)
-  const vals = data.map(v => v.value)
+  const { data, xKey, yKey } = getChartData(spo2Period.value, 'spo2')
+  const times = data.map(v => v[xKey])
+  const vals = data.map(v => v[yKey])
   spo2Chart.setOption({
     backgroundColor: chartBg,
     tooltip: { ...tooltipCfg },
@@ -659,9 +904,9 @@ function initSpo2Chart() {
 function initTempChart() {
   if (!tempChartRef.value) return
   tempChart = ec.init(tempChartRef.value)
-  const data = filteredTemp.value
-  const times = data.map(v => v.time)
-  const vals = data.map(v => v.value)
+  const { data, xKey, yKey } = getChartData(tempPeriod.value, 'temp')
+  const times = data.map(v => v[xKey])
+  const vals = data.map(v => v[yKey])
   tempChart.setOption({
     backgroundColor: chartBg,
     tooltip: {
@@ -789,6 +1034,13 @@ watch(() => props.stepsTrend, () => {
     series: [{ data: props.stepsTrend.map(v => v.value) }]
   })
 }, { deep: true })
+
+// 周期切换 → 重新渲染图表
+watch(heartPeriod, () => { nextTick(() => updateHeartChart()) })
+watch(bpPeriod, () => { nextTick(() => updateBpChart()) })
+watch(spo2Period, () => { nextTick(() => updateSpo2Chart()) })
+watch(tempPeriod, () => { nextTick(() => updateTempChart()) })
+watch(stepsPeriod, () => { nextTick(() => updateStepsChart()) })
 
 onMounted(() => {
   window.addEventListener('resize', resizeCharts)
@@ -1086,11 +1338,44 @@ onMounted(() => {
 .panel-icon-txt { font-size: 16px; }
 .panel-time { font-size: 11px; color: var(--text-3); }
 
+/* ===== 周期切换标签 ===== */
+.panel-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.period-tabs { display: flex; gap: 4px; }
+.ptab {
+  padding: 3px 10px; font-size: 11px; font-weight: 600;
+  background: transparent; border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-3); border-radius: 20px; cursor: pointer;
+  transition: all 0.2s;
+}
+.ptab:hover { color: var(--text-2); border-color: rgba(255,255,255,0.2); }
+.ptab.active { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #818cf8; }
+
+/* ===== 睡眠时段纵向柱状图 ===== */
+.sleep-bars-header {
+  display: grid; grid-template-columns: 36px 1fr; align-items: end;
+  margin-bottom: 2px;
+}
+.sb-bar-spacer { grid-column: 1; }
+.sb-y-labels { display: flex; flex-direction: column; justify-content: space-between; height: 80px; grid-row: 1; grid-column: 1; padding-right: 4px; }
+.sb-y-label { font-size: 9px; color: var(--text-3); font-family: var(--font-mono); text-align: right; }
+.sleep-bars-row {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 80px; overflow-x: auto; scrollbar-width: none;
+}
+.sb-hour-label { font-size: 9px; color: var(--text-3); font-family: var(--font-mono); flex-shrink: 0; }
+.sb-stacked-bar {
+  display: flex; flex-direction: column-reverse;
+  width: 14px; height: 80px; border-radius: 3px 3px 0 0; overflow: hidden;
+  flex-shrink: 0; gap: 1px;
+}
+.sb-seg { width: 100%; transition: height 0.3s ease; flex-shrink: 0; }
+.sb-seg:hover { filter: brightness(1.3); }
+
 /* ===== 响应式 ===== */
 @media (max-width: 1100px) {
   .health-metrics-grid { grid-template-columns: repeat(3, 1fr); }
   .health-charts-row { grid-template-columns: 1fr; }
-  .sleep-analysis { grid-template-columns: 1fr 1fr; }
+  .xmsleep-metrics { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
   .health-metrics-grid { grid-template-columns: 1fr 1fr; }
