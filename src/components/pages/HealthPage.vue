@@ -490,12 +490,22 @@ const todaySteps = computed(() => {
 })
 const currentStepsStats = computed(() => {
   const arr = props.stepsTrend || []
-  if (stepsPeriod.value === '日') return { summary: arr.reduce((s, v) => s + v.value, 0).toLocaleString() + ' 步' }
+  if (stepsPeriod.value === '日') {
+    // 日平均：今日总步数 / 有数据的小时段数
+    const today = arr.length ? arr[arr.length - 1] : null
+    const hourData = today?.hourData || []
+    const totalSteps = today?.value || 0
+    const avg = hourData.length ? Math.round(totalSteps / hourData.length) : 0
+    return { summary: avg.toLocaleString() + ' 步/时段' }
+  }
   if (stepsPeriod.value === '周') {
+    // 周平均：7天总步数 / 7
     const avg = arr.length ? Math.round(arr.reduce((s, v) => s + v.value, 0) / arr.length) : 0
     return { summary: avg.toLocaleString() + ' steps/day' }
   }
-  return { summary: '8,234 steps/day' }
+  // 月平均：30天总步数 / 30
+  const monthAvg = Math.round(STEPS_MONTH_FIXED.reduce((s, v) => s + v, 0) / STEPS_MONTH_FIXED.length)
+  return { summary: monthAvg.toLocaleString() + ' steps/day' }
 })
 
 // ===== 睡眠阶段数据 =====
@@ -694,7 +704,11 @@ function getTempData(period) {
 }
 // 步数：周/月数据固定（不随实时更新变化）
 const STEPS_WEEK_FIXED = [7234, 8156, 6890, 9032, 7521, 10234, 6543]
-const STEPS_MONTH_FIXED = [12,11,10,8,9,13,11,10,8,7,9,12,10,9,8,10,12,11,9,8,10,12,11,10,9,8,7,10,12,11].map(v => v * 100)
+// 月数据：基于目标值（默认10000）的 ±10% 生成，只生成一次
+const STEPS_MONTH_FIXED = (() => {
+  const baseTarget = 10000
+  return Array.from({ length: 30 }, () => Math.round(baseTarget * (0.9 + Math.random() * 0.2)))
+})()
 function getStepsData(period) {
   if (period === '日') {
     const today = props.stepsTrend?.length ? props.stepsTrend[props.stepsTrend.length - 1] : null

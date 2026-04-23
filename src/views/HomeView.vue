@@ -656,7 +656,7 @@ function mountCanvas(targetPage) {
 
 const currentTime = ref('')
 const currentDate = ref('')
-let timeTimer, envTimer, healthTimer, energyTimer
+let timeTimer, envTimer, healthTimer, energyTimer, stepsTimer
 function updateTime() {
   const n = new Date()
   currentTime.value = n.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -1433,19 +1433,163 @@ const stepsTrendData = ref([
   { day: '周四', value: 7896 },
   { day: '周五', value: 11230 },
   { day: '周六', value: 9876 },
-  { day: '周日', value: 8547,
-    hourData: (() => {
-      const now = new Date().getHours()
-      const start = 8 // 从8点开始计步
-      const vals = [1234, 2105, 1876, 956, 543, 1543, 1023, 810, 654, 432, 321, 210, 156, 98, 65, 43]
-      const arr = []
-      for (let h = start; h <= now; h++) {
-        arr.push({ hour: String(h).padStart(2, '0') + ':00', value: vals[h - start] || Math.round(Math.random() * 500) })
-      }
-      return arr
-    })()
-  },
+  { day: '周日', value: 8547, hourData: [] },
 ])
+
+// ========== 步数实时模拟系统 ==========
+// 目标: 每日 9000~11000 步(目标90%-110%)，小时分布合理，20点前落后则追赶，到达目标后缓慢增长
+
+const STEP_TARGET_BASE = 10000   // 基础目标
+const STEP_TARGET_MIN  = 9000    // 90%
+const STEP_TARGET_MAX  = 11000   // 110%
+
+// 合理的小时分布比例（从8:00开始，24小时归一化，和=1）
+// 早高峰通勤、中午/下午低、傍晚高、晚间递减
+const STEP_HOUR_WEIGHTS = [
+  0, 0, 0, 0, 0, 0, 0, 0,    // 0-7点: 0（睡眠/未开始）
+  0.12,                       // 8点  早高峰通勤
+  0.07, 0.06, 0.05,           // 9-11 工作时段
+  0.06, 0.05,                 // 12-13 午休
+  0.05, 0.05, 0.05, 0.05,    // 14-17 下午
+  0.08,                       // 18点 傍晚
+  0.12,                       // 19点 晚饭后高峰
+  0.10,                       // 20点 晚间散步
+  0.06, 0.05, 0.04,           // 21-23 递减
+]
+
+// 每天的步数模拟状态（持久化，不随 Vue 响应式）
+const stepsSim = {
+  dailyTarget: STEP_TARGET_BASE,       // 今日目标
+  accumulated: 0,                       // 累计步数（今日已走）
+  catchUpMode: false,                  // 是否处于追赶模式
+  lastHour: -1,                        // 上次模拟的小时（用于整点重置）
+}
+
+function initStepsSimulation() {
+  const now = new Date()
+  const hour = now.getHours()
+  const minute = now.getMinutes()
+
+  // 每日目标：基础值 ±10% 随机 (9000~11000)
+  stepsSim.dailyTarget = Math.round(STEP_TARGET_BASE * (0.9 + Math.random() * 0.2))
+  stepsSim.catchUpMode = false
+  stepsSim.lastHour = hour
+
+  // 计算当前时间应该已经完成的步数（按小时分布累加）
+  const totalHourWeight = STEP_HOUR_WEIGHTS.slice(8, 24).reduce((a, b) => a + b, 0)
+  let expectedSteps = 0
+  const hourData = []
+
+  // 生成 8:00 到当前小时的完整 hourData（存储每个时段的步数增量）
+  for (let h = 8; h <= hour; h++) {
+    const weight = STEP_HOUR_WEIGHTS[h] || 0
+    const hourTarget = stepsSim.dailyTarget * (weight / totalHourWeight)
+    // 已过去的小时：完整步数；当前小时：按分钟比例
+    const isCurrentHour = h === hour
+    const fraction = isCurrentHour ? (minute / 60) : 1
+    
+    // 计算该时段的目标步数（基于小时权重和比例）
+    const targetHourSteps = Math.round(hourTarget * fraction)
+    // 添加小随机波动（±15%），但保证至少为0
+    const randomFactor = 0.85 + Math.random() * 0.3 // 0.85 ~ 1.15
+    const hourIncrement = Math.max(0, Math.round(targetHourSteps * randomFactor))
+    
+    expectedSteps += hourIncrement
+    
+    // 每个整点记录时段增量
+    hourData.push({ hour: String(h).padStart(2, '0') + ':00', value: hourIncrement })
+  }
+
+  stepsSim.accumulated = expectedSteps
+
+  // 判断是否处于追赶模式（当前步数 < 期望的 90% 且未到 20 点）
+  const idealProgress = stepsSim.dailyTarget * (STEP_HOUR_WEIGHTS.slice(0, hour + 1).reduce((a, b) => a + b, 0))
+  stepsSim.catchUpMode = hour < 20 && expectedSteps < idealProgress * 0.9
+
+  // 初始化 healthItems 步数
+  const stepsItem = healthItems.value[5]
+  stepsItem.raw = expectedSteps
+  stepsItem.value = expectedSteps.toLocaleString() + '步'
+  stepsItem.pct = Math.min(100, Math.round((expectedSteps / 10000) * 100))
+  stepsItem.trend = 0
+
+  // 初始化 stepsTrendData 今天的值和 hourData
+  const stepsIdx = stepsTrendData.value.length - 1
+  stepsTrendData.value = stepsTrendData.value.map((item, i) =>
+    i === stepsIdx ? { ...item, value: expectedSteps, hourData: [...hourData] } : item
+  )
+}
+
+function simulateStepsPerTick() {
+  const now = new Date()
+  const hour = now.getHours()
+  const minute = now.getMinutes()
+  const second = now.getSeconds()
+
+  // 每小时整点检查是否需要重置追赶状态
+  if (minute === 0 && hour !== stepsSim.lastHour) {
+    stepsSim.lastHour = hour
+    // 每小时开始时重新判断是否需要追赶
+    const expected = stepsSim.dailyTarget * (STEP_HOUR_WEIGHTS.slice(0, hour + 1).reduce((a, b) => a + b, 0))
+    const behind = stepsSim.accumulated < expected * 0.95 // 落后超过5%则追赶
+    stepsSim.catchUpMode = hour < 20 && behind && stepsSim.accumulated < stepsSim.dailyTarget
+  }
+
+  const totalHourWeight = STEP_HOUR_WEIGHTS.slice(8, 24).reduce((a, b) => a + b, 0)
+  const currentHourWeight = STEP_HOUR_WEIGHTS[hour] || 0
+
+  // 计算本小时应该有的步数（4秒一次，一小时900个tick）
+  const hourTarget = stepsSim.dailyTarget * (currentHourWeight / totalHourWeight)
+  const ticksPerHour = 900 // 3600秒 / 4秒 = 900 ticks
+
+  // 基准步数（按小时分布的自然步数，每4秒一次）
+  let addSteps = Math.max(0, Math.round(currentHourWeight > 0
+    ? (hourTarget / ticksPerHour) * (0.85 + Math.random() * 0.3)
+    : 0))
+
+  // 追赶模式：加速追赶
+  if (stepsSim.catchUpMode) {
+    const deficit = stepsSim.dailyTarget * 0.9 - stepsSim.accumulated
+    const remainingTicks = ((20 - hour) * 60 - minute) * 15 - Math.floor(second / 4) // 剩余4秒tick数
+    if (deficit > 0 && remainingTicks > 0) {
+      addSteps += Math.max(0, Math.round(deficit / remainingTicks * 1.5))
+    }
+  }
+
+  // 达到目标后：极缓慢增长（每4秒 0-1 步）
+  if (!stepsSim.catchUpMode && stepsSim.accumulated >= stepsSim.dailyTarget * 0.9) {
+    addSteps = Math.random() > 0.7 ? 1 : 0 // 30%概率增加1步
+  }
+
+  // 封顶：最多不超过目标的 120%
+  const prevAccumulated = stepsSim.accumulated
+  stepsSim.accumulated = Math.min(Math.round(stepsSim.dailyTarget * 1.2), stepsSim.accumulated + addSteps)
+  const actualAddSteps = stepsSim.accumulated - prevAccumulated
+
+  // 更新 healthItems[5]（步数卡片指标）
+  const stepsItem = healthItems.value[5]
+  stepsItem.raw = stepsSim.accumulated
+  stepsItem.value = stepsSim.accumulated.toLocaleString() + '步'
+  stepsItem.pct = Math.min(100, Math.round((stepsSim.accumulated / 10000) * 100))
+  stepsItem.trend = actualAddSteps
+
+  // 更新当前小时的 hourData（存储时段增量，而非累计值）
+  const hourLabel = String(hour).padStart(2, '0') + ':00'
+  const today = stepsTrendData.value[stepsTrendData.value.length - 1]
+  const existingHourIdx = today.hourData.findIndex(h => h.hour === hourLabel)
+  if (existingHourIdx >= 0) {
+    // 累加到当前时段
+    today.hourData[existingHourIdx].value += actualAddSteps
+  } else {
+    today.hourData.push({ hour: hourLabel, value: actualAddSteps })
+  }
+
+  // 同步更新 stepsTrendData 最后一项的总 value
+  const stepsIdx = stepsTrendData.value.length - 1
+  stepsTrendData.value = stepsTrendData.value.map((item, i) =>
+    i === stepsIdx ? { ...item, value: stepsSim.accumulated, hourData: [...today.hourData] } : item
+  )
+}
 
 // 睡眠数据
 const sleepData = ref({
@@ -2221,6 +2365,10 @@ onMounted(() => {
   nextTick(() => mountCanvas('env'))
   window.addEventListener('resize', () => { lineChart?.resize(); pieChart?.resize(); waterChart?.resize(); gasChart?.resize(); waterPieChart?.resize(); gasPieChart?.resize() })
 
+  // 初始化步数模拟系统（每日目标90%-110%，追赶机制，合理小时分布）
+  initStepsSimulation()
+  stepsTimer = setInterval(() => simulateStepsPerTick(), 4000) // 每4秒更新一次步数
+
   // 环境数据实时模拟：每 3 秒波动一次
   envTimer = setInterval(() => {
     const { alerts } = homeStore.simulateEnvData(1)
@@ -2271,27 +2419,11 @@ onMounted(() => {
     items[3].trend = items[3].raw - _prevSpo2
     _prevSpo2 = items[3].raw
 
-    // 步数：每次加1-3步，模拟行走（每4秒）
-    items[5].raw = Math.min(15000, items[5].raw + Math.floor(Math.random() * 3) + 1)
-    items[5].value = items[5].raw + '步'
-    items[5].pct = Math.min(100, Math.round((items[5].raw / 10000) * 100))
-
-    // 心率趋势数据：更新当前时段的数据点
-    const hrIdx = Math.min(hour, heartRateData.value.length - 1)
-    heartRateData.value[hrIdx].value = Math.max(50, Math.min(100, items[0].raw + Math.round((Math.random() - 0.5) * 4)))
-    heartRateData.value[hrIdx].time = String(hour).padStart(2, '0') + ':00'
-
-    // 血氧趋势：更新当前时段
-    const spo2Idx = Math.min(hour, spo2TrendData.value.length - 1)
-    spo2TrendData.value[spo2Idx].value = Math.max(92, Math.min(100, items[3].raw))
-
-    // 体温趋势：更新当前时段
-    const tempIdx = Math.min(hour, temperatureTrendData.value.length - 1)
-    temperatureTrendData.value[tempIdx].value = items[2].raw
-
-    // 步数趋势：更新当天（最后一项）
+    // 步数趋势：整体替换数组触发响应式更新（步数由 stepsTimer 统一管理）
     const stepsIdx = stepsTrendData.value.length - 1
-    stepsTrendData.value[stepsIdx].value = items[5].raw
+    stepsTrendData.value = stepsTrendData.value.map((item, i) =>
+      i === stepsIdx ? { ...item, value: stepsSim.accumulated } : item
+    )
   }, 4000)
 
   // 能源排行实时模拟：每 8 秒微调一次（排行现在是computed，基于chartData自动计算，这里只需更新饼图数据）
@@ -2426,6 +2558,7 @@ onUnmounted(() => {
   clearInterval(envTimer)
   clearInterval(healthTimer)
   clearInterval(energyTimer)
+  clearInterval(stepsTimer)
   lineChart?.dispose()
   pieChart?.dispose()
   waterChart?.dispose()
