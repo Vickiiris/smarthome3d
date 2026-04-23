@@ -228,11 +228,11 @@
     <!-- 第六行：设备能耗排行 + 环保贡献 -->
     <div class="energy-bottom-row">
       <div class="panel-card rank-card">
-        <div class="panel-header"><h3 class="panel-title">能耗排行</h3><span>用电/用水/燃气</span></div>
-        <div class="rank-tabs">
-          <button class="rank-tab" :class="{ active: rankTab === 'electric' }" @click="$emit('update:rankTab', 'electric')">用电</button>
-          <button class="rank-tab" :class="{ active: rankTab === 'water' }" @click="$emit('update:rankTab', 'water')">用水</button>
-          <button class="rank-tab" :class="{ active: rankTab === 'gas' }" @click="$emit('update:rankTab', 'gas')">燃气</button>
+        <div class="panel-header">
+          <h3 class="panel-title">能耗排行</h3>
+          <div class="period-tabs">
+            <button v-for="t in rankTabs" :key="t.key" class="ptab" :class="{ active: rankTab === t.key }" @click="$emit('update:rankTab', t.key)">{{ t.label }}</button>
+          </div>
         </div>
         <div class="rank-list">
           <div v-for="(item, i) in currentRankList" :key="item.name" class="rank-item" @click="$emit('openEnergyDetail', rankTab + '-rank', item)">
@@ -342,6 +342,11 @@ const props = defineProps({
 })
 
 const periods = ['日', '周', '月']
+const rankTabs = [
+  { key: 'electric', label: '用电' },
+  { key: 'water', label: '用水' },
+  { key: 'gas', label: '燃气' }
+]
 
 defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
 
@@ -390,4 +395,7 @@ const totalMonthCost = computed(() => {
 .ptab { padding: 3px 10px; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-3); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
 .ptab:hover { color: var(--text-2); border-color: rgba(255,255,255,0.2); }
 .ptab.active { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #818cf8; }
+
+/* 图表高度 - 参考健康监测页面 */
+.chart-box { width: 100%; height: 160px; }
 </style>

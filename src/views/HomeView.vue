@@ -2882,28 +2882,15 @@ onUnmounted(() => {
   gap: 16px;
 }
 .rank-card { flex: 1; }
-.rank-tabs {
+.rank-card .panel-header {
   display: flex;
-  gap: 8px;
-  padding: 0 16px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.rank-tab {
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-3);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.rank-tab.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  align-items: center;
+  justify-content: space-between;
 }
 .rank-icon { font-size: 16px; margin-right: 8px; }
+.rank-list {
+  padding-top: 12px;
+}
 .eco-contribute-card {
   background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.06) 50%, rgba(34,197,94,0.03) 100%);
   border: 1px solid rgba(34,197,94,0.2);
