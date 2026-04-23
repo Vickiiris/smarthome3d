@@ -69,7 +69,9 @@
             <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             用电趋势
           </h3>
-          <span>24小时</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: electricPeriod === p }" @click="$emit('update:electricPeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="lineChartRef" class="chart-box"></div>
       </div>
@@ -79,6 +81,9 @@
             <svg class="panel-icon electric" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
             用电结构
           </h3>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: electricPiePeriod === p }" @click="$emit('update:electricPiePeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="pieChartRef" class="chart-box"></div>
       </div>
@@ -92,7 +97,9 @@
             <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
             用水趋势
           </h3>
-          <span>24小时</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: waterPeriod === p }" @click="$emit('update:waterPeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="waterChartRef" class="chart-box"></div>
       </div>
@@ -102,6 +109,9 @@
             <svg class="panel-icon water" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
             用水结构
           </h3>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: waterPiePeriod === p }" @click="$emit('update:waterPiePeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="waterPieChartRef" class="chart-box"></div>
       </div>
@@ -115,7 +125,9 @@
             <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-4-.5 2-.5 4-1 6a2.5 2.5 0 0 0 2.5 2.5z"/><path d="M12 22c4.97 0 9-4.03 9-9-4.5 0-9 4.5-9 9z"/><path d="M12 22c-4.97 0-9-4.03-9-9 4.5 0 9 4.5 9 9z"/></svg>
             燃气趋势
           </h3>
-          <span>24小时</span>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: gasPeriod === p }" @click="$emit('update:gasPeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="gasChartRef" class="chart-box"></div>
       </div>
@@ -125,6 +137,9 @@
             <svg class="panel-icon gas" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
             燃气结构
           </h3>
+          <div class="period-tabs">
+            <button v-for="p in periods" :key="p" class="ptab" :class="{ active: gasPiePeriod === p }" @click="$emit('update:gasPiePeriod', p)">{{ p }}</button>
+          </div>
         </div>
         <div ref="gasPieChartRef" class="chart-box"></div>
       </div>
@@ -132,7 +147,7 @@
 
     <!-- 第五行：费用明细 -->
     <div class="energy-cost-detail-row">
-      <div class="cost-detail-card" @click="$emit('openEnergyDetail', 'cost')">
+      <div class="cost-detail-card" @click="$emit('openEnergyDetail', 'electricCost')">
         <div class="cdc-header">
           <div class="cdc-icon electric">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -292,6 +307,12 @@ const props = defineProps({
   currentRankList: { type: Array, required: true },
   carbonReduction: { type: Number, required: true },
   savingRate: { type: Number, required: true },
+  electricPeriod: { type: String, default: '日' },
+  waterPeriod: { type: String, default: '日' },
+  gasPeriod: { type: String, default: '日' },
+  electricPiePeriod: { type: String, default: '日' },
+  waterPiePeriod: { type: String, default: '日' },
+  gasPiePeriod: { type: String, default: '日' },
   // Chart refs
   lineChartRef: { type: Object, default: null },
   pieChartRef: { type: Object, default: null },
@@ -301,20 +322,40 @@ const props = defineProps({
   gasPieChartRef: { type: Object, default: null },
 })
 
-defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab'])
+const periods = ['日', '周', '月']
 
-// Computed cost values
-const todayCost = computed(() => ((props.dailyEnergy ?? 8.5) * 0.6 + props.waterToday * 3.5 + props.gasToday * 2.8).toFixed(1))
-const electricMonthCost = computed(() => ((props.dailyEnergy ?? 8.5) * 0.6 * 30 + props.waterToday * 3.5 * 30 + props.gasToday * 2.8 * 30).toFixed(1))
-const electricPeakCost = computed(() => ((props.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.6).toFixed(1))
-const electricNormalCost = computed(() => ((props.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.3).toFixed(1))
-const electricValleyCost = computed(() => ((props.dailyEnergy ?? 8.5) * 0.6 * 30 * 0.1).toFixed(1))
-const waterMonthCost = computed(() => (props.waterToday * 30 * 3.5).toFixed(1))
-const waterLifeCost = computed(() => (props.waterToday * 30 * 3.5 * 0.7).toFixed(1))
-const waterBathCost = computed(() => (props.waterToday * 30 * 3.5 * 0.2).toFixed(1))
-const waterKitchenCost = computed(() => (props.waterToday * 30 * 3.5 * 0.1).toFixed(1))
-const gasMonthCost = computed(() => (props.gasToday * 30 * 2.8).toFixed(1))
-const gasHeaterCost = computed(() => (props.gasToday * 30 * 2.8 * 0.55).toFixed(1))
-const gasStoveCost = computed(() => (props.gasToday * 30 * 2.8 * 0.35).toFixed(1))
-const gasBoilerCost = computed(() => (props.gasToday * 30 * 2.8 * 0.1).toFixed(1))
+defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
+
+// Computed cost values - 基于实际用量计算
+const dEnergy = computed(() => parseFloat(props.dailyEnergy) || 0)
+const dWater = computed(() => props.waterToday || 0)
+const dGas = computed(() => props.gasToday || 0)
+
+// 今日总费用
+const todayCost = computed(() => (dEnergy.value * 0.6 + dWater.value * 3.5 + dGas.value * 2.8).toFixed(1))
+
+// 电费明细（基于实际用电量）
+const electricMonthCost = computed(() => (dEnergy.value * 0.6 * 30).toFixed(1))
+const electricPeakCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.6).toFixed(1))
+const electricNormalCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.3).toFixed(1))
+const electricValleyCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.1).toFixed(1))
+
+// 水费明细（基于实际用水量）
+const waterMonthCost = computed(() => (dWater.value * 3.5 * 30).toFixed(1))
+const waterLifeCost = computed(() => (dWater.value * 3.5 * 30 * 0.7).toFixed(1))
+const waterBathCost = computed(() => (dWater.value * 3.5 * 30 * 0.2).toFixed(1))
+const waterKitchenCost = computed(() => (dWater.value * 3.5 * 30 * 0.1).toFixed(1))
+
+// 燃气费明细（基于实际用气量）
+const gasMonthCost = computed(() => (dGas.value * 2.8 * 30).toFixed(1))
+const gasHeaterCost = computed(() => (dGas.value * 2.8 * 30 * 0.55).toFixed(1))
+const gasStoveCost = computed(() => (dGas.value * 2.8 * 30 * 0.35).toFixed(1))
+const gasBoilerCost = computed(() => (dGas.value * 2.8 * 30 * 0.1).toFixed(1))
 </script>
+
+<style scoped>
+.period-tabs { display: flex; gap: 4px; }
+.ptab { padding: 3px 10px; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-3); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+.ptab:hover { color: var(--text-2); border-color: rgba(255,255,255,0.2); }
+.ptab.active { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #818cf8; }
+</style>

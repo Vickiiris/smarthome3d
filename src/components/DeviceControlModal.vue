@@ -189,25 +189,10 @@
                 <div class="ed-devices" v-if="device.id?.includes('today') || device.id?.includes('power')">
                   <div class="ed-section-title">🔌 各电器用电明细</div>
                   <div class="ed-device-list">
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">❄️ 空调</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #4fc3f7"></div></div>
-                      <span class="ed-device-val">3.2 kWh</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🧊 冰箱</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 56%; background: #81c784"></div></div>
-                      <span class="ed-device-val">1.8 kWh</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">💡 照明</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 28%; background: #ffd54f"></div></div>
-                      <span class="ed-device-val">0.9 kWh</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">📺 电视</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 16%; background: #ce93d8"></div></div>
-                      <span class="ed-device-val">0.5 kWh</span>
+                    <div v-for="(item, idx) in device._rankList" :key="item.name" class="ed-device-item">
+                      <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                      <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
                     </div>
                   </div>
                 </div>
@@ -216,25 +201,10 @@
                 <div class="ed-devices" v-if="device.id?.includes('water') && !device.id?.includes('Cost') && !device.id?.includes('rank')">
                   <div class="ed-section-title">🚿 用水明细</div>
                   <div class="ed-device-list">
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🚿 淋浴</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #4fc3f7"></div></div>
-                      <span class="ed-device-val">0.35 m³</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🧺 洗衣</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 51%; background: #81c784"></div></div>
-                      <span class="ed-device-val">0.18 m³</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🍳 厨房</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 34%; background: #ffd54f"></div></div>
-                      <span class="ed-device-val">0.12 m³</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🚰 洗手台</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 23%; background: #ce93d8"></div></div>
-                      <span class="ed-device-val">0.08 m³</span>
+                    <div v-for="(item, idx) in device._rankList" :key="item.name" class="ed-device-item">
+                      <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                      <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
                     </div>
                   </div>
                 </div>
@@ -243,20 +213,10 @@
                 <div class="ed-devices" v-if="device.id?.includes('gas') && !device.id?.includes('Cost') && !device.id?.includes('rank')">
                   <div class="ed-section-title">🔥 燃气使用明细</div>
                   <div class="ed-device-list">
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🚿 热水器</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 100%; background: #ff7043"></div></div>
-                      <span class="ed-device-val">0.25 m³</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🔥 燃气灶</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 60%; background: #ffa726"></div></div>
-                      <span class="ed-device-val">0.15 m³</span>
-                    </div>
-                    <div class="ed-device-item">
-                      <span class="ed-device-name">🏠 壁挂炉</span>
-                      <div class="ed-device-bar"><div class="ed-device-fill" style="width: 20%; background: #ffcc80"></div></div>
-                      <span class="ed-device-val">0.05 m³</span>
+                    <div v-for="(item, idx) in device._rankList" :key="item.name" class="ed-device-item">
+                      <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+                      <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                      <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
                     </div>
                   </div>
                 </div>
@@ -279,23 +239,35 @@
                 <div class="ed-cost-detail" v-if="device.id?.includes('Cost') || device.id === 'energy-cost'">
                   <div class="ed-section-title">💰 费用明细</div>
                   <div class="ed-cost-list">
-                    <!-- 电费明细：id 是 energy-cost 或以 cost 结尾但不是 waterCost/gasCost -->
-                    <div class="ed-cost-item" v-if="device.id === 'energy-cost' || (device.id?.endsWith('cost') && !device.id?.includes('water') && !device.id?.includes('gas'))">
-                      <div class="ed-cost-row"><span>峰时用电 (60%)</span><span>¥{{ (parseFloat(device.value) * 0.6).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>平时用电 (30%)</span><span>¥{{ (parseFloat(device.value) * 0.3).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>谷时用电 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                    <!-- 总费用明细：展示电/水/气各项费用 -->
+                    <div class="ed-cost-item" v-if="device.id === 'energy-cost'">
+                      <div class="ed-cost-row"><span>⚡ 电费 (0.6元/kWh)</span><span>¥{{ device._electricCost }}</span></div>
+                      <div class="ed-cost-row"><span>💧 水费 (3.5元/m³)</span><span>¥{{ device._waterCost }}</span></div>
+                      <div class="ed-cost-row"><span>🔥 燃气费 (2.8元/m³)</span><span>¥{{ device._gasCost }}</span></div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
+                    <!-- 电费明细：按电器实际用量比例 -->
+                    <div class="ed-cost-item" v-if="device.id?.includes('electric') || (device.id?.endsWith('cost') && !device.id?.includes('water') && !device.id?.includes('gas') && device.id !== 'energy-cost')">
+                      <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
+                        <span>{{ item.icon }} {{ item.name }}</span>
+                        <span>¥{{ (item.val * 0.6).toFixed(2) }}</span>
+                      </div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                    </div>
+                    <!-- 水费明细：按用水实际用量比例 -->
                     <div class="ed-cost-item" v-if="device.id?.includes('waterCost')">
-                      <div class="ed-cost-row"><span>生活用水 (70%)</span><span>¥{{ (parseFloat(device.value) * 0.7).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>洗浴用水 (20%)</span><span>¥{{ (parseFloat(device.value) * 0.2).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>厨房用水 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                      <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
+                        <span>{{ item.icon }} {{ item.name }}</span>
+                        <span>¥{{ (item.val * 3.5).toFixed(2) }}</span>
+                      </div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
+                    <!-- 燃气费明细：按燃气实际用量比例 -->
                     <div class="ed-cost-item" v-if="device.id?.includes('gasCost')">
-                      <div class="ed-cost-row"><span>热水器 (55%)</span><span>¥{{ (parseFloat(device.value) * 0.55).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>燃气灶 (35%)</span><span>¥{{ (parseFloat(device.value) * 0.35).toFixed(1) }}</span></div>
-                      <div class="ed-cost-row"><span>壁挂炉 (10%)</span><span>¥{{ (parseFloat(device.value) * 0.1).toFixed(1) }}</span></div>
+                      <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
+                        <span>{{ item.icon }} {{ item.name }}</span>
+                        <span>¥{{ (item.val * 2.8).toFixed(2) }}</span>
+                      </div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
                   </div>

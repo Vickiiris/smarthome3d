@@ -82,7 +82,7 @@
           :isFullscreen="isFullscreen"
           :activeRoom="activeRoom"
           :rooms="rooms"
-          :dailyEnergy="homeStore.stats.dailyEnergy ?? '8.5'"
+          :dailyEnergy="(chartData?.energyLine || []).reduce((a, b) => a + b, 0).toFixed(2)"
           :waterToday="energyLiveData.waterToday"
           :gasToday="energyLiveData.gasToday"
           :electricTrend="electricTrend"
@@ -93,10 +93,22 @@
           :currentRankList="currentRankList"
           :carbonReduction="energyLiveData.carbonReduction"
           :savingRate="energyLiveData.savingRate"
+          :electricPeriod="electricPeriod"
+          :waterPeriod="waterPeriod"
+          :gasPeriod="gasPeriod"
+          :electricPiePeriod="electricPiePeriod"
+          :waterPiePeriod="waterPiePeriod"
+          :gasPiePeriod="gasPiePeriod"
           @switchRoom="switchRoom"
           @toggleFullscreen="toggleFullscreen"
           @openEnergyDetail="openEnergyDetail"
           @update:rankTab="(v) => rankTab = v"
+          @update:electricPeriod="(v) => { electricPeriod = v; updateEnergyChart('electric') }"
+          @update:waterPeriod="(v) => { waterPeriod = v; updateEnergyChart('water') }"
+          @update:gasPeriod="(v) => { gasPeriod = v; updateEnergyChart('gas') }"
+          @update:electricPiePeriod="(v) => { electricPiePeriod = v; updatePieChart('electric') }"
+          @update:waterPiePeriod="(v) => { waterPiePeriod = v; updatePieChart('water') }"
+          @update:gasPiePeriod="(v) => { gasPiePeriod = v; updatePieChart('gas') }"
         />
 
         <!-- ===== 健康监测 ===== -->
@@ -977,17 +989,24 @@ function openEnergyDetail(type, item = null) {
     return
   }
 
+  const dailyE = (chartData.value?.energyLine || []).reduce((a, b) => a + b, 0)
+  const dailyW = energyLiveData.value.waterToday
+  const dailyG = energyLiveData.value.gasToday
+  const electricCost = (dailyE * 0.6).toFixed(1)
+  const waterCost = (dailyW * 3.5).toFixed(1)
+  const gasCost = (dailyG * 2.8).toFixed(1)
   const energyData = {
-    today: { title: '今日用电详情', unit: 'kWh', value: homeStore.stats.dailyEnergy ?? 8.5, trend: '+5.2%', desc: '今日累计用电量' },
+    today: { title: '今日用电详情', unit: 'kWh', value: dailyE.toFixed(2), trend: electricTrend.value.label, desc: '今日累计用电量', rankList: energyRank.value },
     power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(1), trend: '', desc: '当前用电功率' },
     total: { title: '累计用电', unit: 'kWh', value: energyLiveData.value.totalEnergy, trend: '', desc: '本月累计用电' },
     saving: { title: '节能率', unit: '%', value: energyLiveData.value.savingRate, trend: '', desc: '相比历史平均节能比例' },
         carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
-    water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday, trend: '-3.2%', desc: '今日累计用水量' },
-    gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday, trend: '+2.1%', desc: '今日累计燃气用量' },
-    cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: '-2.8%', desc: '今日电费+水费+燃气费' },
-    waterCost: { title: '今日水费详情', unit: '元', value: (energyLiveData.value.waterToday * 3.5).toFixed(1), trend: '+1.5%', desc: '今日水费支出' },
-    gasCost: { title: '今日燃气费详情', unit: '元', value: (energyLiveData.value.gasToday * 2.8).toFixed(1), trend: '-5.8%', desc: '今日燃气费支出' },
+    water: { title: '今日用水详情', unit: 'm³', value: dailyW.toFixed(3), trend: waterTrend.value.label, desc: '今日累计用水量', rankList: waterRank.value },
+    gas: { title: '今日燃气详情', unit: 'm³', value: dailyG.toFixed(3), trend: gasTrend.value.label, desc: '今日累计燃气用量', rankList: gasRank.value },
+    cost: { title: '今日费用详情', unit: '元', value: (parseFloat(electricCost) + parseFloat(waterCost) + parseFloat(gasCost)).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费', _electricCost: electricCost, _waterCost: waterCost, _gasCost: gasCost },
+    electricCost: { title: '今日电费详情', unit: '元', value: electricCost, trend: electricTrend.value.label, desc: '今日电费支出', rankList: energyRank.value, _rate: '0.6元/kWh' },
+    waterCost: { title: '今日水费详情', unit: '元', value: waterCost, trend: waterTrend.value.label, desc: '今日水费支出', rankList: waterRank.value },
+    gasCost: { title: '今日燃气费详情', unit: '元', value: gasCost, trend: gasTrend.value.label, desc: '今日燃气费支出', rankList: gasRank.value },
   }
   const data = energyData[type] || energyData.today
   const iconMap = { water: '💧', gas: '🔥', waterCost: '💧', gasCost: '🔥', cost: '💰' }
@@ -1005,6 +1024,10 @@ function openEnergyDetail(type, item = null) {
     // 存储类型标签，弹窗通过 computed 读取实时数据，不冻结快照
     energyType: type,
     _savingRate: data.savingRate || energyLiveData.value.savingRate,
+    _rankList: data.rankList || [],
+    _electricCost: data._electricCost || electricCost,
+    _waterCost: data._waterCost || waterCost,
+    _gasCost: data._gasCost || gasCost,
   }
   showControlPanel.value = true
 }
@@ -1612,30 +1635,131 @@ const visibleStrategyPages = computed(() => {
 })
 watch([alarmSearch, alarmLevelFilter, alarmStatusFilter], () => { alarmPage.value = 1 })
 
-// 能耗排行数据
-const energyRank = ref([
-  { name: '空调', val: 3.2, pct: 100, color: '#4fc3f7', icon: '❄️', unit: 'kWh' },
-  { name: '冰箱', val: 1.8, pct: 56,  color: '#81c784', icon: '🧊', unit: 'kWh' },
-  { name: '照明', val: 0.9, pct: 28,  color: '#ffd54f', icon: '💡', unit: 'kWh' },
-  { name: '电视', val: 0.5, pct: 16,  color: '#ce93d8', icon: '📺', unit: 'kWh' },
-])
-const waterRank = ref([
-  { name: '淋浴', val: 0.35, pct: 100, color: '#4fc3f7', icon: '🚿', unit: 'm³' },
-  { name: '洗衣机', val: 0.18, pct: 51,  color: '#81c784', icon: '🧺', unit: 'm³' },
-  { name: '厨房', val: 0.12, pct: 34,  color: '#ffd54f', icon: '🍳', unit: 'm³' },
-  { name: '洗手台', val: 0.08, pct: 23,  color: '#ce93d8', icon: '🚰', unit: 'm³' },
-])
-const gasRank = ref([
-  { name: '热水器', val: 0.25, pct: 100, color: '#ff7043', icon: '🚿', unit: 'm³' },
-  { name: '燃气灶', val: 0.15, pct: 60,  color: '#ffa726', icon: '🔥', unit: 'm³' },
-  { name: '壁挂炉', val: 0.05, pct: 20,  color: '#ffcc80', icon: '🏠', unit: 'm³' },
-])
+// 能耗排行数据（按日常家用标准：日电5-6度，日水0.5-0.8m³，日气0.3-0.5m³）
+// 能源排行 - 基于实际用量动态计算（与饼图数据联动）
+const energyRank = computed(() => {
+  const total = chartData.value.energyPie.reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '空调', color: '#4fc3f7', icon: '❄️', unit: 'kWh' },
+    { name: '冰箱', color: '#81c784', icon: '🧊', unit: 'kWh' },
+    { name: '照明', color: '#ffd54f', icon: '💡', unit: 'kWh' },
+    { name: '其他', color: '#ce93d8', icon: '📺', unit: 'kWh' },
+  ]
+  const dailyTotal = chartData.value.energyLine.reduce((a, b) => a + b, 0)
+  return items.map((item, i) => {
+    const pieValue = chartData.value.energyPie[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 100) / 100
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
+const waterRank = computed(() => {
+  const total = chartData.value.waterPie.reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '淋浴', color: '#4fc3f7', icon: '🚿', unit: 'm³' },
+    { name: '洗衣', color: '#81c784', icon: '🧺', unit: 'm³' },
+    { name: '厨房', color: '#ffd54f', icon: '🍳', unit: 'm³' },
+    { name: '其他', color: '#ce93d8', icon: '🚰', unit: 'm³' },
+  ]
+  const dailyTotal = chartData.value.waterBar.reduce((a, b) => a + b, 0)
+  return items.map((item, i) => {
+    const pieValue = chartData.value.waterPie[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 1000) / 1000
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
+const gasRank = computed(() => {
+  const total = chartData.value.gasPie.reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '热水器', color: '#ff7043', icon: '🚿', unit: 'm³' },
+    { name: '燃气灶', color: '#ffa726', icon: '🔥', unit: 'm³' },
+    { name: '壁挂炉', color: '#ffcc80', icon: '🏠', unit: 'm³' },
+  ]
+  const dailyTotal = chartData.value.gasLine.reduce((a, b) => a + b, 0)
+  return items.map((item, i) => {
+    const pieValue = chartData.value.gasPie[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 1000) / 1000
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
 const rankTab = ref('electric')
 const currentRankList = computed(() => {
   if (rankTab.value === 'water') return waterRank.value
   if (rankTab.value === 'gas') return gasRank.value
   return energyRank.value
 })
+
+// 能源图表周期
+const electricPeriod = ref('日')
+const waterPeriod = ref('日')
+const gasPeriod = ref('日')
+const electricPiePeriod = ref('日')
+const waterPiePeriod = ref('日')
+const gasPiePeriod = ref('日')
+
+// 能源图表周/月固定数据（按日常家用标准：日电5-6度，日水0.5-0.8m³，日气0.3-0.5m³）
+const energyWeekData = {
+  labels: ['周一','周二','周三','周四','周五','周六','周日'],
+  values: [5.2, 5.8, 5.5, 6.2, 5.9, 6.5, 5.6]
+}
+const energyMonthData = {
+  labels: Array.from({length:30}, (_,i) => `${i+1}日`),
+  values: Array.from({length:30}, () => Math.round((4.5 + Math.random() * 2.5) * 10) / 10)
+}
+const waterWeekData = {
+  labels: ['周一','周二','周三','周四','周五','周六','周日'],
+  values: [0.55, 0.72, 0.58, 0.80, 0.65, 0.85, 0.62]
+}
+const waterMonthData = {
+  labels: Array.from({length:30}, (_,i) => `${i+1}日`),
+  values: Array.from({length:30}, () => Math.round((0.4 + Math.random() * 0.5) * 100) / 100)
+}
+const gasWeekData = {
+  labels: ['周一','周二','周三','周四','周五','周六','周日'],
+  values: [0.32, 0.45, 0.35, 0.48, 0.38, 0.50, 0.42]
+}
+const gasMonthData = {
+  labels: Array.from({length:30}, (_,i) => `${i+1}日`),
+  values: Array.from({length:30}, () => Math.round((0.25 + Math.random() * 0.3) * 100) / 100)
+}
+
+// 结构图周/月固定数据
+const energyPieWeekData = [
+  { value: 42, name: '空调', itemStyle: { color: '#4fc3f7' } },
+  { value: 28, name: '冰箱', itemStyle: { color: '#81c784' } },
+  { value: 18, name: '照明', itemStyle: { color: '#ffd54f' } },
+  { value: 12, name: '其他', itemStyle: { color: '#ce93d8' } },
+]
+const energyPieMonthData = [
+  { value: 40, name: '空调', itemStyle: { color: '#4fc3f7' } },
+  { value: 30, name: '冰箱', itemStyle: { color: '#81c784' } },
+  { value: 20, name: '照明', itemStyle: { color: '#ffd54f' } },
+  { value: 10, name: '其他', itemStyle: { color: '#ce93d8' } },
+]
+const waterPieWeekData = [
+  { value: 48, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+  { value: 22, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+  { value: 18, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
+  { value: 12, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
+]
+const waterPieMonthData = [
+  { value: 50, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+  { value: 20, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+  { value: 18, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
+  { value: 12, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
+]
+const gasPieWeekData = [
+  { value: 52, name: '热水器', itemStyle: { color: '#ff7043' } },
+  { value: 38, name: '燃气灶', itemStyle: { color: '#ffa726' } },
+  { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
+]
+const gasPieMonthData = [
+  { value: 50, name: '热水器', itemStyle: { color: '#ff7043' } },
+  { value: 40, name: '燃气灶', itemStyle: { color: '#ffa726' } },
+  { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
+]
 
 const products = ref([
   // 环境控制
@@ -1699,22 +1823,69 @@ const pagedProducts = computed(() => {
 let lineChart = null, pieChart = null, waterChart = null, gasChart = null, waterPieChart = null, gasPieChart = null
 
   // 能源图表数据源（ref，便于实时更新）
+  // 日视图：24小时数据，每小时一个点
+  // 每天0点从0开始，当前小时实时增加，全天累计上限：电5-6度、水0.5-0.8m³、气0.3-0.5m³
+  
+  // 生成初始数据的辅助函数：根据当前时间，生成从0点到当前小时的累计数据
+  function generateInitialData() {
+    const hour = getCurrentHour()
+    
+    // 用电：全天目标5.5度，按时段权重分配
+    const energyWeights = [0.3,0.2,0.2,0.2,0.3,0.5,0.8,1.2,1.0,0.8,0.6,0.8,1.0,0.8,0.6,0.8,1.0,1.5,2.0,2.2,1.8,1.2,0.8,0.5]
+    const totalEnergyWeight = energyWeights.reduce((a,b)=>a+b,0)
+    const targetEnergy = 5.5 // 全天目标
+    const energyLine = Array.from({length: 24}, (_, i) => {
+      if (i > hour) return 0 // 当前小时之后为0
+      // 根据时段权重和已过去的时间比例生成数据
+      const baseValue = (targetEnergy * energyWeights[i] / totalEnergyWeight)
+      // 添加一些随机波动，使数据更真实
+      const randomFactor = 0.8 + Math.random() * 0.4 // 0.8 ~ 1.2
+      return Math.round(baseValue * randomFactor * 100) / 100
+    })
+    
+    // 用水：全天目标0.65m³
+    const waterWeights = [0.2,0.1,0.1,0.1,0.2,0.5,1.5,2.0,0.8,0.5,0.3,0.5,1.0,0.5,0.3,0.5,0.8,1.5,2.5,2.0,1.2,0.8,0.4,0.2]
+    const totalWaterWeight = waterWeights.reduce((a,b)=>a+b,0)
+    const targetWater = 0.65
+    const waterBar = Array.from({length: 24}, (_, i) => {
+      if (i > hour) return 0
+      const baseValue = (targetWater * waterWeights[i] / totalWaterWeight)
+      const randomFactor = 0.8 + Math.random() * 0.4
+      return Math.round(baseValue * randomFactor * 1000) / 1000
+    })
+    
+    // 燃气：全天目标0.4m³
+    const gasWeights = [0.3,0.2,0.2,0.2,0.3,0.8,2.0,2.5,1.0,0.3,0.2,0.5,1.0,0.5,0.3,0.5,0.8,2.0,3.0,2.5,1.5,1.0,0.5,0.3]
+    const totalGasWeight = gasWeights.reduce((a,b)=>a+b,0)
+    const targetGas = 0.4
+    const gasLine = Array.from({length: 24}, (_, i) => {
+      if (i > hour) return 0
+      const baseValue = (targetGas * gasWeights[i] / totalGasWeight)
+      const randomFactor = 0.8 + Math.random() * 0.4
+      return Math.round(baseValue * randomFactor * 1000) / 1000
+    })
+    
+    return { energyLine, waterBar, gasLine }
+  }
+  
+  const initialData = generateInitialData()
+  
   const chartData = ref({
-    energyLine: [1.8, 1.2, 2.0, 4.5, 3.8, 5.5, 2.8],
+    energyLine: initialData.energyLine,
     energyPie: [
-      { value: 45, name: '空调', itemStyle: { color: '#4fc3f7' } },
-      { value: 25, name: '冰箱', itemStyle: { color: '#81c784' } },
-      { value: 15, name: '照明', itemStyle: { color: '#ffd54f' } },
-      { value: 15, name: '其他', itemStyle: { color: '#ce93d8' } },
+      { value: 40, name: '空调', itemStyle: { color: '#4fc3f7' } },
+      { value: 30, name: '冰箱', itemStyle: { color: '#81c784' } },
+      { value: 18, name: '照明', itemStyle: { color: '#ffd54f' } },
+      { value: 12, name: '其他', itemStyle: { color: '#ce93d8' } },
     ],
-    waterBar: [0.02, 0.01, 0.06, 0.18, 0.08, 0.22, 0.12],
+    waterBar: initialData.waterBar,
     waterPie: [
-      { value: 45, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
-      { value: 25, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+      { value: 48, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+      { value: 22, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
       { value: 20, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
       { value: 10, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
     ],
-    gasLine: [0.01, 0.01, 0.03, 0.05, 0.04, 0.20, 0.11],
+    gasLine: initialData.gasLine,
     gasPie: [
       { value: 55, name: '热水器', itemStyle: { color: '#ff7043' } },
       { value: 35, name: '燃气灶', itemStyle: { color: '#ffa726' } },
@@ -1722,20 +1893,20 @@ let lineChart = null, pieChart = null, waterChart = null, gasChart = null, water
     ],
   })
 
-  // 能源弹窗实时数据源
+  // 能源弹窗实时数据源（今日用量从小时数据累加）
   const energyLiveData = ref({
-    waterToday: 0.80,
-    gasToday: 0.45,
+    get waterToday() { return chartData.value.waterBar.reduce((a, b) => a + b, 0) },
+    get gasToday() { return chartData.value.gasLine.reduce((a, b) => a + b, 0) },
     savingRate: 18,
     totalEnergy: 235,
     carbonReduction: 12.5,
   })
 
-  // 能源趋势数据（实时更新）
-  const electricTrend = ref({ dir: 'up', label: '↑ 5.2%', raw: 5.2 })
-  const waterTrend = ref({ dir: 'down', label: '↓ 3.2%', raw: 3.2 })
-  const gasTrend = ref({ dir: 'up', label: '↑ 2.1%', raw: 2.1 })
-  const costTrend = ref({ dir: 'down', label: '↓ 2.8%', raw: 2.8 })
+  // 能源趋势数据（与昨日对比， realistic 波动范围 ±5%）
+  const electricTrend = ref({ dir: 'up', label: '↑ 2.3%', raw: 2.3 })
+  const waterTrend = ref({ dir: 'down', label: '↓ 1.5%', raw: -1.5 })
+  const gasTrend = ref({ dir: 'up', label: '↑ 0.8%', raw: 0.8 })
+  const costTrend = ref({ dir: 'down', label: '↓ 1.2%', raw: -1.2 })
 
 
 
@@ -1746,20 +1917,108 @@ let lineChart = null, pieChart = null, waterChart = null, gasChart = null, water
   }
 
 
+// 获取当前小时（0-23）
+function getCurrentHour() {
+  return new Date().getHours()
+}
+
+// 生成24小时标签
+const hourLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`)
+
+// 更新结构图（饼图/玫瑰图）
+function updatePieChart(type) {
+  if (type === 'electric' || type === 'all') {
+    const period = electricPiePeriod.value
+    let data
+    if (period === '日') data = chartData.value.energyPie
+    else if (period === '周') data = energyPieWeekData
+    else data = energyPieMonthData
+    pieChart?.setOption({ series: [{ data }] })
+  }
+  if (type === 'water' || type === 'all') {
+    const period = waterPiePeriod.value
+    let data
+    if (period === '日') data = chartData.value.waterPie
+    else if (period === '周') data = waterPieWeekData
+    else data = waterPieMonthData
+    waterPieChart?.setOption({ series: [{ data }] })
+  }
+  if (type === 'gas' || type === 'all') {
+    const period = gasPiePeriod.value
+    let data
+    if (period === '日') data = chartData.value.gasPie
+    else if (period === '周') data = gasPieWeekData
+    else data = gasPieMonthData
+    gasPieChart?.setOption({ series: [{ data }] })
+  }
+}
+
+// 更新能源图表（周期切换时调用）
+function updateEnergyChart(type) {
+  if (!lineChart && !waterChart && !gasChart && !pieChart && !waterPieChart && !gasPieChart) return
+  const hour = getCurrentHour()
+  if (type === 'electric' || type === 'all') {
+    const period = electricPeriod.value
+    let labels, values
+    if (period === '日') {
+      labels = hourLabels.slice(0, hour + 1)
+      values = chartData.value.energyLine.slice(0, hour + 1)
+    } else if (period === '周') {
+      labels = energyWeekData.labels
+      values = energyWeekData.values
+    } else {
+      labels = energyMonthData.labels
+      values = energyMonthData.values
+    }
+    lineChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
+  }
+  if (type === 'water' || type === 'all') {
+    const period = waterPeriod.value
+    let labels, values
+    if (period === '日') {
+      labels = hourLabels.slice(0, hour + 1)
+      values = chartData.value.waterBar.slice(0, hour + 1)
+    } else if (period === '周') {
+      labels = waterWeekData.labels
+      values = waterWeekData.values
+    } else {
+      labels = waterMonthData.labels
+      values = waterMonthData.values
+    }
+    waterChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
+  }
+  if (type === 'gas' || type === 'all') {
+    const period = gasPeriod.value
+    let labels, values
+    if (period === '日') {
+      labels = hourLabels.slice(0, hour + 1)
+      values = chartData.value.gasLine.slice(0, hour + 1)
+    } else if (period === '周') {
+      labels = gasWeekData.labels
+      values = gasWeekData.values
+    } else {
+      labels = gasMonthData.labels
+      values = gasMonthData.values
+    }
+    gasChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
+  }
+}
+
 async function initCharts() {
   const ec = await import('echarts')
   // Get DOM refs from energyPageRef
   const refs = energyPageRef.value || {}
   const { lineChartRef, pieChartRef, waterChartRef, gasChartRef, waterPieChartRef, gasPieChartRef } = refs
+  const hour = getCurrentHour()
   if (lineChartRef && !lineChart) {
     lineChart = ec.init(lineChartRef)
     lineChart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
       grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      xAxis: { type: 'category', boundaryGap: false, data: hourLabels.slice(0, hour + 1), axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
-      series: [{ data: chartData.value.energyLine, type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
+      series: [{ data: chartData.value.energyLine.slice(0, hour + 1), type: 'line', smooth: true, lineStyle: { color: '#00d4aa', width: 3 }, areaStyle: { color: new ec.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,170,0.25)'},{offset:1,color:'rgba(0,212,170,0)'}]) }, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#00d4aa' } }]
     })
   }
   if (pieChartRef && !pieChart) {
@@ -1777,10 +2036,10 @@ async function initCharts() {
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
       grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'category', data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      xAxis: { type: 'category', data: hourLabels.slice(0, hour + 1), axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       series: [{ 
-        data: chartData.value.waterBar, 
+        data: chartData.value.waterBar.slice(0, hour + 1), 
         type: 'bar', 
         barWidth: '50%',
         itemStyle: { 
@@ -1797,10 +2056,10 @@ async function initCharts() {
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,38,0.95)', borderColor: 'rgba(255,255,255,0.12)', textStyle: { color: '#e2e8f0', fontSize: 12 } },
       grid: { left: '3%', right: '4%', top: '12%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: ['00h','04h','08h','12h','16h','20h','24h'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      xAxis: { type: 'category', boundaryGap: false, data: hourLabels.slice(0, hour + 1), axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
       series: [{ 
-        data: chartData.value.gasLine, 
+        data: chartData.value.gasLine.slice(0, hour + 1), 
         type: 'line', 
         smooth: true, 
         lineStyle: { color: '#ff7043', width: 3, type: 'dashed' }, 
@@ -1926,88 +2185,109 @@ onMounted(() => {
     stepsTrendData.value[stepsIdx].value = items[5].raw
   }, 4000)
 
-  // 能源排行实时模拟：每 8 秒微调一次
+  // 能源排行实时模拟：每 8 秒微调一次（排行现在是computed，基于chartData自动计算，这里只需更新饼图数据）
   energyTimer = setInterval(() => {
-    // 电能排行
-    energyRank.value.forEach(item => {
-    item.val = Math.round((item.val + Math.random() * 0.05) * 100) / 100
-      item.val = Math.max(0.1, item.val)
-      item.pct = Math.round((item.val / 4) * 100)
-    })
-    // 水排行
-    waterRank.value.forEach(item => {
-    item.val = Math.round((item.val + Math.random() * 0.005) * 1000) / 1000
-      item.val = Math.max(0.01, item.val)
-      item.pct = Math.round((item.val / 0.4) * 100)
-    })
-    // 燃气排行
-    gasRank.value.forEach(item => {
-    item.val = Math.round((item.val + Math.random() * 0.003) * 1000) / 1000
-      item.val = Math.max(0.01, item.val)
-      item.pct = Math.round((item.val / 0.3) * 100)
-    })
+    // 排行数据现在通过computed自动从chartData计算，无需手动更新
+    // 只需微调饼图数据让排行有动态变化效果
 
-    // 能源图表实时更新
+    // 能源图表实时更新（仅日视图，且只有当前小时增加）
     const cd = chartData.value
-    // 电能趋势折线：模拟最后一个时段变化
-    cd.energyLine = cd.energyLine.map(v => Math.max(0.5, Math.round((v + (Math.random() - 0.5) * 0.4) * 100) / 100))
-    lineChart?.setOption({ series: [{ data: [...cd.energyLine] }] })
+    const hour = getCurrentHour()
+    
+    // 检查是否跨天（00:00 重置为0）
+    if (hour === 0 && cd.energyLine[23] > 0) {
+      // 重置所有小时数据为0
+      cd.energyLine = Array.from({length: 24}, () => 0)
+      cd.waterBar = Array.from({length: 24}, () => 0)
+      cd.gasLine = Array.from({length: 24}, () => 0)
+    }
+    
+    // 电能趋势：仅当前小时增加，根据时段调整增量，全天上限5-6度
+    if (electricPeriod.value === '日') {
+      const currentTotal = cd.energyLine.reduce((a, b) => a + b, 0)
+      if (currentTotal < 6) { // 上限6度
+        // 不同时段不同增量：早晚高峰增量高，凌晨增量低
+        const hourWeight = [0.3,0.2,0.2,0.2,0.3,0.5,0.8,1.2,1.0,0.8,0.6,0.8,1.0,0.8,0.6,0.8,1.0,1.5,2.0,2.2,1.8,1.2,0.8,0.5][hour]
+        const increment = Math.round((Math.random() * 0.01 + 0.005) * hourWeight * 100) / 100
+        cd.energyLine[hour] = Math.round((cd.energyLine[hour] + increment) * 100) / 100
+      }
+      lineChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.energyLine.slice(0, hour + 1) }] })
+    }
 
+    // 电能占比饼图：日视图实时变化，周/月固定
+    if (electricPeriod.value === '日') {
+      const acOn = deviceList.value.filter(d => (d.type === 'ac') && d.status).length
+      cd.energyPie[0].value = Math.max(20, 45 + acOn * 10 + Math.round((Math.random() - 0.5) * 5))
+      cd.energyPie[1].value = Math.max(10, 25 + Math.round((Math.random() - 0.5) * 3))
+      cd.energyPie[2].value = Math.max(5, 15 + Math.round((Math.random() - 0.5) * 3))
+      cd.energyPie[3].value = Math.max(3, 15 + Math.round((Math.random() - 0.5) * 3))
+      pieChart?.setOption({ series: [{ data: cd.energyPie }] })
+    }
 
-    // 电能占比饼图：根据设备状态微调
-    const acOn = deviceList.value.filter(d => (d.type === 'ac') && d.status).length
-    cd.energyPie[0].value = Math.max(20, 45 + acOn * 10 + Math.round((Math.random() - 0.5) * 5))
-    cd.energyPie[1].value = Math.max(10, 25 + Math.round((Math.random() - 0.5) * 3))
-    cd.energyPie[2].value = Math.max(5, 15 + Math.round((Math.random() - 0.5) * 3))
-    cd.energyPie[3].value = Math.max(3, 15 + Math.round((Math.random() - 0.5) * 3))
-    pieChart?.setOption({ series: [{ data: cd.energyPie }] })
+    // 用水柱状图：仅当前小时增加，全天上限0.8m³
+    if (waterPeriod.value === '日') {
+      const currentTotal = cd.waterBar.reduce((a, b) => a + b, 0)
+      if (currentTotal < 0.8) { // 上限0.8m³
+        const hourWeight = [0.2,0.1,0.1,0.1,0.2,0.5,1.5,2.0,0.8,0.5,0.3,0.5,1.0,0.5,0.3,0.5,0.8,1.5,2.5,2.0,1.2,0.8,0.4,0.2][hour]
+        const increment = Math.round((Math.random() * 0.001 + 0.0005) * hourWeight * 1000) / 1000
+        cd.waterBar[hour] = Math.round((cd.waterBar[hour] + increment) * 1000) / 1000
+      }
+      waterChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.waterBar.slice(0, hour + 1) }] })
+    }
 
-    // 用水柱状图：最后一个时段波动
-    cd.waterBar = cd.waterBar.map(v => Math.max(0.01, Math.round((v + (Math.random() - 0.5) * 0.03) * 100) / 100))
-    waterChart?.setOption({ series: [{ data: [...cd.waterBar] }] })
+    // 用水结构：日视图实时变化
+    if (waterPeriod.value === '日') {
+      cd.waterPie.forEach(d => { d.value = Math.max(3, d.value + Math.round((Math.random() - 0.5) * 2)) })
+      waterPieChart?.setOption({ series: [{ data: cd.waterPie }] })
+    }
 
+    // 燃气虚线折线图：仅当前小时增加，全天上限0.5m³
+    if (gasPeriod.value === '日') {
+      const currentTotal = cd.gasLine.reduce((a, b) => a + b, 0)
+      if (currentTotal < 0.5) { // 上限0.5m³
+        const hourWeight = [0.3,0.2,0.2,0.2,0.3,0.8,2.0,2.5,1.0,0.3,0.2,0.5,1.0,0.5,0.3,0.5,0.8,2.0,3.0,2.5,1.5,1.0,0.5,0.3][hour]
+        const increment = Math.round((Math.random() * 0.0008 + 0.0005) * hourWeight * 1000) / 1000
+        cd.gasLine[hour] = Math.round((cd.gasLine[hour] + increment) * 1000) / 1000
+      }
+      gasChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.gasLine.slice(0, hour + 1) }] })
+    }
 
-    // 用水结构横向条形图
-    cd.waterPie.forEach(d => { d.value = Math.max(3, d.value + Math.round((Math.random() - 0.5) * 2)) })
-    waterPieChart?.setOption({ series: [{ data: cd.waterPie }] })
+    // 燃气结构：日视图实时变化
+    if (gasPeriod.value === '日') {
+      cd.gasPie.forEach(d => { d.value = Math.max(2, d.value + Math.round((Math.random() - 0.5) * 2)) })
+      gasPieChart?.setOption({ series: [{ data: cd.gasPie }] })
+    }
 
-    // 燃气虚线折线图
-    cd.gasLine = cd.gasLine.map(v => Math.max(0.005, Math.round((v + (Math.random() - 0.5) * 0.015) * 100) / 100))
-    gasChart?.setOption({ series: [{ data: [...cd.gasLine] }] })
-
-
-    // 燃气结构玫瑰图
-    cd.gasPie.forEach(d => { d.value = Math.max(2, d.value + Math.round((Math.random() - 0.5) * 2)) })
-    gasPieChart?.setOption({ series: [{ data: cd.gasPie }] })
-
-    // 能源弹窗数据实时更新
+    // 能源弹窗数据实时更新（从小时数据累加）
     const eld = energyLiveData.value
-      eld.waterToday = Math.round((eld.waterToday + Math.random() * 0.03) * 100) / 100
-      // Water/gas only accumulate, never decrease
-      eld.gasToday = Math.round((eld.gasToday + Math.random() * 0.015) * 100) / 100
-
+    // waterToday 和 gasToday 通过 getter 自动从 chartData 计算
+    // 只需要更新其他字段
     eld.savingRate = Math.max(10, Math.min(28, eld.savingRate + Math.round((Math.random() - 0.45) * 3)))
     eld.totalEnergy = Math.round(eld.totalEnergy + (Math.random() - 0.3) * 0.5)
     eld.totalEnergy = Math.max(100, eld.totalEnergy)
     eld.carbonReduction = Math.round((eld.carbonReduction + (Math.random() - 0.4) * 0.3) * 10) / 10
     eld.carbonReduction = Math.max(5, eld.carbonReduction)
 
-    // 实时更新趋势指标
-    electricTrend.value = makeTrend(Math.round((Math.random() - 0.4) * 8 * 10) / 10)
-    waterTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 6 * 10) / 10)
-    gasTrend.value = makeTrend(Math.round((Math.random() - 0.4) * 5 * 10) / 10)
-    costTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 7 * 10) / 10)
+    // 实时更新趋势指标（小幅波动，±3%以内）
+    electricTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 3 * 10) / 10)
+    waterTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 2 * 10) / 10)
+    gasTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 2 * 10) / 10)
+    costTrend.value = makeTrend(Math.round((Math.random() - 0.5) * 2.5 * 10) / 10)
 
     // 如果能源弹窗打开中，实时刷新弹窗数值
     if (showControlPanel.value && selectedDevice.value?.id?.startsWith('energy-')) {
       const etype = selectedDevice.value.id.replace('energy-', '')
+      const dailyE2 = (chartData?.energyLine || []).reduce((a, b) => a + b, 0)
+      const eCost2 = (dailyE2 * 0.6).toFixed(1)
+      const wCost2 = (energyLiveData.value.waterToday * 3.5).toFixed(1)
+      const gCost2 = (energyLiveData.value.gasToday * 2.8).toFixed(1)
       const energyData = {
-        today: { title: '今日用电详情', unit: 'kWh', value: homeStore.stats.dailyEnergy ?? 8.5, trend: electricTrend.value.label, desc: '今日累计用电量' },
-        water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday, trend: waterTrend.value.label, desc: '今日累计用水量' },
-        gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday, trend: gasTrend.value.label, desc: '今日累计燃气用量' },
-        cost: { title: '今日费用详情', unit: '元', value: ((homeStore.stats.dailyEnergy ?? 8.5) * 0.6 + energyLiveData.value.waterToday * 3.5 + energyLiveData.value.gasToday * 2.8).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费' },
-        waterCost: { title: '今日水费详情', unit: '元', value: (energyLiveData.value.waterToday * 3.5).toFixed(1), trend: waterTrend.value.label, desc: '今日水费支出' },
-        gasCost: { title: '今日燃气费详情', unit: '元', value: (energyLiveData.value.gasToday * 2.8).toFixed(1), trend: gasTrend.value.label, desc: '今日燃气费支出' },
+        today: { title: '今日用电详情', unit: 'kWh', value: dailyE2.toFixed(2), trend: electricTrend.value.label, desc: '今日累计用电量', rankList: energyRank.value },
+        water: { title: '今日用水详情', unit: 'm³', value: energyLiveData.value.waterToday.toFixed(3), trend: waterTrend.value.label, desc: '今日累计用水量', rankList: waterRank.value },
+        gas: { title: '今日燃气详情', unit: 'm³', value: energyLiveData.value.gasToday.toFixed(3), trend: gasTrend.value.label, desc: '今日累计燃气用量', rankList: gasRank.value },
+        cost: { title: '今日费用详情', unit: '元', value: (parseFloat(eCost2) + parseFloat(wCost2) + parseFloat(gCost2)).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费', _electricCost: eCost2, _waterCost: wCost2, _gasCost: gCost2 },
+        waterCost: { title: '今日水费详情', unit: '元', value: wCost2, trend: waterTrend.value.label, desc: '今日水费支出', rankList: waterRank.value },
+        gasCost: { title: '今日燃气费详情', unit: '元', value: gCost2, trend: gasTrend.value.label, desc: '今日燃气费支出', rankList: gasRank.value },
         carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
       }
       const data = energyData[etype]
