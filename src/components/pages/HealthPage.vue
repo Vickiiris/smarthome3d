@@ -1100,13 +1100,13 @@ onMounted(async () => {
 /* ===== 睡眠时间条: Apple Health 风格整晚分段 ===== */
 .stl-wrap { margin-bottom: 12px; }
 .stl-ruler {
-  display: flex; justify-content: space-between;
-  font-size: 9px; color: var(--text-3); font-family: var(--font-mono);
-  margin-bottom: 4px; padding: 0 2px;
+  display: flex; justify-content: space-between; margin-top: 35px;
+  font-size: 10px; color: var(--text-3); font-family: var(--font-mono);
+  margin-bottom: 4px; padding: 0 2px; 
 }
 .stl-r-end { text-align: right; }
 .stl-band {
-  display: flex; height: 80px; gap: 1px; border-radius: 6px; overflow: hidden;
+  display: flex; height: 80px; gap: 1px; border-radius: 6px; overflow: hidden; margin-top: 15px;
 }
 .stl-seg {
   height: 100%; display: flex; align-items: center; justify-content: center;
