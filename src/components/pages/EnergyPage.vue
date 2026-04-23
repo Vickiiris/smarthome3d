@@ -204,6 +204,25 @@
           </div>
         </div>
       </div>
+      <div class="cost-detail-card total" @click="$emit('openEnergyDetail', 'cost')">
+        <div class="cdc-header">
+          <div class="cdc-icon total">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="cdc-title">费用总计</div>
+        </div>
+        <div class="cdc-body">
+          <div class="cdc-main">
+            <span class="cdc-value">¥{{ totalMonthCost }}</span>
+            <span class="cdc-label">本月合计</span>
+          </div>
+          <div class="cdc-items">
+            <div class="cdc-item"><span>电费</span><span>¥{{ electricMonthCost }}</span></div>
+            <div class="cdc-item"><span>水费</span><span>¥{{ waterMonthCost }}</span></div>
+            <div class="cdc-item"><span>燃气费</span><span>¥{{ gasMonthCost }}</span></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 第六行：设备能耗排行 + 环保贡献 -->
@@ -331,26 +350,39 @@ const dEnergy = computed(() => parseFloat(props.dailyEnergy) || 0)
 const dWater = computed(() => props.waterToday || 0)
 const dGas = computed(() => props.gasToday || 0)
 
+// 统一单价：电费 0.558元/kWh，水费 2.47元/m³，燃气费 2.53元/m³
+const ELECTRIC_RATE = 0.558
+const WATER_RATE = 2.47
+const GAS_RATE = 2.53
+
 // 今日总费用
-const todayCost = computed(() => (dEnergy.value * 0.6 + dWater.value * 3.5 + dGas.value * 2.8).toFixed(1))
+const todayCost = computed(() => (dEnergy.value * ELECTRIC_RATE + dWater.value * WATER_RATE + dGas.value * GAS_RATE).toFixed(1))
 
 // 电费明细（基于实际用电量）
-const electricMonthCost = computed(() => (dEnergy.value * 0.6 * 30).toFixed(1))
-const electricPeakCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.6).toFixed(1))
-const electricNormalCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.3).toFixed(1))
-const electricValleyCost = computed(() => (dEnergy.value * 0.6 * 30 * 0.1).toFixed(1))
+const electricMonthCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30).toFixed(1))
+const electricPeakCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.6).toFixed(1))
+const electricNormalCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.3).toFixed(1))
+const electricValleyCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.1).toFixed(1))
 
 // 水费明细（基于实际用水量）
-const waterMonthCost = computed(() => (dWater.value * 3.5 * 30).toFixed(1))
-const waterLifeCost = computed(() => (dWater.value * 3.5 * 30 * 0.7).toFixed(1))
-const waterBathCost = computed(() => (dWater.value * 3.5 * 30 * 0.2).toFixed(1))
-const waterKitchenCost = computed(() => (dWater.value * 3.5 * 30 * 0.1).toFixed(1))
+const waterMonthCost = computed(() => (dWater.value * WATER_RATE * 30).toFixed(1))
+const waterLifeCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.7).toFixed(1))
+const waterBathCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.2).toFixed(1))
+const waterKitchenCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.1).toFixed(1))
 
 // 燃气费明细（基于实际用气量）
-const gasMonthCost = computed(() => (dGas.value * 2.8 * 30).toFixed(1))
-const gasHeaterCost = computed(() => (dGas.value * 2.8 * 30 * 0.55).toFixed(1))
-const gasStoveCost = computed(() => (dGas.value * 2.8 * 30 * 0.35).toFixed(1))
-const gasBoilerCost = computed(() => (dGas.value * 2.8 * 30 * 0.1).toFixed(1))
+const gasMonthCost = computed(() => (dGas.value * GAS_RATE * 30).toFixed(1))
+const gasHeaterCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.55).toFixed(1))
+const gasStoveCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.35).toFixed(1))
+const gasBoilerCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.1).toFixed(1))
+
+// 费用总计
+const totalMonthCost = computed(() => {
+  const e = parseFloat(electricMonthCost.value) || 0
+  const w = parseFloat(waterMonthCost.value) || 0
+  const g = parseFloat(gasMonthCost.value) || 0
+  return (e + w + g).toFixed(1)
+})
 </script>
 
 <style scoped>

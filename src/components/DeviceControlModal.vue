@@ -180,7 +180,7 @@
               <div class="energy-detail">
                 <div class="ed-big">
                   <span class="ed-val">{{ device.value }}</span>
-                  <span class="ed-unit">{{ device.unit }}</span>
+                  <span class="ed-unit">{{ device.id === 'energy-cost' || device.id?.includes('Cost') ? '元' : device.unit }}</span>
                   <span v-if="device.trend" class="ed-trend" :class="device.trend.includes('+') ? 'up' : 'down'">{{ device.trend }}</span>
                 </div>
                 <p class="ed-desc">{{ device.desc }}</p>
@@ -241,16 +241,16 @@
                   <div class="ed-cost-list">
                     <!-- 总费用明细：展示电/水/气各项费用 -->
                     <div class="ed-cost-item" v-if="device.id === 'energy-cost'">
-                      <div class="ed-cost-row"><span>⚡ 电费 (0.6元/kWh)</span><span>¥{{ device._electricCost }}</span></div>
-                      <div class="ed-cost-row"><span>💧 水费 (3.5元/m³)</span><span>¥{{ device._waterCost }}</span></div>
-                      <div class="ed-cost-row"><span>🔥 燃气费 (2.8元/m³)</span><span>¥{{ device._gasCost }}</span></div>
-                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                      <div class="ed-cost-row"><span>⚡ 电费 (0.558元/kWh)</span><span>¥{{ liveElectricCost }}</span></div>
+                      <div class="ed-cost-row"><span>💧 水费 (2.47元/m³)</span><span>¥{{ liveWaterCost }}</span></div>
+                      <div class="ed-cost-row"><span>🔥 燃气费 (2.53元/m³)</span><span>¥{{ liveGasCost }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveTotalCost }}</span></div>
                     </div>
                     <!-- 电费明细：按电器实际用量比例 -->
                     <div class="ed-cost-item" v-if="device.id?.includes('electric') || (device.id?.endsWith('cost') && !device.id?.includes('water') && !device.id?.includes('gas') && device.id !== 'energy-cost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 0.6).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 0.558).toFixed(2) }}</span>
                       </div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
@@ -258,7 +258,7 @@
                     <div class="ed-cost-item" v-if="device.id?.includes('waterCost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 3.5).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 2.47).toFixed(2) }}</span>
                       </div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
@@ -266,7 +266,7 @@
                     <div class="ed-cost-item" v-if="device.id?.includes('gasCost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 2.8).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 2.53).toFixed(2) }}</span>
                       </div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
                     </div>
@@ -324,27 +324,14 @@
                 </div>
                 <!-- 历史对比 -->
                 <div class="ed-chart">
-                  <div class="ed-chart-title">📈 历史数据对比</div>
+                  <div class="ed-chart-title">📈 用能趋势对比</div>
                   <div class="ed-bars">
-                    <div class="ed-bar-item">
-                      <div class="ed-bar-label">昨日</div>
-                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '85%', background: '#4fc3f7' }"></div></div>
-                      <div class="ed-bar-val">{{ (device.value * 0.95).toFixed(1) }}{{ device.unit }}</div>
-                    </div>
-                    <div class="ed-bar-item">
-                      <div class="ed-bar-label">上周</div>
-                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '95%', background: '#81c784' }"></div></div>
-                      <div class="ed-bar-val">{{ (device.value * 1.1).toFixed(1) }}{{ device.unit }}</div>
-                    </div>
-                    <div class="ed-bar-item">
-                      <div class="ed-bar-label">上月</div>
-                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '75%', background: '#ffd54f' }"></div></div>
-                      <div class="ed-bar-val">{{ (device.value * 0.85).toFixed(1) }}{{ device.unit }}</div>
-                    </div>
-                    <div class="ed-bar-item">
-                      <div class="ed-bar-label">年均</div>
-                      <div class="ed-bar-wrap"><div class="ed-bar" :style="{ width: '90%', background: '#ce93d8' }"></div></div>
-                      <div class="ed-bar-val">{{ (device.value * 1.05).toFixed(1) }}{{ device.unit }}</div>
+                    <div v-for="(item, index) in historyStats" :key="index" class="ed-bar-item">
+                      <div class="ed-bar-label">{{ item.label }}</div>
+                      <div class="ed-bar-wrap">
+                        <div class="ed-bar" :style="{ width: item.width + '%', background: item.color }"></div>
+                      </div>
+                      <div class="ed-bar-val">{{ item.value }}{{ device.unit }}</div>
                     </div>
                   </div>
                 </div>
@@ -362,7 +349,9 @@ import { ref, computed, watch, readonly } from 'vue'
 
 const props = defineProps({
   visible: Boolean,
-  device: Object
+  device: Object,
+  chartData: Object,
+  energyLiveData: Object
 })
 
 const emit = defineEmits(['close', 'toggle', 'update'])
@@ -394,6 +383,59 @@ watch(() => props.device, (d) => {
     heaterTemp.value = d.type === 'heater' ? (d.value ?? 55) : 55
   }
 }, { immediate: true })
+
+// 统一从 chartData 计算所有数据（与卡片完全同源）
+const cd = computed(() => props.chartData?.value || props.chartData || {})
+
+const liveElectricCost = computed(() => {
+  const dailyE = (cd.value.energyLine || []).reduce((a, b) => a + b, 0)
+  return (dailyE * 0.558).toFixed(2)
+})
+const liveWaterCost = computed(() => {
+  const dailyW = (cd.value.waterBar || []).reduce((a, b) => a + b, 0)
+  return (dailyW * 2.47).toFixed(2)
+})
+const liveGasCost = computed(() => {
+  const dailyG = (cd.value.gasLine || []).reduce((a, b) => a + b, 0)
+  return (dailyG * 2.53).toFixed(2)
+})
+const liveTotalCost = computed(() => {
+  return (parseFloat(liveElectricCost.value) + parseFloat(liveWaterCost.value) + parseFloat(liveGasCost.value)).toFixed(1)
+})
+
+// 历史对比数据（模拟数据，实际应从后端获取）
+const historyStats = computed(() => {
+  const val = props.device?.value || 0
+  // 以最大值为基准计算宽度，确保图表比例合理
+  const maxVal = Math.max(val * 0.95, val * 1.1, val * 0.85, val * 1.05)
+  
+  return [
+    { 
+      label: '昨日总耗', 
+      value: (val * 0.95).toFixed(1),
+      width: ((val * 0.95) / maxVal * 100).toFixed(1),
+      color: '#4fc3f7' 
+    },
+    { 
+      label: '七日同比', 
+      value: (val * 1.1).toFixed(1),
+      width: ((val * 1.1) / maxVal * 100).toFixed(1),
+      color: '#81c784' 
+    },
+    { 
+      label: '月度同比', 
+      value: (val * 0.85).toFixed(1),
+      width: ((val * 0.85) / maxVal * 100).toFixed(1),
+      color: '#ffd54f' 
+    },
+    { 
+      label: '去年同比', 
+      value: (val * 1.05).toFixed(1),
+      width: ((val * 1.05) / maxVal * 100).toFixed(1),
+      color: '#ce93d8' 
+    }
+  ]
+})
 
 const iconBg = computed(() => {
   const map = {
