@@ -341,7 +341,7 @@ const props = defineProps({
   gasPieChartRef: { type: Object, default: null },
 })
 
-const periods = ['日', '周', '月']
+const periods = ['日', '周', '月', '年']
 const rankTabs = [
   { key: 'electric', label: '用电' },
   { key: 'water', label: '用水' },

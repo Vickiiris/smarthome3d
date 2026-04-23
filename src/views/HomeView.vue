@@ -1855,6 +1855,10 @@ const energyMonthData = {
   labels: Array.from({length:30}, (_,i) => `${i+1}日`),
   values: Array.from({length:30}, () => Math.round((4.5 + Math.random() * 2.5) * 10) / 10)
 }
+const energyYearData = {
+  labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+  values: [165, 158, 172, 168, 175, 195, 210, 225, 198, 182, 170, 178]
+}
 const waterWeekData = {
   labels: ['周一','周二','周三','周四','周五','周六','周日'],
   values: [0.55, 0.72, 0.58, 0.80, 0.65, 0.85, 0.62]
@@ -1863,6 +1867,10 @@ const waterMonthData = {
   labels: Array.from({length:30}, (_,i) => `${i+1}日`),
   values: Array.from({length:30}, () => Math.round((0.4 + Math.random() * 0.5) * 100) / 100)
 }
+const waterYearData = {
+  labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+  values: [18.5, 16.8, 19.2, 17.5, 20.1, 22.8, 25.5, 24.2, 21.6, 19.8, 17.5, 18.2]
+}
 const gasWeekData = {
   labels: ['周一','周二','周三','周四','周五','周六','周日'],
   values: [0.32, 0.45, 0.35, 0.48, 0.38, 0.50, 0.42]
@@ -1870,6 +1878,10 @@ const gasWeekData = {
 const gasMonthData = {
   labels: Array.from({length:30}, (_,i) => `${i+1}日`),
   values: Array.from({length:30}, () => Math.round((0.25 + Math.random() * 0.3) * 100) / 100)
+}
+const gasYearData = {
+  labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+  values: [8.5, 9.2, 7.8, 6.5, 5.2, 4.8, 4.2, 4.0, 4.5, 5.8, 7.5, 8.8]
 }
 
 // 结构图周/月固定数据
@@ -1885,6 +1897,12 @@ const energyPieMonthData = [
   { value: 20, name: '照明', itemStyle: { color: '#ffd54f' } },
   { value: 10, name: '其他', itemStyle: { color: '#ce93d8' } },
 ]
+const energyPieYearData = [
+  { value: 38, name: '空调', itemStyle: { color: '#4fc3f7' } },
+  { value: 32, name: '冰箱', itemStyle: { color: '#81c784' } },
+  { value: 18, name: '照明', itemStyle: { color: '#ffd54f' } },
+  { value: 12, name: '其他', itemStyle: { color: '#ce93d8' } },
+]
 const waterPieWeekData = [
   { value: 48, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
   { value: 22, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
@@ -1897,6 +1915,12 @@ const waterPieMonthData = [
   { value: 18, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
   { value: 12, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
 ]
+const waterPieYearData = [
+  { value: 52, name: '淋浴', itemStyle: { color: '#4fc3f7', borderRadius: [0, 4, 4, 0] } },
+  { value: 18, name: '洗衣', itemStyle: { color: '#81c784', borderRadius: [0, 4, 4, 0] } },
+  { value: 20, name: '厨房', itemStyle: { color: '#ffd54f', borderRadius: [0, 4, 4, 0] } },
+  { value: 10, name: '其他', itemStyle: { color: '#ce93d8', borderRadius: [0, 4, 4, 0] } },
+]
 const gasPieWeekData = [
   { value: 52, name: '热水器', itemStyle: { color: '#ff7043' } },
   { value: 38, name: '燃气灶', itemStyle: { color: '#ffa726' } },
@@ -1905,6 +1929,11 @@ const gasPieWeekData = [
 const gasPieMonthData = [
   { value: 50, name: '热水器', itemStyle: { color: '#ff7043' } },
   { value: 40, name: '燃气灶', itemStyle: { color: '#ffa726' } },
+  { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
+]
+const gasPieYearData = [
+  { value: 55, name: '热水器', itemStyle: { color: '#ff7043' } },
+  { value: 35, name: '燃气灶', itemStyle: { color: '#ffa726' } },
   { value: 10, name: '壁挂炉', itemStyle: { color: '#ffcc80' } },
 ]
 
@@ -2176,7 +2205,8 @@ function updatePieChart(type) {
     let data
     if (period === '日') data = chartData.value.energyPie
     else if (period === '周') data = energyPieWeekData
-    else data = energyPieMonthData
+    else if (period === '月') data = energyPieMonthData
+    else data = energyPieYearData
     pieChart?.setOption({ series: [{ data }] })
   }
   if (type === 'water' || type === 'all') {
@@ -2184,7 +2214,8 @@ function updatePieChart(type) {
     let data
     if (period === '日') data = chartData.value.waterPie
     else if (period === '周') data = waterPieWeekData
-    else data = waterPieMonthData
+    else if (period === '月') data = waterPieMonthData
+    else data = waterPieYearData
     waterPieChart?.setOption({ series: [{ data }] })
   }
   if (type === 'gas' || type === 'all') {
@@ -2192,7 +2223,8 @@ function updatePieChart(type) {
     let data
     if (period === '日') data = chartData.value.gasPie
     else if (period === '周') data = gasPieWeekData
-    else data = gasPieMonthData
+    else if (period === '月') data = gasPieMonthData
+    else data = gasPieYearData
     gasPieChart?.setOption({ series: [{ data }] })
   }
 }
@@ -2210,9 +2242,12 @@ function updateEnergyChart(type) {
     } else if (period === '周') {
       labels = energyWeekData.labels
       values = energyWeekData.values
-    } else {
+    } else if (period === '月') {
       labels = energyMonthData.labels
       values = energyMonthData.values
+    } else {
+      labels = energyYearData.labels
+      values = energyYearData.values
     }
     lineChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
   }
@@ -2225,9 +2260,12 @@ function updateEnergyChart(type) {
     } else if (period === '周') {
       labels = waterWeekData.labels
       values = waterWeekData.values
-    } else {
+    } else if (period === '月') {
       labels = waterMonthData.labels
       values = waterMonthData.values
+    } else {
+      labels = waterYearData.labels
+      values = waterYearData.values
     }
     waterChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
   }
@@ -2240,9 +2278,12 @@ function updateEnergyChart(type) {
     } else if (period === '周') {
       labels = gasWeekData.labels
       values = gasWeekData.values
-    } else {
+    } else if (period === '月') {
       labels = gasMonthData.labels
       values = gasMonthData.values
+    } else {
+      labels = gasYearData.labels
+      values = gasYearData.values
     }
     gasChart?.setOption({ xAxis: { data: labels }, series: [{ data: values }] })
   }
