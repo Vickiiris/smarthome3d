@@ -916,7 +916,15 @@ function updateStepsChart() {
   const { data, xKey } = getStepsData(stepsPeriod.value)
   stepsChart.setOption({
     xAxis: { data: data.map(v => v[xKey]) },
-    series: [{ data: data.map(v => v.value) }],
+    series: [{
+      data: data.map(v => v.value),
+      type: 'bar', barWidth: '55%',
+      itemStyle: {
+        color: new ec.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#34d399' }, { offset: 1, color: 'rgba(52,211,153,0.3)' }]),
+        borderRadius: [3, 3, 0, 0]
+      },
+      markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(0,212,170,0.5)', type: 'dashed', width: 1.5 }, data: [{ yAxis: 10000, label: { formatter: '目标 10000', color: 'rgba(0,212,170,0.7)', fontSize: 10 } }] }
+    }],
     tooltip: mkTooltip(data, xKey, ' 步', '#00d4aa'),
   })
 }

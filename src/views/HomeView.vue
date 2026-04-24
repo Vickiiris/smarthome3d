@@ -1526,6 +1526,13 @@ function simulateStepsPerTick() {
   const minute = now.getMinutes()
   const second = now.getSeconds()
 
+  // 跨天检测：如果当前是0点且已有数据，重置步数模拟
+  if (hour === 0 && stepsSim.accumulated > 0 && stepsSim.lastHour >= 22) {
+    // 重新初始化步数模拟（新的一天）
+    initStepsSimulation()
+    return
+  }
+
   // 每小时整点检查是否需要重置追赶状态
   if (minute === 0 && hour !== stepsSim.lastHour) {
     stepsSim.lastHour = hour
@@ -2904,8 +2911,6 @@ onUnmounted(() => {
 .cdc-icon.water { background: rgba(79,195,247,0.15); color: #4fc3f7; }
 .cdc-icon.gas { background: rgba(255,112,67,0.15); color: #ff7043; }
 .cdc-icon.total { background: linear-gradient(135deg, rgba(0,212,170,0.25) 0%, rgba(99,102,241,0.25) 100%); color: #00d4aa; }
-.cost-detail-card.total { border-color: rgba(0,212,170,0.3); }
-.cost-detail-card.total:hover { border-color: #00d4aa; }
 .cdc-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
 .cdc-body { display: flex; flex-direction: column; gap: 12px; }
 .cdc-main { display: flex; align-items: baseline; gap: 8px; }
