@@ -25,7 +25,7 @@
         </div>
         <div class="em-info">
           <div class="em-label">今日用电</div>
-          <div class="em-value">{{ dailyEnergy }} <span class="em-unit">kWh</span></div>
+          <div class="em-value electric">{{ Number(dailyEnergy).toFixed(2) }} <span class="em-unit">kWh</span></div>
           <div class="em-trend" :class="electricTrend.dir">{{ electricTrend.label }}</div>
         </div>
       </div>
@@ -35,7 +35,7 @@
         </div>
         <div class="em-info">
           <div class="em-label">今日用水</div>
-          <div class="em-value">{{ waterToday.toFixed(2) }} <span class="em-unit">m³</span></div>
+          <div class="em-value water">{{ waterToday.toFixed(2) }} <span class="em-unit">m³</span></div>
           <div class="em-trend" :class="waterTrend.dir">{{ waterTrend.label }}</div>
         </div>
       </div>
@@ -45,7 +45,7 @@
         </div>
         <div class="em-info">
           <div class="em-label">今日燃气</div>
-          <div class="em-value">{{ gasToday.toFixed(2) }} <span class="em-unit">m³</span></div>
+          <div class="em-value gas">{{ gasToday.toFixed(2) }} <span class="em-unit">m³</span></div>
           <div class="em-trend" :class="gasTrend.dir">{{ gasTrend.label }}</div>
         </div>
       </div>
@@ -55,7 +55,7 @@
         </div>
         <div class="em-info">
           <div class="em-label">今日费用</div>
-          <div class="em-value">¥{{ todayCost }}</div>
+          <div class="em-value cost">¥{{ todayCost }}</div>
           <div class="em-trend" :class="costTrend.dir">{{ costTrend.label }}</div>
         </div>
       </div>
@@ -204,7 +204,7 @@
           </div>
         </div>
       </div>
-      <div class="cost-detail-card total" @click="$emit('openEnergyDetail', 'cost')">
+      <div class="cost-detail-card total" @click="$emit('openCostTotal')">
         <div class="cdc-header">
           <div class="cdc-icon total">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -348,7 +348,7 @@ const rankTabs = [
   { key: 'gas', label: '燃气' }
 ]
 
-defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
+defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'openCostTotal', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
 
 // Computed cost values - 基于实际用量计算
 const dEnergy = computed(() => parseFloat(props.dailyEnergy) || 0)
@@ -361,32 +361,32 @@ const WATER_RATE = 2.47
 const GAS_RATE = 2.53
 
 // 今日总费用
-const todayCost = computed(() => (dEnergy.value * ELECTRIC_RATE + dWater.value * WATER_RATE + dGas.value * GAS_RATE).toFixed(1))
+const todayCost = computed(() => (dEnergy.value * ELECTRIC_RATE + dWater.value * WATER_RATE + dGas.value * GAS_RATE).toFixed(2))
 
 // 电费明细（基于实际用电量）
-const electricMonthCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30).toFixed(1))
-const electricPeakCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.6).toFixed(1))
-const electricNormalCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.3).toFixed(1))
-const electricValleyCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.1).toFixed(1))
+const electricMonthCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30).toFixed(2))
+const electricPeakCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.6).toFixed(2))
+const electricNormalCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.3).toFixed(2))
+const electricValleyCost = computed(() => (dEnergy.value * ELECTRIC_RATE * 30 * 0.1).toFixed(2))
 
 // 水费明细（基于实际用水量）
-const waterMonthCost = computed(() => (dWater.value * WATER_RATE * 30).toFixed(1))
-const waterLifeCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.7).toFixed(1))
-const waterBathCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.2).toFixed(1))
-const waterKitchenCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.1).toFixed(1))
+const waterMonthCost = computed(() => (dWater.value * WATER_RATE * 30).toFixed(2))
+const waterLifeCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.7).toFixed(2))
+const waterBathCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.2).toFixed(2))
+const waterKitchenCost = computed(() => (dWater.value * WATER_RATE * 30 * 0.1).toFixed(2))
 
 // 燃气费明细（基于实际用气量）
-const gasMonthCost = computed(() => (dGas.value * GAS_RATE * 30).toFixed(1))
-const gasHeaterCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.55).toFixed(1))
-const gasStoveCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.35).toFixed(1))
-const gasBoilerCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.1).toFixed(1))
+const gasMonthCost = computed(() => (dGas.value * GAS_RATE * 30).toFixed(2))
+const gasHeaterCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.55).toFixed(2))
+const gasStoveCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.35).toFixed(2))
+const gasBoilerCost = computed(() => (dGas.value * GAS_RATE * 30 * 0.1).toFixed(2))
 
 // 费用总计
 const totalMonthCost = computed(() => {
   const e = parseFloat(electricMonthCost.value) || 0
   const w = parseFloat(waterMonthCost.value) || 0
   const g = parseFloat(gasMonthCost.value) || 0
-  return (e + w + g).toFixed(1)
+  return (e + w + g).toFixed(2)
 })
 </script>
 
@@ -397,5 +397,5 @@ const totalMonthCost = computed(() => {
 .ptab.active { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #818cf8; }
 
 /* 图表高度 - 参考健康监测页面 */
-.chart-box { width: 100%; height: 160px; }
+.chart-box { width: 100%; height: 200px; }
 </style>

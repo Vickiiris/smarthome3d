@@ -82,7 +82,7 @@
           :isFullscreen="isFullscreen"
           :activeRoom="activeRoom"
           :rooms="rooms"
-          :dailyEnergy="(chartData?.energyLine || []).reduce((a, b) => a + b, 0).toFixed(2)"
+          :dailyEnergy="(chartData?.energyLine || []).reduce((a, b) => a + b, 0)"
           :waterToday="energyLiveData.waterToday"
           :gasToday="energyLiveData.gasToday"
           :electricTrend="electricTrend"
@@ -102,6 +102,7 @@
           @switchRoom="switchRoom"
           @toggleFullscreen="toggleFullscreen"
           @openEnergyDetail="openEnergyDetail"
+          @openCostTotal="openCostTotalDetail"
           @update:rankTab="(v) => rankTab = v"
           @update:electricPeriod="(v) => { electricPeriod = v; updateEnergyChart('electric') }"
           @update:waterPeriod="(v) => { waterPeriod = v; updateEnergyChart('water') }"
@@ -995,18 +996,18 @@ function openEnergyDetail(type, item = null) {
   const dailyW = energyLiveData.value.waterToday
   const dailyG = energyLiveData.value.gasToday
   // 电费 0.5580 元/度，水费 2.47 元/吨，燃气费 2.53 元/立方米
-  const electricCost = (dailyE * 0.558).toFixed(2)
-  const waterCost = (dailyW * 2.47).toFixed(2)
-  const gasCost = (dailyG * 2.53).toFixed(2)
+  const electricCost = (dailyE * 0.558).toFixed(3)
+  const waterCost = (dailyW * 2.47).toFixed(3)
+  const gasCost = (dailyG * 2.53).toFixed(3)
   const energyData = {
-    today: { title: '今日用电详情', unit: 'kWh', value: dailyE.toFixed(2), trend: electricTrend.value.label, desc: '今日累计用电量', rankList: energyRank.value },
-    power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(1), trend: '', desc: '当前用电功率' },
+    today: { title: '今日用电详情', unit: 'kWh', value: dailyE.toFixed(3), trend: electricTrend.value.label, desc: '今日累计用电量', rankList: energyRank.value },
+    power: { title: '实时功率', unit: 'kW', value: homeStore.stats.energyUsage.toFixed(3), trend: '', desc: '当前用电功率' },
     total: { title: '累计用电', unit: 'kWh', value: energyLiveData.value.totalEnergy, trend: '', desc: '本月累计用电' },
     saving: { title: '节能率', unit: '%', value: energyLiveData.value.savingRate, trend: '', desc: '相比历史平均节能比例' },
-        carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
+    carbon: { title: '碳减排量', unit: 'kg', value: energyLiveData.value.carbonReduction, trend: '', desc: '相当于减少的二氧化碳排放', savingRate: energyLiveData.value.savingRate },
     water: { title: '今日用水详情', unit: 'm³', value: dailyW.toFixed(3), trend: waterTrend.value.label, desc: '今日累计用水量', rankList: waterRank.value },
     gas: { title: '今日燃气详情', unit: 'm³', value: dailyG.toFixed(3), trend: gasTrend.value.label, desc: '今日累计燃气用量', rankList: gasRank.value },
-    cost: { title: '今日费用详情', unit: '元', value: (parseFloat(electricCost) + parseFloat(waterCost) + parseFloat(gasCost)).toFixed(1), trend: costTrend.value.label, desc: '今日电费+水费+燃气费', _electricCost: electricCost, _waterCost: waterCost, _gasCost: gasCost },
+    cost: { title: '今日费用详情', unit: '元', value: (parseFloat(electricCost) + parseFloat(waterCost) + parseFloat(gasCost)).toFixed(3), trend: costTrend.value.label, desc: '今日电费+水费+燃气费', _electricCost: electricCost, _waterCost: waterCost, _gasCost: gasCost },
     electricCost: { title: '今日电费详情', unit: '元', value: electricCost, trend: electricTrend.value.label, desc: '今日电费支出', rankList: energyRank.value, _rate: '0.558元/kWh' },
     waterCost: { title: '今日水费详情', unit: '元', value: waterCost, trend: waterTrend.value.label, desc: '今日水费支出', rankList: waterRank.value },
     gasCost: { title: '今日燃气费详情', unit: '元', value: gasCost, trend: gasTrend.value.label, desc: '今日燃气费支出', rankList: gasRank.value },
@@ -1031,6 +1032,34 @@ function openEnergyDetail(type, item = null) {
     _electricCost: data._electricCost || electricCost,
     _waterCost: data._waterCost || waterCost,
     _gasCost: data._gasCost || gasCost,
+  }
+  showControlPanel.value = true
+}
+
+// 费用总计双栏详情弹窗（cost-detail-card total 点击）
+function openCostTotalDetail() {
+  const dailyE = (chartData.value?.energyLine || []).reduce((a, b) => a + b, 0)
+  const dailyW = energyLiveData.value.waterToday
+  const dailyG = energyLiveData.value.gasToday
+  const electricCost = (dailyE * 0.558).toFixed(3)
+  const waterCost = (dailyW * 2.47).toFixed(3)
+  const gasCost = (dailyG * 2.53).toFixed(3)
+  const totalCost = (parseFloat(electricCost) + parseFloat(waterCost) + parseFloat(gasCost)).toFixed(3)
+  selectedDevice.value = {
+    id: 'energy-cost-total',
+    name: '费用总计详情',
+    icon: '💰',
+    type: 'energy',
+    status: true,
+    value: totalCost,
+    unit: '元',
+    trend: costTrend.value.label,
+    desc: '今日电费+水费+燃气费',
+    room: '全屋',
+    energyType: 'cost',
+    _electricCost: electricCost,
+    _waterCost: waterCost,
+    _gasCost: gasCost,
   }
   showControlPanel.value = true
 }
@@ -2505,7 +2534,9 @@ onMounted(() => {
     // 电能趋势：严格按照公式 W(h,t) = W̄ × (1+0.2R₁) × Kₕ × (1+0.2R₂) × (t/60)
     if (electricPeriod.value === '日') {
       const minute = now.getMinutes() + now.getSeconds() / 60 // 0~60
-      cd.energyLine[hour] = Math.round(calcEnergyAt(DAILY_BASE_ELECTRIC, dailyR1_Electric, ENERGY_KH[hour], hourlyR2_Electric[hour], minute) * 10000) / 10000
+      const newEnergyLine = [...cd.energyLine]
+      newEnergyLine[hour] = Math.round(calcEnergyAt(DAILY_BASE_ELECTRIC, dailyR1_Electric, ENERGY_KH[hour], hourlyR2_Electric[hour], minute) * 10000) / 10000
+      cd.energyLine = newEnergyLine
       lineChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.energyLine.slice(0, hour + 1) }] })
     }
 
@@ -2517,20 +2548,24 @@ onMounted(() => {
       // 基础比例 + 随机波动（±2%）+ 设备影响
       const baseAC = 35, baseLight = 25, baseAppliance = 20, baseOther = 10
       const randomShift = () => (Math.random() - 0.5) * 4 // ±2%随机波动
-      cd.energyPie[0].value = Math.max(20, Math.min(50, baseAC + acOn * 6 + randomShift()))
-      cd.energyPie[1].value = Math.max(15, Math.min(40, baseLight + lightOn * 4 + randomShift()))
-      cd.energyPie[2].value = Math.max(10, Math.min(35, baseAppliance + Math.min(8, totalOn) * 2 + randomShift()))
-      cd.energyPie[3].value = Math.max(5, Math.min(20, baseOther + randomShift()))
-      // 归一化到100%
-      const sum = cd.energyPie.reduce((a, b) => a + b.value, 0)
-      cd.energyPie.forEach(item => item.value = Math.round(item.value / sum * 100))
+      const newEnergyPie = cd.energyPie.map((item, i) => {
+        if (i === 0) return { ...item, value: Math.max(20, Math.min(50, baseAC + acOn * 6 + randomShift())) }
+        if (i === 1) return { ...item, value: Math.max(15, Math.min(40, baseLight + lightOn * 4 + randomShift())) }
+        if (i === 2) return { ...item, value: Math.max(10, Math.min(35, baseAppliance + Math.min(8, totalOn) * 2 + randomShift())) }
+        if (i === 3) return { ...item, value: Math.max(5, Math.min(20, baseOther + randomShift())) }
+        return item
+      })
+      const sum = newEnergyPie.reduce((a, b) => a + b.value, 0)
+      cd.energyPie = newEnergyPie.map(item => ({ ...item, value: Math.round(item.value / sum * 100) }))
       pieChart?.setOption({ series: [{ data: cd.energyPie }] })
     }
 
     // 用水柱状图：严格按照公式 W(h,t) = W̄ × (1+0.2R₁) × Kₕ × (1+0.2R₂) × (t/60)
     if (waterPeriod.value === '日') {
       const minute = now.getMinutes() + now.getSeconds() / 60
-      cd.waterBar[hour] = Math.round(calcEnergyAt(DAILY_BASE_WATER, dailyR1_Water, WATER_KH[hour], hourlyR2_Water[hour], minute) * 10000) / 10000
+      const newWaterBar = [...cd.waterBar]
+      newWaterBar[hour] = Math.round(calcEnergyAt(DAILY_BASE_WATER, dailyR1_Water, WATER_KH[hour], hourlyR2_Water[hour], minute) * 10000) / 10000
+      cd.waterBar = newWaterBar
       waterChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.waterBar.slice(0, hour + 1) }] })
     }
 
@@ -2538,20 +2573,24 @@ onMounted(() => {
     if (waterPeriod.value === '日' && now.getSeconds() % 5 === 0) {
       const baseShower = 40, baseLaundry = 25, baseKitchen = 20, baseOther = 10
       const randomShift = () => (Math.random() - 0.5) * 4 // ±2%随机波动
-      cd.waterPie[0].value = Math.max(25, Math.min(55, baseShower + randomShift())) // 淋浴
-      cd.waterPie[1].value = Math.max(15, Math.min(35, baseLaundry + randomShift())) // 洗衣
-      cd.waterPie[2].value = Math.max(10, Math.min(30, baseKitchen + randomShift())) // 厨房
-      cd.waterPie[3].value = Math.max(5, Math.min(20, baseOther + randomShift())) // 其他
-      // 归一化
-      const sum = cd.waterPie.reduce((a, b) => a + b.value, 0)
-      cd.waterPie.forEach(item => item.value = Math.round(item.value / sum * 100))
+      const newWaterPie = cd.waterPie.map((item, i) => {
+        if (i === 0) return { ...item, value: Math.max(25, Math.min(55, baseShower + randomShift())) }
+        if (i === 1) return { ...item, value: Math.max(15, Math.min(35, baseLaundry + randomShift())) }
+        if (i === 2) return { ...item, value: Math.max(10, Math.min(30, baseKitchen + randomShift())) }
+        if (i === 3) return { ...item, value: Math.max(5, Math.min(20, baseOther + randomShift())) }
+        return item
+      })
+      const wSum = newWaterPie.reduce((a, b) => a + b.value, 0)
+      cd.waterPie = newWaterPie.map(item => ({ ...item, value: Math.round(item.value / wSum * 100) }))
       waterPieChart?.setOption({ series: [{ data: cd.waterPie }] })
     }
 
     // 燃气虚线折线图：严格按照公式 W(h,t) = W̄ × (1+0.2R₁) × Kₕ × (1+0.2R₂) × (t/60)
     if (gasPeriod.value === '日') {
       const minute = now.getMinutes() + now.getSeconds() / 60
-      cd.gasLine[hour] = Math.round(calcEnergyAt(DAILY_BASE_GAS, dailyR1_Gas, GAS_KH[hour], hourlyR2_Gas[hour], minute) * 10000) / 10000
+      const newGasLine = [...cd.gasLine]
+      newGasLine[hour] = Math.round(calcEnergyAt(DAILY_BASE_GAS, dailyR1_Gas, GAS_KH[hour], hourlyR2_Gas[hour], minute) * 10000) / 10000
+      cd.gasLine = newGasLine
       gasChart?.setOption({ xAxis: { data: hourLabels.slice(0, hour + 1) }, series: [{ data: cd.gasLine.slice(0, hour + 1) }] })
     }
 
@@ -2559,12 +2598,14 @@ onMounted(() => {
     if (gasPeriod.value === '日' && now.getSeconds() % 5 === 0) {
       const baseHeater = 50, baseStove = 35, baseWall = 10, baseOther = 5
       const randomShift = () => (Math.random() - 0.5) * 4 // ±2%随机波动
-      cd.gasPie[0].value = Math.max(35, Math.min(65, baseHeater + randomShift())) // 热水器
-      cd.gasPie[1].value = Math.max(20, Math.min(45, baseStove + randomShift())) // 燃气灶
-      cd.gasPie[2].value = Math.max(5, Math.min(20, baseWall + randomShift())) // 壁挂炉
-      // 归一化
-      const sum = cd.gasPie.reduce((a, b) => a + b.value, 0)
-      cd.gasPie.forEach(item => item.value = Math.round(item.value / sum * 100))
+      const newGasPie = cd.gasPie.map((item, i) => {
+        if (i === 0) return { ...item, value: Math.max(35, Math.min(65, baseHeater + randomShift())) }
+        if (i === 1) return { ...item, value: Math.max(20, Math.min(45, baseStove + randomShift())) }
+        if (i === 2) return { ...item, value: Math.max(5, Math.min(20, baseWall + randomShift())) }
+        return item
+      })
+      const gSum = newGasPie.reduce((a, b) => a + b.value, 0)
+      cd.gasPie = newGasPie.map(item => ({ ...item, value: Math.round(item.value / gSum * 100) }))
       gasPieChart?.setOption({ series: [{ data: cd.gasPie }] })
     }
 
@@ -2864,6 +2905,10 @@ onUnmounted(() => {
 .em-info { flex: 1; }
 .em-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
 .em-value { font-size: 24px; font-weight: 700; color: var(--text-1); }
+.em-value.electric { color: #00d4aa; }
+.em-value.water { color: #4fc3f7; }
+.em-value.gas { color: #ff7043; }
+.em-value.cost { color: #ffd54f; }
 .em-unit { font-size: 13px; color: var(--text-3); font-weight: 400; }
 .em-trend { font-size: 11px; font-weight: 600; margin-top: 4px; }
 .em-trend.up { color: #ef4444; }

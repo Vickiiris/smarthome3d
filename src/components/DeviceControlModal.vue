@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal-anim">
       <div v-if="visible" class="modal-overlay" @click.self="$emit('close')">
-        <div class="ctrl-modal">
+        <div class="ctrl-modal" :class="{ 'ctrl-modal--wide': device?.id === 'energy-cost-total' }">
           <div class="modal-top" :style="{ background: iconBg }">
             <div class="m-icon">{{ device?.icon }}</div>
             <div class="m-info">
@@ -178,12 +178,67 @@
             <!-- 能源详情 -->
             <template v-if="device?.type === 'energy'">
               <div class="energy-detail">
-                <div class="ed-big">
-                  <span class="ed-val">{{ device.value }}</span>
-                  <span class="ed-unit">{{ device.id === 'energy-cost' || device.id?.includes('Cost') ? '元' : device.unit }}</span>
-                  <span v-if="device.trend" class="ed-trend" :class="device.trend.includes('+') ? 'up' : 'down'">{{ device.trend }}</span>
-                </div>
-                <p class="ed-desc">{{ device.desc }}</p>
+                <!-- 费用总计双栏详情（cost-detail-card total 点击） -->
+                <template v-if="device.id === 'energy-cost-total'">
+                  <div class="cost-detail-two-col">
+                    <!-- 左栏：今日 -->
+                    <div class="cost-detail-col">
+                      <div class="cdc-header">📅 今日</div>
+                      <div class="cdc-big">{{ liveTotalCost }}<span class="cdc-unit">元</span></div>
+                      <div class="cdc-list">
+                        <div class="cdc-row"><span>⚡ 电费</span><span>¥{{ liveElectricCost }}</span></div>
+                        <div class="cdc-row"><span>💧 水费</span><span>¥{{ liveWaterCost }}</span></div>
+                        <div class="cdc-row"><span>🔥 燃气费</span><span>¥{{ liveGasCost }}</span></div>
+                      </div>
+                    </div>
+                    <!-- 右栏：本月估算 -->
+                    <div class="cost-detail-col">
+                      <div class="cdc-header">📆 本月估算</div>
+                      <div class="cdc-big">{{ monthTotalCost }}<span class="cdc-unit">元</span></div>
+                      <div class="cdc-list">
+                        <div class="cdc-row"><span>⚡ 电费</span><span>¥{{ monthElectricCost }}</span></div>
+                        <div class="cdc-row"><span>💧 水费</span><span>¥{{ monthWaterCost }}</span></div>
+                        <div class="cdc-row"><span>🔥 燃气费</span><span>¥{{ monthGasCost }}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 趋势对比双栏 -->
+                  <div class="cost-trend-two-col">
+                    <div class="cost-detail-col">
+                      <div class="cdc-chart-title">📈 今日趋势</div>
+                      <div class="ed-bars">
+                        <div v-for="(item, index) in historyStats" :key="index" class="ed-bar-item">
+                          <div class="ed-bar-label">{{ item.label }}</div>
+                          <div class="ed-bar-wrap">
+                            <div class="ed-bar" :style="{ width: item.width + '%', background: item.color }"></div>
+                          </div>
+                          <div class="ed-bar-val">{{ item.value }}元</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cost-detail-col">
+                      <div class="cdc-chart-title">📈 本月趋势</div>
+                      <div class="ed-bars">
+                        <div v-for="(item, index) in monthHistoryStats" :key="index" class="ed-bar-item">
+                          <div class="ed-bar-label">{{ item.label }}</div>
+                          <div class="ed-bar-wrap">
+                            <div class="ed-bar" :style="{ width: item.width + '%', background: item.color }"></div>
+                          </div>
+                          <div class="ed-bar-val">{{ item.value }}元</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- energy-cost 单列详情（energy-metric-card cost 点击） -->
+                <template v-else>
+                  <div class="ed-big">
+                    <span class="ed-val">{{ device?.type === 'energy' ? liveEnergyValue : device.value }}</span>
+                    <span class="ed-unit">{{ device.id === 'energy-cost' || device.id?.includes('Cost') || device.id === 'energy-cost-total' ? '元' : device.unit }}</span>
+                    <span v-if="device.trend" class="ed-trend" :class="device.trend.includes('+') ? 'up' : 'down'">{{ device.trend }}</span>
+                  </div>
+                  <p class="ed-desc">{{ device.desc }}</p>
+                </template>
                 
                 <!-- 各电器明细 -->
                 <div class="ed-devices" v-if="device.id?.includes('today') || device.id?.includes('power')">
@@ -239,36 +294,36 @@
                 <div class="ed-cost-detail" v-if="device.id?.includes('Cost') || device.id === 'energy-cost'">
                   <div class="ed-section-title">💰 费用明细</div>
                   <div class="ed-cost-list">
-                    <!-- 总费用明细：展示电/水/气各项费用 -->
+                    <!-- energy-cost 单列费用明细 -->
                     <div class="ed-cost-item" v-if="device.id === 'energy-cost'">
-                      <div class="ed-cost-row"><span>⚡ 电费 (0.558元/kWh)</span><span>¥{{ liveElectricCost }}</span></div>
-                      <div class="ed-cost-row"><span>💧 水费 (2.47元/m³)</span><span>¥{{ liveWaterCost }}</span></div>
-                      <div class="ed-cost-row"><span>🔥 燃气费 (2.53元/m³)</span><span>¥{{ liveGasCost }}</span></div>
+                      <div class="ed-cost-row"><span>⚡ 电费</span><span>¥{{ liveElectricCost }}</span></div>
+                      <div class="ed-cost-row"><span>💧 水费</span><span>¥{{ liveWaterCost }}</span></div>
+                      <div class="ed-cost-row"><span>🔥 燃气费</span><span>¥{{ liveGasCost }}</span></div>
                       <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveTotalCost }}</span></div>
                     </div>
                     <!-- 电费明细：按电器实际用量比例 -->
-                    <div class="ed-cost-item" v-if="device.id?.includes('electric') || (device.id?.endsWith('cost') && !device.id?.includes('water') && !device.id?.includes('gas') && device.id !== 'energy-cost')">
+                    <div class="ed-cost-item" v-if="device.id?.includes('electricCost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 0.558).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 0.558).toFixed(3) }}</span>
                       </div>
-                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
                     </div>
                     <!-- 水费明细：按用水实际用量比例 -->
                     <div class="ed-cost-item" v-if="device.id?.includes('waterCost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 2.47).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 2.47).toFixed(3) }}</span>
                       </div>
-                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
                     </div>
                     <!-- 燃气费明细：按燃气实际用量比例 -->
                     <div class="ed-cost-item" v-if="device.id?.includes('gasCost')">
                       <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
                         <span>{{ item.icon }} {{ item.name }}</span>
-                        <span>¥{{ (item.val * 2.53).toFixed(2) }}</span>
+                        <span>¥{{ (item.val * 2.53).toFixed(3) }}</span>
                       </div>
-                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ device.value }}</span></div>
+                      <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
                     </div>
                   </div>
                 </div>
@@ -323,7 +378,7 @@
                   </div>
                 </div>
                 <!-- 历史对比 -->
-                <div class="ed-chart">
+                <div class="ed-chart" v-if="device.id !== 'energy-cost-total'">
                   <div class="ed-chart-title">📈 用能趋势对比</div>
                   <div class="ed-bars">
                     <div v-for="(item, index) in historyStats" :key="index" class="ed-bar-item">
@@ -384,56 +439,99 @@ watch(() => props.device, (d) => {
   }
 }, { immediate: true })
 
-// 统一从 chartData 计算所有数据（与卡片完全同源）
-const cd = computed(() => props.chartData?.value || props.chartData || {})
+// 统一从 chartData + energyLiveData 计算所有数据（与卡片完全同源）
+// chartData 通过 props 传入，父组件传递 ref 时 Vue 会自动解包，此处不再取 .value
+const cd = computed(() => props.chartData || {})
+const eld = computed(() => props.energyLiveData || {})
 
-const liveElectricCost = computed(() => {
-  const dailyE = (cd.value.energyLine || []).reduce((a, b) => a + b, 0)
-  return (dailyE * 0.558).toFixed(2)
-})
-const liveWaterCost = computed(() => {
-  const dailyW = (cd.value.waterBar || []).reduce((a, b) => a + b, 0)
-  return (dailyW * 2.47).toFixed(2)
-})
-const liveGasCost = computed(() => {
-  const dailyG = (cd.value.gasLine || []).reduce((a, b) => a + b, 0)
-  return (dailyG * 2.53).toFixed(2)
-})
+// 今日用量：优先用 energyLiveData（与卡片同源），fallback 到 chartData 数组 reduce
+const dailyE = computed(() => (cd.value.energyLine || []).reduce((a, b) => a + b, 0))
+const dailyW = computed(() => eld.value.waterToday || (cd.value.waterBar || []).reduce((a, b) => a + b, 0))
+const dailyG = computed(() => eld.value.gasToday || (cd.value.gasLine || []).reduce((a, b) => a + b, 0))
+
+// 统一费率：电 0.558元/kWh，水 2.47元/m³，燃气 2.53元/m³
+const ELECTRIC_RATE = 0.558
+const WATER_RATE = 2.47
+const GAS_RATE = 2.53
+
+const liveElectricCost = computed(() => (dailyE.value * ELECTRIC_RATE).toFixed(3))
+const liveWaterCost = computed(() => (dailyW.value * WATER_RATE).toFixed(3))
+const liveGasCost = computed(() => (dailyG.value * GAS_RATE).toFixed(3))
 const liveTotalCost = computed(() => {
-  return (parseFloat(liveElectricCost.value) + parseFloat(liveWaterCost.value) + parseFloat(liveGasCost.value)).toFixed(1)
+  // 与卡片一致：先求和再截断，避免逐项截断后求和的舍入差异
+  return (dailyE.value * ELECTRIC_RATE + dailyW.value * WATER_RATE + dailyG.value * GAS_RATE).toFixed(3)
+})
+
+// 本月费用（今日 × 30 估算，与卡片一致）
+// 实时计算 .ed-big 大数值（替代 device.value 静态快照）
+const liveEnergyValue = computed(() => {
+  const type = props.device?.energyType
+  switch (type) {
+    case 'today': return dailyE.value.toFixed(3)
+    case 'water': return dailyW.value.toFixed(3)
+    case 'gas': return dailyG.value.toFixed(3)
+    case 'cost': return (dailyE.value * ELECTRIC_RATE + dailyW.value * WATER_RATE + dailyG.value * GAS_RATE).toFixed(3)
+    case 'electricCost': return (dailyE.value * ELECTRIC_RATE).toFixed(3)
+    case 'waterCost': return (dailyW.value * WATER_RATE).toFixed(3)
+    case 'gasCost': return (dailyG.value * GAS_RATE).toFixed(3)
+    default: return props.device?.value ?? '0'
+  }
+})
+
+const monthElectricCost = computed(() => (dailyE.value * ELECTRIC_RATE * 30).toFixed(3))
+const monthWaterCost = computed(() => (dailyW.value * WATER_RATE * 30).toFixed(3))
+const monthGasCost = computed(() => (dailyG.value * GAS_RATE * 30).toFixed(3))
+const monthTotalCost = computed(() => {
+  // 与卡片一致：直接从原始用量×费率×30求和，避免二次截断
+  return (dailyE.value * ELECTRIC_RATE * 30 + dailyW.value * WATER_RATE * 30 + dailyG.value * GAS_RATE * 30).toFixed(3)
 })
 
 // 历史对比数据（模拟数据，实际应从后端获取）
 const historyStats = computed(() => {
-  const val = props.device?.value || 0
+  // 费用类型用实时计算值，其他用 device.value
+  const val = props.device?.energyType === 'cost'
+    ? parseFloat(liveTotalCost.value) || 0
+    : (props.device?.value || 0)
   // 以最大值为基准计算宽度，确保图表比例合理
   const maxVal = Math.max(val * 0.95, val * 1.1, val * 0.85, val * 1.05)
   
   return [
-    { 
-      label: '昨日总耗', 
-      value: (val * 0.95).toFixed(1),
-      width: ((val * 0.95) / maxVal * 100).toFixed(1),
-      color: '#4fc3f7' 
+    {
+      label: '昨日总耗',
+      value: (val * 0.95).toFixed(3),
+      width: ((val * 0.95) / maxVal * 100).toFixed(3),
+      color: '#4fc3f7'
     },
-    { 
-      label: '七日同比', 
-      value: (val * 1.1).toFixed(1),
-      width: ((val * 1.1) / maxVal * 100).toFixed(1),
-      color: '#81c784' 
+    {
+      label: '七日同比',
+      value: (val * 1.1).toFixed(3),
+      width: ((val * 1.1) / maxVal * 100).toFixed(3),
+      color: '#81c784'
     },
-    { 
-      label: '月度同比', 
-      value: (val * 0.85).toFixed(1),
-      width: ((val * 0.85) / maxVal * 100).toFixed(1),
-      color: '#ffd54f' 
+    {
+      label: '月度同比',
+      value: (val * 0.85).toFixed(3),
+      width: ((val * 0.85) / maxVal * 100).toFixed(3),
+      color: '#ffd54f'
     },
-    { 
-      label: '去年同比', 
-      value: (val * 1.05).toFixed(1),
-      width: ((val * 1.05) / maxVal * 100).toFixed(1),
-      color: '#ce93d8' 
+    {
+      label: '去年同比',
+      value: (val * 1.05).toFixed(3),
+      width: ((val * 1.05) / maxVal * 100).toFixed(3),
+      color: '#ce93d8'
     }
+  ]
+})
+
+// 本月费用趋势对比（基于月估算 × 倍率）
+const monthHistoryStats = computed(() => {
+  const monthVal = parseFloat(monthTotalCost.value) || 0
+  const maxVal = Math.max(monthVal * 0.92, monthVal * 1.08, monthVal * 0.88, monthVal * 1.03)
+  return [
+    { label: '上月费用', value: (monthVal * 0.92).toFixed(3), width: ((monthVal * 0.92) / maxVal * 100).toFixed(3), color: '#4fc3f7' },
+    { label: '三月均费', value: (monthVal * 1.08).toFixed(3), width: ((monthVal * 1.08) / maxVal * 100).toFixed(3), color: '#81c784' },
+    { label: '去年同期', value: (monthVal * 0.88).toFixed(3), width: ((monthVal * 0.88) / maxVal * 100).toFixed(3), color: '#ffd54f' },
+    { label: '年度均费', value: (monthVal * 1.03).toFixed(3), width: ((monthVal * 1.03) / maxVal * 100).toFixed(3), color: '#ce93d8' },
   ]
 })
 
@@ -485,6 +583,11 @@ function toggleStatus() {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+}
+.ctrl-modal--wide {
+  max-width: 720px;
+  overflow-y: auto;
+  max-height: 85vh;
 }
 
 .modal-top {
@@ -825,284 +928,7 @@ input[type=range] {
   color: var(--text-3);
 }
 
-/* 能源详情样式 */
-.energy-detail {
-  padding: 8px 0;
-}
-.ed-big {
-  text-align: center;
-  padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-}
-.ed-val {
-  font-size: 42px;
-  font-weight: 700;
-  color: var(--text-1);
-  line-height: 1;
-}
-.ed-unit {
-  font-size: 16px;
-  color: var(--text-3);
-  margin-left: 4px;
-}
-.ed-trend {
-  display: inline-block;
-  margin-left: 12px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.ed-trend.up {
-  background: rgba(239,68,68,0.15);
-  color: #ef4444;
-}
-.ed-trend.down {
-  background: rgba(34,197,94,0.15);
-  color: #22c55e;
-}
-.ed-desc {
-  font-size: 13px;
-  color: var(--text-3);
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-/* 环保贡献弹窗 */
-.ed-carbon-detail {
-  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.03) 100%);
-  border: 1px solid rgba(34,197,94,0.15);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-top: 12px;
-}
-.ed-carbon-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 12px;
-}
-.ed-carbon-item {
-  text-align: center;
-  padding: 12px 8px;
-  background: rgba(255,255,255,0.03);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(34,197,94,0.1);
-}
-.ed-carbon-icon { font-size: 22px; margin-bottom: 6px; }
-.ed-carbon-val {
-  font-size: 20px;
-  font-weight: 700;
-  color: #22c55e;
-  line-height: 1.2;
-}
-.ed-carbon-unit { font-size: 12px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
-.ed-carbon-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-.ed-carbon-summary {
-  margin-top: 16px;
-  padding: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.ed-carbon-summary-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 12px; }
-.ed-carbon-summary-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  font-size: 13px;
-  color: var(--text-2);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.ed-carbon-summary-row:last-child { border-bottom: none; }
-.ed-carbon-summary-row .highlight { color: #22c55e; font-weight: 600; }
-.ed-carbon-progress { margin-top: 12px; }
-.ed-carbon-progress-bar {
-  width: 100%;
-  height: 8px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.ed-carbon-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #22c55e, #4ade80);
-  border-radius: 4px;
-  transition: width 0.5s ease;
-}
-.ed-carbon-progress-label { font-size: 11px; color: var(--text-3); margin-top: 6px; }
-
-.ed-chart {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-.ed-chart-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  margin-bottom: 14px;
-}
-.ed-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ed-bar-item {
-  display: grid;
-  grid-template-columns: 50px 1fr 70px;
-  align-items: center;
-  gap: 12px;
-}
-.ed-bar-label {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.ed-bar-wrap {
-  height: 8px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.ed-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-.ed-bar-val {
-  font-size: 12px;
-  color: var(--text-2);
-  text-align: right;
-  font-weight: 500;
-}
-
-/* 设备明细样式 */
-.ed-devices {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.ed-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  margin-bottom: 14px;
-}
-.ed-device-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ed-device-item {
-  display: grid;
-  grid-template-columns: 80px 1fr 60px;
-  align-items: center;
-  gap: 12px;
-}
-.ed-device-name {
-  font-size: 12px;
-  color: var(--text-2);
-}
-.ed-device-bar {
-  height: 6px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-/* 分时段耗能样式 */
-.ed-periods {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.ed-period-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ed-period-item {
-  display: grid;
-  grid-template-columns: 110px 1fr 60px;
-  align-items: center;
-  gap: 12px;
-}
-.ed-period-label {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.ed-period-bar {
-  height: 8px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.ed-period-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-.ed-period-val {
-  font-size: 12px;
-  color: var(--text-1);
-  text-align: right;
-  font-weight: 500;
-}
-.ed-device-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-.ed-device-val {
-  font-size: 12px;
-  color: var(--text-1);
-  text-align: right;
-  font-weight: 500;
-}
-
-/* 费用明细样式 */
-.ed-cost-detail {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.ed-cost-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ed-cost-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ed-cost-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--text-2);
-}
-.ed-cost-row.total {
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-weight: 600;
-  color: var(--text-1);
-}
-.ed-cost-row.total span:last-child {
-  color: #00d4aa;
-  font-size: 16px;
-}
-
+/* 弹窗过渡动画 - 保留在组件中 */
 .modal-anim-enter-active {
   animation: fadeIn 0.22s ease;
 }
@@ -1114,5 +940,129 @@ input[type=range] {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+
+/* === 费用详情双栏完整布局 === */
+.cost-detail-two-col {
+  display: flex;
+  gap: 16px;
+}
+.cost-trend-two-col {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+.cost-detail-col {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.cdc-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.cdc-big {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+.cdc-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+  margin-left: 2px;
+}
+.cdc-list {
+  margin-bottom: 12px;
+}
+.cdc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 4px 0;
+  color: var(--text-2);
+}
+.cdc-row span:last-child {
+  font-weight: 500;
+  color: var(--text-1);
+}
+.cdc-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  padding-top: 8px;
+}
+.cost-detail-col .ed-bars {
+  margin-top: 4px;
+}
+
+/* === 旧双栏样式（保留兼容） === */
+.cost-two-col {
+  display: flex;
+  gap: 16px;
+}
+.cost-two-col .cost-col {
+  flex: 1;
+  min-width: 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+}
+.cost-two-col .cost-col .ed-bars {
+  margin-top: 8px;
+}
+.cost-two-col .ed-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+
+
+.cost-col {
+  border-radius: 10px;
+  /* padding: 14px 16px; */
+}
+.cost-col-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 5px 0;
+  color: var(--text-2);
+}
+.cost-row span:last-child {
+  font-weight: 500;
+  color: var(--text-1);
+}
+.cost-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 10px;
+  font-weight: 600;
+}
+.cost-row.total span:last-child {
+  color: var(--primary);
 }
 </style>
