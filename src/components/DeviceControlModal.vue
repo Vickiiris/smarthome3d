@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal-anim">
       <div v-if="visible" class="modal-overlay" @click.self="$emit('close')">
-        <div class="ctrl-modal" :class="{ 'ctrl-modal--wide': device?.id === 'energy-cost-total' }">
+        <div class="ctrl-modal" :class="{ 'ctrl-modal--wide': isWideModal }">
           <div class="modal-top" :style="{ background: iconBg }">
             <div class="m-icon">{{ device?.icon }}</div>
             <div class="m-info">
@@ -183,12 +183,12 @@
                   <div class="cost-detail-two-col">
                     <!-- 左栏：今日 -->
                     <div class="cost-detail-col">
-                      <div class="cdc-header">📅 今日</div>
+                      <div class="cdc-header">📅 今日估算</div>
                       <div class="cdc-big">{{ liveTotalCost }}<span class="cdc-unit">元</span></div>
                       <div class="cdc-list">
-                        <div class="cdc-row"><span>⚡ 电费</span><span>¥{{ liveElectricCost }}</span></div>
-                        <div class="cdc-row"><span>💧 水费</span><span>¥{{ liveWaterCost }}</span></div>
-                        <div class="cdc-row"><span>🔥 燃气费</span><span>¥{{ liveGasCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>⚡ 日电费</span><span>¥{{ liveElectricCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>💧 日水费</span><span>¥{{ liveWaterCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>🔥 日燃气费</span><span>¥{{ liveGasCost }}</span></div>
                       </div>
                     </div>
                     <!-- 右栏：本月估算 -->
@@ -196,9 +196,9 @@
                       <div class="cdc-header">📆 本月估算</div>
                       <div class="cdc-big">{{ monthTotalCost }}<span class="cdc-unit">元</span></div>
                       <div class="cdc-list">
-                        <div class="cdc-row"><span>⚡ 电费</span><span>¥{{ monthElectricCost }}</span></div>
-                        <div class="cdc-row"><span>💧 水费</span><span>¥{{ monthWaterCost }}</span></div>
-                        <div class="cdc-row"><span>🔥 燃气费</span><span>¥{{ monthGasCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>⚡ 月电费</span><span>¥{{ monthElectricCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>💧 月水费</span><span>¥{{ monthWaterCost }}</span></div>
+                        <div class="cdc-row cdc-row--total"><span>🔥 月燃气费</span><span>¥{{ monthGasCost }}</span></div>
                       </div>
                     </div>
                   </div>
@@ -230,11 +230,105 @@
                     </div>
                   </div>
                 </template>
-                <!-- energy-cost 单列详情（energy-metric-card cost 点击） -->
+                <!-- 费用类双栏详情（electricCost / waterCost / gasCost） -->
+                <template v-else-if="isCostTypeDual">
+                  <div class="cost-detail-two-col">
+                    <!-- 左栏：今日 -->
+                    <div class="cost-detail-col">
+                      <div class="cdc-header">📅 今日估算</div>
+                      <div class="cdc-big">{{ costTypeTodayValue }}<span class="cdc-unit">{{ costTypeUnit }}</span></div>
+                      <div class="cdc-list">
+                        <template v-if="device.energyType === 'electricCost'">
+                          <div class="cdc-section-title">📊 各电器明细</div>
+                          <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ item.val.toFixed(2) }} kWh · ¥{{ (item.val * ELECTRIC_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                        <template v-if="device.energyType === 'waterCost'">
+                          <div class="cdc-section-title">📊 各用途明细</div>
+                          <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ item.val.toFixed(3) }} m³ · ¥{{ (item.val * WATER_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                        <template v-if="device.energyType === 'gasCost'">
+                          <div class="cdc-section-title">📊 各设备明细</div>
+                          <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ item.val.toFixed(3) }} m³ · ¥{{ (item.val * GAS_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                    <!-- 右栏：本月估算 -->
+                    <div class="cost-detail-col">
+                      <div class="cdc-header">📆 本月估算</div>
+                      <div class="cdc-big">{{ costTypeMonthValue }}<span class="cdc-unit">{{ costTypeUnit }}</span></div>
+                      <div class="cdc-list">
+                        <template v-if="device.energyType === 'electricCost'">
+                          <div class="cdc-section-title">📊 各电器明细</div>
+                          <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ (item.val * 30).toFixed(2) }} kWh · ¥{{ (item.val * 30 * ELECTRIC_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                        <template v-if="device.energyType === 'waterCost'">
+                          <div class="cdc-section-title">📊 各用途明细</div>
+                          <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ (item.val * 30).toFixed(3) }} m³ · ¥{{ (item.val * 30 * WATER_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                        <template v-if="device.energyType === 'gasCost'">
+                          <div class="cdc-section-title">📊 各设备明细</div>
+                          <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
+                            <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                            <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
+                            <span class="cdc-device-val">{{ (item.val * 30).toFixed(3) }} m³ · ¥{{ (item.val * 30 * GAS_RATE).toFixed(3) }}</span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 趋势对比双栏 -->
+                  <div class="cost-trend-two-col">
+                    <div class="cost-detail-col">
+                      <div class="cdc-chart-title">📈 今日趋势</div>
+                      <div class="ed-bars">
+                        <div v-for="(item, index) in historyStats" :key="index" class="ed-bar-item">
+                          <div class="ed-bar-label">{{ item.label }}</div>
+                          <div class="ed-bar-wrap">
+                            <div class="ed-bar" :style="{ width: item.width + '%', background: item.color }"></div>
+                          </div>
+                          <div class="ed-bar-val">{{ item.value }}{{ costTypeTrendUnit }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cost-detail-col">
+                      <div class="cdc-chart-title">📈 本月趋势</div>
+                      <div class="ed-bars">
+                        <div v-for="(item, index) in costTypeMonthHistory" :key="index" class="ed-bar-item">
+                          <div class="ed-bar-label">{{ item.label }}</div>
+                          <div class="ed-bar-wrap">
+                            <div class="ed-bar" :style="{ width: item.width + '%', background: item.color }"></div>
+                          </div>
+                          <div class="ed-bar-val">{{ item.value }}{{ costTypeTrendUnit }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- 非费用类单列详情 -->
                 <template v-else>
                   <div class="ed-big">
                     <span class="ed-val">{{ device?.type === 'energy' ? liveEnergyValue : device.value }}</span>
-                    <span class="ed-unit">{{ device.id === 'energy-cost' || device.id?.includes('Cost') || device.id === 'energy-cost-total' ? '元' : device.unit }}</span>
+                    <span class="ed-unit">{{ device.unit }}</span>
                     <span v-if="device.trend" class="ed-trend" :class="device.trend.includes('+') ? 'up' : 'down'">{{ device.trend }}</span>
                   </div>
                   <p class="ed-desc">{{ device.desc }}</p>
@@ -291,7 +385,7 @@
                 </div>
 
                 <!-- 费用明细 -->
-                <div class="ed-cost-detail" v-if="device.id?.includes('Cost') || device.id === 'energy-cost'">
+                <div class="ed-cost-detail" v-if="(device.id?.includes('Cost') || device.id === 'energy-cost') && !isCostTypeDual && device.id !== 'energy-cost-total'">
                   <div class="ed-section-title">💰 费用明细</div>
                   <div class="ed-cost-list">
                     <!-- energy-cost 单列费用明细 -->
@@ -371,14 +465,14 @@
                     <div class="ed-carbon-summary-row"><span>连续节能</span><span>14 天</span></div>
                     <div class="ed-carbon-progress">
                       <div class="ed-carbon-progress-bar">
-                        <div class="ed-carbon-progress-fill" :style="{ width: Math.min(device._savingRate ?? 18, 100) + '%' }"></div>
+                        <div class="ed-carbon-progress-fill" :style="{ width: `${ Math.min(100, Math.max(0, (device._savingRate ?? 18) / 30 * 100)) }%` }"></div>
                       </div>
                       <div class="ed-carbon-progress-label">距离 30% 目标还差 {{ Math.max(0, 30 - (device._savingRate ?? 18)) }}%</div>
                     </div>
                   </div>
                 </div>
                 <!-- 历史对比 -->
-                <div class="ed-chart" v-if="device.id !== 'energy-cost-total'">
+                <div class="ed-chart" v-if="!isWideModal">
                   <div class="ed-chart-title">📈 用能趋势对比</div>
                   <div class="ed-bars">
                     <div v-for="(item, index) in historyStats" :key="index" class="ed-bar-item">
@@ -444,6 +538,55 @@ watch(() => props.device, (d) => {
 const cd = computed(() => props.chartData || {})
 const eld = computed(() => props.energyLiveData || {})
 
+// 各类型设备排行数据（用于费用弹窗明细）
+const electricRankList = computed(() => {
+  const total = (cd.value.energyPie || []).reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '空调', color: '#4fc3f7', icon: '❄️', unit: 'kWh' },
+    { name: '冰箱', color: '#81c784', icon: '🧊', unit: 'kWh' },
+    { name: '照明', color: '#ffd54f', icon: '💡', unit: 'kWh' },
+    { name: '其他', color: '#ce93d8', icon: '📺', unit: 'kWh' },
+  ]
+  const dailyTotal = dailyE.value
+  return items.map((item, i) => {
+    const pieValue = (cd.value.energyPie || [])[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 100) / 100
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
+const waterRankList = computed(() => {
+  const total = (cd.value.waterPie || []).reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '淋浴', color: '#4fc3f7', icon: '🚿', unit: 'm³' },
+    { name: '洗衣', color: '#81c784', icon: '🧺', unit: 'm³' },
+    { name: '厨房', color: '#ffd54f', icon: '🍳', unit: 'm³' },
+    { name: '其他', color: '#ce93d8', icon: '🚰', unit: 'm³' },
+  ]
+  const dailyTotal = dailyW.value
+  return items.map((item, i) => {
+    const pieValue = (cd.value.waterPie || [])[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 1000) / 1000
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
+const gasRankList = computed(() => {
+  const total = (cd.value.gasPie || []).reduce((a, b) => a + b.value, 0) || 1
+  const items = [
+    { name: '热水器', color: '#ff7043', icon: '🚿', unit: 'm³' },
+    { name: '燃气灶', color: '#ffa726', icon: '🔥', unit: 'm³' },
+    { name: '壁挂炉', color: '#ffcc80', icon: '🏠', unit: 'm³' },
+  ]
+  const dailyTotal = dailyG.value
+  return items.map((item, i) => {
+    const pieValue = (cd.value.gasPie || [])[i]?.value || 0
+    const ratio = pieValue / total
+    const val = Math.round(dailyTotal * ratio * 1000) / 1000
+    return { ...item, val, pct: Math.round(ratio * 100) }
+  }).sort((a, b) => b.val - a.val)
+})
+
 // 今日用量：优先用 energyLiveData（与卡片同源），fallback 到 chartData 数组 reduce
 const dailyE = computed(() => (cd.value.energyLine || []).reduce((a, b) => a + b, 0))
 const dailyW = computed(() => eld.value.waterToday || (cd.value.waterBar || []).reduce((a, b) => a + b, 0))
@@ -486,12 +629,77 @@ const monthTotalCost = computed(() => {
   return (dailyE.value * ELECTRIC_RATE * 30 + dailyW.value * WATER_RATE * 30 + dailyG.value * GAS_RATE * 30).toFixed(3)
 })
 
+// 本月用量估算
+const monthElectricUsage = computed(() => (dailyE.value * 30).toFixed(3))
+const monthWaterUsage = computed(() => (dailyW.value * 30).toFixed(3))
+const monthGasUsage = computed(() => (dailyG.value * 30).toFixed(3))
+
+// 双栏弹窗标识
+const isWideModal = computed(() => {
+  const id = props.device?.id
+  return id === 'energy-cost-total' || id === 'energy-electricCost' || id === 'energy-waterCost' || id === 'energy-gasCost'
+})
+const isCostTypeDual = computed(() => {
+  const t = props.device?.energyType
+  return t === 'electricCost' || t === 'waterCost' || t === 'gasCost'
+})
+
+// 费用类型双栏：今日大数值
+const costTypeTodayValue = computed(() => {
+  const t = props.device?.energyType
+  if (t === 'electricCost') return liveElectricCost.value
+  if (t === 'waterCost') return liveWaterCost.value
+  if (t === 'gasCost') return liveGasCost.value
+  return '0'
+})
+// 费用类型双栏：月度大数值
+const costTypeMonthValue = computed(() => {
+  const t = props.device?.energyType
+  if (t === 'electricCost') return monthElectricCost.value
+  if (t === 'waterCost') return monthWaterCost.value
+  if (t === 'gasCost') return monthGasCost.value
+  return '0'
+})
+// 单位
+const costTypeUnit = computed(() => {
+  return '元'
+})
+// 趋势条单位
+const costTypeTrendUnit = computed(() => {
+  const t = props.device?.energyType
+  if (t === 'electricCost') return '元'
+  if (t === 'waterCost') return '元'
+  if (t === 'gasCost') return '元'
+  return props.device?.unit || ''
+})
+
+// 费用类型月度趋势对比
+const costTypeMonthHistory = computed(() => {
+  const t = props.device?.energyType
+  let monthVal = 0
+  let unit = '元'
+  if (t === 'electricCost') { monthVal = parseFloat(monthElectricCost.value) || 0; unit = '元' }
+  else if (t === 'waterCost') { monthVal = parseFloat(monthWaterCost.value) || 0; unit = '元' }
+  else if (t === 'gasCost') { monthVal = parseFloat(monthGasCost.value) || 0; unit = '元' }
+  else { monthVal = parseFloat(monthTotalCost.value) || 0 }
+  const maxVal = Math.max(monthVal * 0.92, monthVal * 1.08, monthVal * 0.88, monthVal * 1.03)
+  return [
+    { label: '上月费用', value: (monthVal * 0.92).toFixed(3), width: ((monthVal * 0.92) / maxVal * 100).toFixed(3), color: '#4fc3f7' },
+    { label: '三月均费', value: (monthVal * 1.08).toFixed(3), width: ((monthVal * 1.08) / maxVal * 100).toFixed(3), color: '#81c784' },
+    { label: '去年同期', value: (monthVal * 0.88).toFixed(3), width: ((monthVal * 0.88) / maxVal * 100).toFixed(3), color: '#ffd54f' },
+    { label: '年度均费', value: (monthVal * 1.03).toFixed(3), width: ((monthVal * 1.03) / maxVal * 100).toFixed(3), color: '#ce93d8' },
+  ]
+})
+
 // 历史对比数据（模拟数据，实际应从后端获取）
 const historyStats = computed(() => {
   // 费用类型用实时计算值，其他用 device.value
-  const val = props.device?.energyType === 'cost'
-    ? parseFloat(liveTotalCost.value) || 0
-    : (props.device?.value || 0)
+  let val = props.device?.value || 0
+  const t = props.device?.energyType
+  if (t === 'cost') val = parseFloat(liveTotalCost.value) || 0
+  else if (t === 'electricCost') val = parseFloat(liveElectricCost.value) || 0
+  else if (t === 'waterCost') val = parseFloat(liveWaterCost.value) || 0
+  else if (t === 'gasCost') val = parseFloat(liveGasCost.value) || 0
   // 以最大值为基准计算宽度，确保图表比例合理
   const maxVal = Math.max(val * 0.95, val * 1.1, val * 0.85, val * 1.05)
   
@@ -967,13 +1175,20 @@ input[type=range] {
   color: var(--text-2);
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
 }
 .cdc-big {
   font-size: 28px;
   font-weight: 700;
   margin-bottom: 12px;
   line-height: 1.2;
+}
+.cdc-big::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin-top: 8px;
 }
 .cdc-unit {
   font-size: 13px;
@@ -991,6 +1206,49 @@ input[type=range] {
   font-size: 13px;
   padding: 4px 0;
   color: var(--text-2);
+}
+.cdc-row--total {
+  font-weight: 600;
+  color: var(--text-1);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+.cdc-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+
+}
+.cdc-device-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.cdc-device-name {
+  width: 52px;
+  flex-shrink: 0;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.cdc-device-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cdc-device-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+.cdc-device-val {
+  flex-shrink: 0;
+  color: var(--text-1);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .cdc-row span:last-child {
   font-weight: 500;

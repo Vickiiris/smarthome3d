@@ -204,7 +204,7 @@
           </div>
         </div>
       </div>
-      <div class="cost-detail-card total" @click="$emit('openCostTotal')">
+      <div class="cost-detail-card total" @click="$emit('openEnergyDetail', 'cost')">
         <div class="cdc-header">
           <div class="cdc-icon total">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -274,7 +274,7 @@
         <div class="eco-progress-row">
           <div class="eco-progress-label">本月节能目标 <span class="eco-progress-pct">{{ savingRate }}%</span></div>
           <div class="eco-progress-bar">
-            <div class="eco-progress-fill" :style="{ width: Math.min(savingRate, 100) + '%' }"></div>
+            <div class="eco-progress-fill" :style="{ width: Math.min( (savingRate / 30) * 100, 100 ) + '%' }"></div>
           </div>
           <div class="eco-progress-sub">距离 30% 目标还差 {{ Math.max(0, 30 - savingRate) }}%</div>
         </div>
@@ -348,7 +348,7 @@ const rankTabs = [
   { key: 'gas', label: '燃气' }
 ]
 
-defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'openCostTotal', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
+defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
 
 // Computed cost values - 基于实际用量计算
 const dEnergy = computed(() => parseFloat(props.dailyEnergy) || 0)
