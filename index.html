@@ -237,11 +237,9 @@
       let realProgress = 0
       let loaderHidden = false 
       
-      // 初始化进度条
-      fill.style.width = '0%'
-      pct.textContent = '0%'
-      status.textContent = '正在初始化系统...'
-
+      // 资源加载状态
+      let resourcesLoaded = false
+      
       // 模拟进度条动画（仅用于视觉反馈，不控制隐藏）
       const timer = setInterval(() => {
         if (modelLoaded) {
@@ -251,28 +249,34 @@
         }
         
         if (i >= steps.length) {
-          // 所有模拟步骤已完成，但模型尚未加载，继续显示95%并更新状态
-          fill.style.width = '95%'
-          pct.textContent = '95%'
-          status.textContent = '正在加载模型...'
+          // 所有模拟步骤已完成，但继续显示真实进度
+          if (realProgress < 100) {
+            fill.style.width = realProgress + '%'
+            pct.textContent = realProgress + '%'
+            status.textContent = '正在加载模型...'
+          }
           return
         }
         
         const s = steps[i++]
-        // 只显示模拟进度，如果真实进度更高则显示真实进度
-        const displayP = Math.max(s.p, realProgress)
+        // 如果还没有真实进度或者真实进度较低，使用模拟进度
+        // 否则使用真实进度
+        let displayP = s.p
         
-        // 如果模型还没加载完，进度条不要超过95%，等待真实进度
-        if (displayP < 95) {
-          fill.style.width = displayP + '%'
-          pct.textContent = displayP + '%'
-          status.textContent = s.text
-        } else {
-          fill.style.width = '95%'
-          pct.textContent = '95%'
-          status.textContent = '正在加载模型...'
+        // 如果真实进度已经大于模拟进度，直接显示真实进度
+        if (realProgress > displayP) {
+          displayP = realProgress
         }
-      }, 400)
+        
+        // 限制进度不超过94%，直到资源加载完成
+        if (!resourcesLoaded && displayP >= 94) {
+          displayP = 94  // 保持在94%，等待资源加载完成
+        }
+        
+        fill.style.width = displayP + '%'
+        pct.textContent = displayP + '%'
+        status.textContent = s.text
+      }, 600) // 增加间隔时间，减慢模拟进度
 
       // 检查是否可以隐藏
       function checkHide() {
@@ -313,7 +317,11 @@
 
       // 设置真实加载进度（0-100）
       window.__setLoaderProgress = function (p) {
-        realProgress = p
+        // 确保进度不会倒退，只接受更大的值
+        if (p > realProgress) {
+          realProgress = p
+        }
+        
         if (modelLoaded) return; // 模型已加载完成，不再更新进度
         
         if (p > 0) { // 模型未加载完时才更新进度条数字
@@ -321,11 +329,39 @@
             // 如果真实进度达到100%，触发模型加载完成事件
             window.dispatchEvent(new Event('__modelLoaded'))
           } else {
-            fill.style.width = p + '%'
-            pct.textContent = p + '%'
+            // 直接使用真实进度值更新UI，但不超过94%直到资源加载完成
+            let displayProgress = p;
+            if (!resourcesLoaded && p >= 94) {
+              displayProgress = 94;
+            } else if (resourcesLoaded) {
+              displayProgress = p;
+            }
+            
+            fill.style.width = displayProgress + '%'
+            pct.textContent = displayProgress + '%'
+            status.textContent = '正在加载模型...'
           }
         }
       }
+      
+      // 页面资源加载完成时标记
+      window.addEventListener('load', () => {
+        resourcesLoaded = true
+        // 如果当前进度在94%或以下，允许继续前进到100%
+        if (realProgress <= 94) {
+          // 一旦资源加载完成，可以继续显示真实进度
+          if (realProgress > 0) {
+            fill.style.width = realProgress + '%'
+            pct.textContent = realProgress + '%'
+          }
+        }
+      })
+      
+      // 初始化进度条
+      fill.style.width = '0%'
+      pct.textContent = '0%'
+      status.textContent = '正在初始化系统...'
+
     </script>
   </body>
 </html>
