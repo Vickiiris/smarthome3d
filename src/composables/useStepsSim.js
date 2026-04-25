@@ -2,7 +2,7 @@
 const STEP_TARGET_BASE = 10000
 const STEP_HOUR_WEIGHTS = [0,0,0,0,0,0,0,0,0.12,0.07,0.06,0.05,0.06,0.05,0.05,0.05,0.05,0.05,0.08,0.12,0.10,0.06,0.05,0.04]
 
-const stepsSim = { dailyTarget: STEP_TARGET_BASE, accumulated: 0, catchUpMode: false, lastHour: -1 }
+export const stepsSim = { dailyTarget: STEP_TARGET_BASE, accumulated: 0, catchUpMode: false, lastHour: -1 }
 
 export function initStepsSimulation(healthItems, stepsTrendData) {
   const now = new Date(), hour = now.getHours(), minute = now.getMinutes()
