@@ -26,7 +26,6 @@ export function useThreeScene(canvasRef) {
   const isInitialized = ref(false)
 
   const hotspotSprites = []
-  const debugInfo = ref({ clickPos: '-', cameraPos: '-', cameraTarget: '-' })
 
   const onHotspotClick = ref(null)
   const activeRoomId = ref('all')
@@ -408,7 +407,7 @@ const HOTSPOTS = [
     icon: '❄️',
     type: 'ac',
     room: '主卧',
-position: new THREE.Vector3(1.660, 0.026, -1.610),
+    position: new THREE.Vector3(1.660, 0.026, -1.610),
     cameraPos: new THREE.Vector3(0.468, 0.171, -1.485),
   },
   {
@@ -417,7 +416,7 @@ position: new THREE.Vector3(1.660, 0.026, -1.610),
     icon: '🔌',
     type: 'outlet',
     room: '主卧',
-position: new THREE.Vector3(1.745, 0.053, -1.201),
+    position: new THREE.Vector3(1.745, 0.053, -1.201),
     cameraPos: new THREE.Vector3(0.496, 0.348, -1.132),
   },
   {
@@ -426,7 +425,7 @@ position: new THREE.Vector3(1.745, 0.053, -1.201),
     icon: '💡',
     type: 'light',
     room: '主卧',
-position: new THREE.Vector3(0.696, -0.060, 0.242),
+    position: new THREE.Vector3(0.696, -0.060, 0.242),
     cameraPos: new THREE.Vector3(0.662, 0.207, -1.102),
   },
   {
@@ -435,7 +434,7 @@ position: new THREE.Vector3(0.696, -0.060, 0.242),
     icon: '❄️',
     type: 'ac',
     room: '次卧',
-position: new THREE.Vector3(-0.131, -0.017, -1.607),
+    position: new THREE.Vector3(-0.131, -0.017, -1.607),
     cameraPos: new THREE.Vector3(-1.208, 0.365, -1.631),
   },
   {
@@ -444,7 +443,7 @@ position: new THREE.Vector3(-0.131, -0.017, -1.607),
     icon: '🔌',
     type: 'outlet',
     room: '次卧',
-position: new THREE.Vector3(-0.033, 0.040, -1.193),
+    position: new THREE.Vector3(-0.033, 0.040, -1.193),
     cameraPos: new THREE.Vector3(-1.224, 0.316, -1.154),
   },
   {
@@ -453,7 +452,7 @@ position: new THREE.Vector3(-0.033, 0.040, -1.193),
     icon: '💡',
     type: 'light',
     room: '次卧',
-position: new THREE.Vector3(-0.708, -0.057, 0.242),
+    position: new THREE.Vector3(-0.708, -0.057, 0.242),
     cameraPos: new THREE.Vector3(-0.791, 0.390, -0.854),
   },
   {
@@ -571,7 +570,7 @@ position: new THREE.Vector3(-0.708, -0.057, 0.242),
     icon: '💡',
     type: 'light',
     room: '阳台',
-position: new THREE.Vector3(0.576, 0.002, -2.032),
+    position: new THREE.Vector3(0.576, 0.002, -2.032),
     cameraPos: new THREE.Vector3(0.644, 0.395, -2.984),
   },
   {
@@ -580,7 +579,7 @@ position: new THREE.Vector3(0.576, 0.002, -2.032),
     icon: '🌡',
     type: 'sensor',
     room: '阳台',
-position: new THREE.Vector3(1.368, 0.008, -2.022),
+    position: new THREE.Vector3(1.368, 0.008, -2.022),
     cameraPos: new THREE.Vector3(1.348, 0.382, -2.988),
   },
   {
