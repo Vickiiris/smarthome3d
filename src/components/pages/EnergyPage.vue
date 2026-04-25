@@ -204,7 +204,7 @@
           </div>
         </div>
       </div>
-      <div class="cost-detail-card total" @click="$emit('openEnergyDetail', 'cost')">
+      <div class="cost-detail-card total" @click="$emit('openCostTotal')">
         <div class="cdc-header">
           <div class="cdc-icon total">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -348,7 +348,7 @@ const rankTabs = [
   { key: 'gas', label: '燃气' }
 ]
 
-defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
+defineEmits(['switchRoom', 'toggleFullscreen', 'openEnergyDetail', 'openCostTotal', 'update:rankTab', 'update:electricPeriod', 'update:waterPeriod', 'update:gasPeriod', 'update:electricPiePeriod', 'update:waterPiePeriod', 'update:gasPiePeriod'])
 
 // Computed cost values - 基于实际用量计算
 const dEnergy = computed(() => parseFloat(props.dailyEnergy) || 0)
