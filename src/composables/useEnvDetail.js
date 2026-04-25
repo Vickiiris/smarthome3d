@@ -61,10 +61,11 @@ export function useEnvDetail(homeStore) {
 
   const healthDetailVisible = ref(false)
   const healthDetailLabel = ref('')
+  const healthDetailItem = ref(null)
 
   function showEnvDetail(item) { envDetailLabel.value = item.label; envDetailVisible.value = true }
   function closeEnvDetail() { envDetailVisible.value = false }
-  function openHealthDetail(item) { healthDetailLabel.value = item.label; healthDetailVisible.value = true }
+  function openHealthDetail(item) { healthDetailLabel.value = item.label; healthDetailItem.value = item; healthDetailVisible.value = true }
   function closeHealthDetail() { healthDetailVisible.value = false }
 
   function getHealthTips(label, value) {
@@ -90,7 +91,7 @@ export function useEnvDetail(homeStore) {
   return {
     envDetailVisible, envDetailLabel, envDetailItem, envDetailMap,
     envItems, getEnvColor, showEnvDetail, closeEnvDetail,
-    healthDetailVisible, healthDetailLabel, healthDetailMap,
+    healthDetailVisible, healthDetailLabel, healthDetailItem, healthDetailMap,
     openHealthDetail, closeHealthDetail, getHealthTips,
   }
 }

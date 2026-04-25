@@ -255,7 +255,7 @@ import { useDeviceControl } from '@/composables/useDeviceControl'
 import { useEnergyChart } from '@/composables/useEnergyChart'
 import { useSceneModes } from '@/composables/useSceneModes'
 import { useAlarm } from '@/composables/useAlarm'
-import { initStepsSimulation, simulateStepsPerTick } from '@/composables/useStepsSim'
+import { initStepsSimulation, simulateStepsPerTick, stepsSim } from '@/composables/useStepsSim'
 import DeviceControlModal from '@/components/DeviceControlModal.vue'
 import DeviceControlPanel from '@/components/DeviceControlPanel.vue'
 import AppSidebar from '@/components/pages/AppSidebar.vue'
@@ -282,7 +282,7 @@ const {
 const {
   envDetailVisible, envDetailLabel, envDetailItem, envDetailMap,
   envItems, getEnvColor, showEnvDetail, closeEnvDetail,
-  healthDetailVisible, healthDetailLabel, healthDetailMap,
+  healthDetailVisible, healthDetailLabel, healthDetailItem, healthDetailMap,
   openHealthDetail, closeHealthDetail, getHealthTips,
 } = useEnvDetail(homeStore)
 

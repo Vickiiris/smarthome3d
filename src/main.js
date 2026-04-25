@@ -14,7 +14,7 @@ app.use(ElementPlus)
 
 app.mount('#app')
 
-// Vue 挂载完成后隐藏加载动画
-if (typeof window.__hideLoader === 'function') {
-  window.__hideLoader()
+// Vue 挂载完成后通知加载器 Vue 已就绪
+if (typeof window.__vueReady === 'function') {
+  window.__vueReady()
 }
