@@ -1,0 +1,103 @@
+/* ============================================
+   公共弹窗组件样式 - 统一提取
+   ============================================ */
+
+/* 弹窗遮罩层 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 5, 12, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* 主弹窗容器 */
+.ctrl-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  background: rgba(10, 20, 38, 0.95);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 宽版弹窗（用于三栏布局） */
+.ctrl-modal.wide {
+  max-width: 1000px;
+}
+
+/* 弹窗顶部栏 */
+.ctrl-modal .modal-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 16px;
+}
+
+.ctrl-modal .m-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ctrl-modal .m-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ctrl-modal .m-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ctrl-modal .m-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* 关闭按钮 */
+.ctrl-modal .m-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.ctrl-modal .m-close:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
+  border-color: rgba(239,68,68,0.3);
+}
+
+/* 弹窗内容区域 */
+.ctrl-modal .modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+

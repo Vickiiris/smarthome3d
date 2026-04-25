@@ -1,0 +1,383 @@
+/* ============================================
+   能源详情组件样式 - 统一提取
+   ============================================ */
+
+.energy-detail {
+  padding: 8px 0;
+}
+
+/* 大数值展示 */
+.energy-detail .ed-big {
+  text-align: center;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.energy-detail .ed-val {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1;
+}
+
+.energy-detail .ed-unit {
+  font-size: 16px;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+
+.energy-detail .ed-trend {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.energy-detail .ed-trend.up {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+}
+
+.energy-detail .ed-trend.down {
+  background: rgba(34,197,94,0.15);
+  color: #22c55e;
+}
+
+.energy-detail .ed-desc {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* 区块标题 */
+.energy-detail .ed-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+
+/* 分时段/趋势对比 */
+.energy-detail .ed-periods {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.energy-detail .ed-period-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.energy-detail .ed-period-item {
+  display: grid;
+  grid-template-columns: 60px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+}
+
+.energy-detail .ed-period-label {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.energy-detail .ed-period-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.energy-detail .ed-period-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.energy-detail .ed-period-val {
+  font-size: 12px;
+  color: var(--text-1);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* 图表区域 */
+.energy-detail .ed-chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.energy-detail .ed-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+
+.energy-detail .ed-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-detail .ed-bar-item {
+  display: grid;
+  grid-template-columns: 50px 1fr 70px;
+  align-items: center;
+  gap: 12px;
+}
+
+.energy-detail .ed-bar-label {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.energy-detail .ed-bar-wrap {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.energy-detail .ed-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.energy-detail .ed-bar-val {
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* 设备/占比列表 */
+.energy-detail .ed-devices {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.energy-detail .ed-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-detail .ed-device-item {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+}
+
+.energy-detail .ed-device-name {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.energy-detail .ed-device-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.energy-detail .ed-device-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.energy-detail .ed-device-val {
+  font-size: 12px;
+  color: var(--text-1);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* 费用明细 */
+.energy-detail .ed-cost-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.energy-detail .ed-cost-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-detail .ed-cost-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.energy-detail .ed-cost-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.energy-detail .ed-cost-row.total {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.energy-detail .ed-cost-row.total span:last-child {
+  color: #00d4aa;
+  font-size: 16px;
+}
+
+/* 环保贡献 */
+.ed-carbon-detail {
+  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.03) 100%);
+  border: 1px solid rgba(34,197,94,0.15);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.ed-carbon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ed-carbon-item {
+  text-align: center;
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(34,197,94,0.1);
+}
+
+.ed-carbon-icon { font-size: 22px; margin-bottom: 6px; }
+.ed-carbon-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #22c55e;
+  line-height: 1.2;
+}
+.ed-carbon-unit { font-size: 12px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+.ed-carbon-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.ed-carbon-summary {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ed-carbon-summary-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 12px; }
+.ed-carbon-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-2);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ed-carbon-summary-row:last-child { border-bottom: none; }
+.ed-carbon-summary-row .highlight { color: #22c55e; font-weight: 600; }
+.ed-carbon-progress { margin-top: 12px; }
+.ed-carbon-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ed-carbon-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.ed-carbon-progress-label { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+
+/* 本月费用占比列表 */
+.energy-detail .ed-pie-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-detail .ed-pie-item {
+  display: grid;
+  grid-template-columns: 40px 1fr 50px;
+  align-items: center;
+  gap: 12px;
+}
+
+.energy-detail .ed-pie-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.energy-detail .ed-pie-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.energy-detail .ed-pie-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.energy-detail .ed-pie-bar-wrap {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.energy-detail .ed-pie-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.energy-detail .ed-pie-pct {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: right;
+}
+
+/* 弹窗过渡动画 */
+.modal-anim-enter-active {
+  animation: fadeIn 0.22s ease;
+}
+.modal-anim-leave-active {
+  animation: fadeIn 0.18s ease reverse;
+}
+

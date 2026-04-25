@@ -1,0 +1,411 @@
+/* ============================================
+   能源费用卡片
+   ============================================ */
+.energy-cost-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cost-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cost-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.cost-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(0,212,170,0.15);
+  color: #00d4aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+.cost-info { flex: 1; }
+.cost-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+.cost-value { font-size: 22px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+.cost-trend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+.cost-trend.up { background: rgba(239,68,68,0.15); color: #ef4444; }
+.cost-trend.down { background: rgba(34,197,94,0.15); color: #22c55e; }
+
+/* ============================================
+   节能建议
+   ============================================ */
+.energy-tips-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.tips-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tips-icon { font-size: 18px; }
+.tips-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.tips-list { display: flex; flex-direction: column; gap: 12px; }
+.tip-item { display: flex; align-items: flex-start; gap: 10px; }
+.tip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.tip-text { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+/* ============================================
+   环保卡片
+   ============================================ */
+.eco-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.eco-icon { font-size: 40px; margin-bottom: 8px; }
+.eco-title { font-size: 13px; color: var(--text-3); margin-bottom: 8px; }
+.eco-value { font-size: 28px; font-weight: 700; color: #22c55e; margin-bottom: 4px; }
+.eco-desc { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+.eco-badge {
+  font-size: 11px;
+  color: #22c55e;
+  background: rgba(34,197,94,0.15);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* ============================================
+   能源概览指标卡片
+   ============================================ */
+.energy-overview-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.energy-metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.energy-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.energy-metric-card.electric { border-left: 4px solid #00d4aa; }
+.energy-metric-card.electric:hover { border-color: #00d4aa; }
+.energy-metric-card.water { border-left: 4px solid #4fc3f7; }
+.energy-metric-card.water:hover { border-color: #4fc3f7; }
+.energy-metric-card.gas { border-left: 4px solid #ff7043; }
+.energy-metric-card.gas:hover { border-color: #ff7043; }
+.energy-metric-card.cost { border-left: 4px solid #ffd54f; }
+.energy-metric-card.cost:hover { border-color: #ffd54f; }
+.em-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.energy-metric-card.electric .em-icon { background: rgba(0,212,170,0.15); color: #00d4aa; }
+.energy-metric-card.water .em-icon { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.energy-metric-card.gas .em-icon { background: rgba(255,112,67,0.15); color: #ff7043; }
+.energy-metric-card.cost .em-icon { background: rgba(255,213,79,0.15); color: #ffd54f; }
+.em-info { flex: 1; }
+.em-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+.em-value { font-size: 24px; font-weight: 700; color: var(--text-1); font-family: var(--font-mono);}
+.em-value.electric { color: #00d4aa; }
+.em-value.water { color: #4fc3f7; }
+.em-value.gas { color: #ff7043; }
+.em-value.cost { color: #ffd54f; }
+.em-unit { font-size: 13px; color: var(--text-3); font-weight: 400; }
+.em-trend { font-size: 11px; font-weight: 600; margin-top: 4px; }
+.em-trend.up { color: #ef4444; }
+.em-trend.down { color: #22c55e; }
+
+/* 图表布局 */
+.chart-lg { flex: 1.5; }
+.chart-sm { flex: 1; }
+
+/* ============================================
+   费用明细卡片（四列）
+   ============================================ */
+.energy-cost-detail-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cost-detail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cost-detail-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.cdc-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.cdc-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cdc-icon.electric { background: rgba(0,212,170,0.15); color: #00d4aa; }
+.cdc-icon.water { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.cdc-icon.gas { background: rgba(255,112,67,0.15); color: #ff7043; }
+.cdc-icon.total { background: linear-gradient(135deg, rgba(0,212,170,0.25) 0%, rgba(99,102,241,0.25) 100%); color: #00d4aa; }
+.cdc-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.cdc-body { display: flex; flex-direction: column; gap: 12px; }
+.cdc-main { display: flex; align-items: baseline; gap: 8px; }
+.cdc-value { font-size: 28px; font-weight: 700; color: var(--text-1); font-family: var(--font-mono);}
+.cdc-label { font-size: 12px; color: var(--text-3); }
+.cdc-items { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.cdc-item { display: flex; justify-content: space-between; font-size: 12px; }
+.cdc-item span:first-child { color: var(--text-3); }
+.cdc-item span:last-child { color: var(--text-1); font-weight: 500; }
+
+/* ============================================
+   能源底部排行 + 环保贡献
+   ============================================ */
+.energy-bottom-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+}
+.rank-card { flex: 1; }
+.rank-card .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rank-icon { font-size: 16px; margin-right: 8px; }
+.rank-list { padding-top: 12px; }
+.eco-contribute-card {
+  background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.06) 50%, rgba(34,197,94,0.03) 100%);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.eco-contribute-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.35);
+}
+.eco-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.eco-header .eco-icon { font-size: 20px; }
+.eco-header .eco-title { font-size: 15px; font-weight: 600; color: var(--text-1); flex: 1; }
+.eco-badge-tag {
+  font-size: 10px;
+  color: #22c55e;
+  background: rgba(34,197,94,0.15);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.eco-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.eco-stat { text-align: center; }
+.eco-stat.primary .eco-value { color: #22c55e; text-shadow: 0 0 20px rgba(34,197,94,0.3); }
+.eco-stat .eco-value { font-size: 28px; font-weight: 700; color: #22c55e; margin-bottom: 2px; line-height: 1.1; }
+.eco-stat .eco-unit { font-size: 12px; color: var(--text-3); }
+.eco-stat .eco-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.eco-divider { width: 1px; height: 40px; background: rgba(34,197,94,0.15); }
+.eco-progress-row {
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.eco-progress-label { font-size: 12px; color: var(--text-2); display: flex; justify-content: space-between; margin-bottom: 8px; }
+.eco-progress-pct { color: #22c55e; font-weight: 600; }
+.eco-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.eco-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.eco-progress-sub { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+.eco-tips { margin-top: auto; }
+.eco-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: rgba(255,255,255,0.03);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+}
+.eco-tip .tip-icon { font-size: 14px; }
+
+/* ============================================
+   场景模式（侧边栏）
+   ============================================ */
+.scene-modes {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.scene-modes-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+.scene-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+  text-align: left;
+}
+.scene-mode-btn:hover {
+  background: rgba(0, 212, 170, 0.08);
+  border-color: var(--border);
+  color: var(--text);
+}
+.scene-mode-btn.active {
+  background: var(--primary-dim);
+  border-color: rgba(0, 212, 170, 0.25);
+  color: var(--primary);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.1);
+}
+.scene-mode-btn .sm-icon { font-size: 16px; min-width: 22px; text-align: center; }
+.scene-mode-btn .sm-label { font-size: 12px; font-weight: 500; }
+
+/* ============================================
+   Toast 通知系统
+   ============================================ */
+.toast-container {
+  position: fixed;
+  top: 70px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 400px;
+}
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(10, 20, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 212, 170, 0.05);
+  pointer-events: auto;
+}
+.toast-item.info { border-left: 4px solid var(--secondary); }
+.toast-item.success { border-left: 4px solid var(--success); }
+.toast-item.warning { border-left: 4px solid var(--warning); }
+.toast-item.danger { border-left: 4px solid var(--danger); }
+.toast-icon { font-size: 16px; flex-shrink: 0; }
+.toast-msg { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; }
+.toast-close {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.toast-close:hover { background: rgba(255, 255, 255, 0.12); color: var(--text); }
+.toast-fade-enter-active { animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-fade-leave-active { animation: toastSlideOut 0.25s ease forwards; }
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
+
+/* 弹窗 fadeIn（全局复用） */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
