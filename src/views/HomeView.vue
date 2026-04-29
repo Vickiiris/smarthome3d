@@ -10,7 +10,7 @@
     />
 
     <main class="main">
-      <TopBar :currentTitle="currentTitle" :currentTime="currentTime" :currentDate="currentDate" />
+      <TopBar :currentTitle="currentTitle" :currentTime="currentTime" :currentDate="currentDate" :allAlarms="allAlarms" @navigateToAlarm="navigateToAlarm" />
 
       <div class="content">
 
@@ -395,6 +395,10 @@ function switchPage(id) {
   currentPage.value = id
   if (id !== 'health') nextTick(() => mountCanvas(id))
   if (id === 'energy') setTimeout(() => initCharts(), 100)
+}
+
+function navigateToAlarm() {
+  switchPage('alarm')
 }
 
 function closeAllPanels() {
