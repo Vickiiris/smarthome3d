@@ -14,13 +14,13 @@
     <input type="range" min="16" max="30" v-model="temperature" />
   </div>
   <div class="modes">
-    <button v-for="m in ['制冷', '制热', '送风', '自动']" :key="m" class="mode-btn" :class="{ act: acMode === m }" @click="acMode = m">{{ m }}</button>
+    <button v-for="m in modes" :key="m.value" class="mode-btn" :class="{ act: acMode === m.value }" @click="acMode = m.value">{{ m.label }}</button>
   </div>
   <div class="ms" style="margin-top:12px">
     <span class="ml">风速</span>
   </div>
   <div class="modes">
-    <button v-for="s in ['自动', '低速', '中速', '高速']" :key="s" class="mode-btn" :class="{ act: acFanSpeed === s }" @click="acFanSpeed = s">{{ s }}</button>
+    <button v-for="s in fanSpeeds" :key="s.value" class="mode-btn" :class="{ act: acFanSpeed === s.value }" @click="acFanSpeed = s.value">{{ s.label }}</button>
   </div>
 </template>
 
@@ -29,13 +29,32 @@ import { ref, watch } from 'vue'
 
 const props = defineProps({ value: Number, mode: String, fanSpeed: String })
 const emit = defineEmits(['update'])
+// 统一用英文枚举存状态（cool/heat/fan/auto、auto/low/medium/high），
+// 中文只做展示 —— 否则抽屉面板和弹窗会各存一套值，互相识别不了
+const modes = [
+  { value: 'cool', label: '制冷' },
+  { value: 'heat', label: '制热' },
+  { value: 'fan', label: '送风' },
+  { value: 'auto', label: '自动' },
+]
+const fanSpeeds = [
+  { value: 'auto', label: '自动' },
+  { value: 'low', label: '低速' },
+  { value: 'medium', label: '中速' },
+  { value: 'high', label: '高速' },
+]
+// 兼容旧数据里存的中文模式名
+const MODE_ALIAS = { 制冷: 'cool', 制热: 'heat', 送风: 'fan', 自动: 'auto' }
+const FAN_ALIAS = { 自动: 'auto', 低速: 'low', 中速: 'medium', 高速: 'high' }
+
 const temperature = ref(props.value ?? 24)
-const acMode = ref(props.mode ?? '制冷')
-const acFanSpeed = ref(props.fanSpeed ?? '自动')
+// 默认开机即制冷
+const acMode = ref(MODE_ALIAS[props.mode] ?? props.mode ?? 'cool')
+const acFanSpeed = ref(FAN_ALIAS[props.fanSpeed] ?? props.fanSpeed ?? 'auto')
 
 watch(() => props.value, (v) => { if (v != null) temperature.value = v })
-watch(() => props.mode, (v) => { if (v) acMode.value = v })
-watch(() => props.fanSpeed, (v) => { if (v) acFanSpeed.value = v })
+watch(() => props.mode, (v) => { if (v) acMode.value = MODE_ALIAS[v] ?? v })
+watch(() => props.fanSpeed, (v) => { if (v) acFanSpeed.value = FAN_ALIAS[v] ?? v })
 watch([temperature, acMode, acFanSpeed], () => {
   emit('update', { value: temperature.value, mode: acMode.value, fanSpeed: acFanSpeed.value })
 })

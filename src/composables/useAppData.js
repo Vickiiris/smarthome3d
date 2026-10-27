@@ -4,14 +4,14 @@ import { ref, computed } from 'vue'
 export function useAppData() {
   // ===== 设备列表 =====
   const deviceList = ref([
-    { id: 'dev1',  name: '客厅空调',           icon: '❄️',  room: '客厅',   vendor: '三星',    ip: '192.168.1.47', online: true,  status: true,  type: 'ac',       value: 24 },
+    { id: 'dev1',  name: '客厅空调',           icon: '❄️',  room: '客厅',   vendor: '三星',    ip: '192.168.1.47', online: true,  status: true,  type: 'ac',       mode: 'cool', value: 24 },
     { id: 'dev3',  name: '新风系统',           icon: '🌀',  room: '全屋',   vendor: '海尔',    ip: '192.168.1.83', online: true,  status: true,  type: 'ventil',   value: 50 },
     { id: 'dev4',  name: '客厅电视',           icon: '📺',  room: '客厅',   vendor: '三星',    ip: '192.168.1.156',online: true,  status: false, type: 'tv',       value: 30 },
     { id: 'dev5',  name: '智能音箱',           icon: '🔊',  room: '客厅',   vendor: '米歇尔',    ip: '192.168.1.29', online: true,  status: true,  type: 'speaker',  value: 60 },
     { id: 'dev6',  name: '门禁系统',           icon: '🔒',  room: '玄关',   vendor: '德施曼',  ip: '192.168.1.112',online: true,  status: false, type: 'security', value: 0  },
-    { id: 'dev7',  name: '主卧空调',           icon: '🌬️', room: '主卧',   vendor: '三星',    ip: '192.168.1.64', online: true,  status: false, type: 'ac',       value: 26 },
-    { id: 'dev8',  name: '次卧空调',           icon: '🌡️', room: '次卧',   vendor: '三星',    ip: '192.168.1.91', online: true,  status: false, type: 'ac',       value: 26 },
-    { id: 'dev9',  name: '洗碗机',             icon: '🍽️', room: '厨房',   vendor: '西门子',  ip: '192.168.1.178',online: true,  status: false, type: 'washer',   value: 0  },
+    { id: 'dev7',  name: '主卧空调',           icon: '🌬️', room: '主卧',   vendor: '三星',    ip: '192.168.1.64', online: true,  status: false, type: 'ac',       mode: 'cool', value: 26 },
+    { id: 'dev8',  name: '次卧空调',           icon: '🌡️', room: '次卧',   vendor: '三星',    ip: '192.168.1.91', online: true,  status: false, type: 'ac',       mode: 'cool', value: 26 },
+    { id: 'dev9',  name: '洗碗机',             icon: '🍽️', room: '厨房',   vendor: '西门子',  ip: '192.168.1.178',online: true,  status: false, type: 'washer',   value: 0,  doorOpen: false },
     { id: 'dev10', name: '燃气热水器',         icon: '🚿',  room: '厨房',   vendor: '阿里斯顿',    ip: '192.168.1.203',online: true,  status: false, type: 'heater',   value: 55 },
     { id: 'dev11', name: '空调插座A',           icon: '🔌',  room: '主卧',   vendor: '小米',    ip: '192.168.1.38', online: true,  status: true,  type: 'outlet',   value: 0  },
     { id: 'dev12', name: '主卧灯开关',         icon: '🛏️', room: '主卧',   vendor: '小米',    ip: '192.168.1.55', online: true,  status: true,  type: 'light',    value: 80 },
@@ -30,7 +30,7 @@ export function useAppData() {
     { id: 'dev26', name: '阳台灯开关',         icon: '🌿',  room: '阳台',   vendor: '小米',    ip: '192.168.1.58', online: true,  status: false, type: 'light',    value: 0  },
     { id: 'dev27', name: '温湿度/光照传感器', icon: '🌡️', room: '阳台',   vendor: '小米',    ip: '192.168.1.76', online: true,  status: true,  type: 'sensor',   value: 0  },
     { id: 'dev28', name: '抽油烟机',          icon: '🌀',  room: '厨房',   vendor: '欧派',    ip: '192.168.1.142',online: true,  status: false, type: 'ventil',   value: 0  },
-    { id: 'dev29', name: '洗衣机',            icon: '🧺',  room: '阳台',   vendor: '小天鹅',  ip: '192.168.1.66', online: true,  status: false, type: 'washing',  value: 0  },
+    { id: 'dev29', name: '洗衣机',            icon: '🧺',  room: '阳台',   vendor: '小天鹅',  ip: '192.168.1.66', online: true,  status: false, type: 'washing',  value: 0,  doorOpen: false },
   ])
 
   const GATEWAY_TYPES = new Set(['sensor', 'security', 'light', 'outlet'])

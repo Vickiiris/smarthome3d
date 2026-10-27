@@ -6,6 +6,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 import gsap from 'gsap'
+import { createModelEffects } from './useModelEffects.js'
 
 // 资源统一走 BASE_URL，兼容「根目录部署」与「子目录部署」（如 GitHub Pages 项目页）
 const BASE = import.meta.env.BASE_URL || '/'
@@ -20,6 +21,9 @@ const VIEW_DIR = new THREE.Vector3(0, 4, 6).normalize()
 const INITIAL_TARGET = new THREE.Vector3(0, 0, 0)
 
 export function useThreeScene(canvasRef) {
+  // 模型内可动部件 / 特效（电视动画、油烟机风、家电开门）
+  const effects = createModelEffects()
+  const fxClock = new THREE.Clock()
   const scene = shallowRef(null)
   const camera = shallowRef(null)
   const renderer = shallowRef(null)
@@ -280,7 +284,8 @@ export function useThreeScene(canvasRef) {
 
   function focusHotspot(def) {
     if (def.cameraPos) {
-      flyTo(def.cameraPos.clone(), def.position.clone(), 1.0)
+      // lookAt 用于「看点与热点标签锚点不一致」的场合（例如洗衣机要对准机身中心而不是标签）
+      flyTo(def.cameraPos.clone(), (def.lookAt || def.position).clone(), 1.0)
     }
     const newRoomId = ROOM_MAP[def.room] || 'all'
     activeRoomId.value = newRoomId
@@ -473,6 +478,8 @@ export function useThreeScene(canvasRef) {
             isLoading.value = false
             modelError.value = null
             hideFallback()
+            // 缩放动画结束后世界矩阵才是最终值，此时再去找可动部件
+            try { effects.attach(model.value, scene.value) } catch (e) { console.warn('[scene] effects attach failed', e) }
             window.dispatchEvent(new Event('__modelLoaded'))
           },
         })
@@ -496,6 +503,7 @@ export function useThreeScene(canvasRef) {
     // canvas 被隐藏（切到无 3D 的页面）时不渲染，省 CPU/GPU
     if (hostSize().w === 0) return
     controls.value?.update()
+    effects.update(Math.min(0.1, fxClock.getDelta()))
     renderer.value?.render(scene.value, camera.value)
     labelRenderer.value?.render(scene.value, camera.value)
     if (++declutterTick % 8 === 0) updateLabelDeclutter()
@@ -587,7 +595,18 @@ export function useThreeScene(canvasRef) {
     updateHotspotVisibility()
   }
 
+  /** 模型内特效开关：tv | hood | washerDoor | dishwasherDoor | acMain | acSecond | speaker */
+  function setApplianceEffect(key, on) {
+    effects.setState(key, on)
+  }
+
+  /** 空调运行模式：cool | heat —— 只改雾团配色，不影响开关 */
+  function setACMode(key, mode) {
+    effects.setACMode(key, mode)
+  }
+
   function disposeScene() {
+    effects.dispose()
     if (scene.value) {
       scene.value.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose()
@@ -620,6 +639,7 @@ export function useThreeScene(canvasRef) {
     onHotspotClick, activeRoomId,
     setLightStatus, flyToRoom, resetView, flyTo,
     resize, getRenderer, initScene, retryModel, fitCameraToModel,
+    setApplianceEffect, setACMode, effects,
   }
 }
 
@@ -822,7 +842,9 @@ const HOTSPOTS = [
     type: 'washing',
     room: '阳台',
     position: new THREE.Vector3(1.469, -0.097, -2.541),
-    cameraPos: new THREE.Vector3(1.300, 0.850, -1.450),
+    // 正对机身、视线略低的机位（按截图反算：距门 2.3m、机位高 1.25m）
+    cameraPos: new THREE.Vector3(0.237, 0.117, -2.606),
+    lookAt: new THREE.Vector3(1.618, -0.236, -2.497),
   },
   {
     id: 'kitchen-range-hood',

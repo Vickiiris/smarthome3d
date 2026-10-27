@@ -348,6 +348,29 @@ watch(deviceList, () => syncAllLights(), { deep: true })
 
 watch(activeRoomId, (id) => { activeRoom.value = id })
 
+// 家电状态 → 模型内的特效（电视播放、油烟机风、舱门开合）
+watch(deviceList, (list) => {
+  const tv = list.find(d => d.type === 'tv')
+  const hood = list.find(d => d.name === '抽油烟机')
+  const washingMachine = list.find(d => d.type === 'washing')
+  const dishwasher = list.find(d => d.type === 'washer')
+  const acMain = list.find(d => d.name === '主卧空调')
+  const acSecond = list.find(d => d.name === '次卧空调')
+  const speaker = list.find(d => d.type === 'speaker')
+  threeScene.setApplianceEffect('tv', !!tv?.status)
+  threeScene.setApplianceEffect('hood', !!hood?.status)
+  threeScene.setApplianceEffect('washerDoor', !!washingMachine?.doorOpen)
+  threeScene.setApplianceEffect('dishwasherDoor', !!dishwasher?.doorOpen)
+  threeScene.setApplianceEffect('acMain', !!acMain?.status)
+  threeScene.setApplianceEffect('acSecond', !!acSecond?.status)
+  // 运行模式只改 3D 雾团配色（制冷=冷蓝 / 制热=暖橙 / 送风=中性白）；兼容旧数据里的中文模式名
+  const acModeOf = (d) => ({ heat: 'heat', 制热: 'heat', fan: 'fan', 送风: 'fan' })[d?.mode] || 'cool'
+  threeScene.setACMode('acMain', acModeOf(acMain))
+  threeScene.setACMode('acSecond', acModeOf(acSecond))
+  threeScene.setApplianceEffect('speaker', !!speaker?.status)
+  // immediate：页面初次加载时设备就有默认状态（音箱是开着的），要立刻映射到模型上
+}, { deep: true, immediate: true })
+
 // 点热区：先进入全屏，再弹出控制面板。
 // 这样面板是叠在 3D 画面上的（沉浸式），而不是浮在普通页面布局之上——
 // 原来的做法在非全屏时会盖住下面的指标卡/图表，看着像弹错了层。

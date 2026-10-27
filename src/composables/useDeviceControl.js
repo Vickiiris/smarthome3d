@@ -37,6 +37,7 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
         value: nextValue,
         mode: device.mode ?? deviceList.value[idx].mode,
         fanSpeed: device.fanSpeed ?? deviceList.value[idx].fanSpeed,
+        doorOpen: device.doorOpen ?? deviceList.value[idx].doorOpen,
         online: GATEWAY_TYPES.has(deviceList.value[idx].type) ? (deviceList.value[idx].online ?? true) : device.status,
       }
       selectedHotspotDevice.value = deviceList.value[idx]

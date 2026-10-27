@@ -36,6 +36,15 @@
               </div>
             </div>
 
+            <!-- 门：洗衣机 / 洗碗机 -->
+            <div class="dcp-section" v-if="device?.type === 'washer' || device?.type === 'washing'">
+              <div class="dcp-section-title">🚪 门</div>
+              <div class="dcp-switch-row">
+                <span class="dcp-switch-label">{{ localDoor ? '舱门已打开' : '舱门已关闭' }}</span>
+                <button class="dcp-door-btn" :class="{ on: localDoor }" @click="toggleDoor">{{ localDoor ? '关门' : '开门' }}</button>
+              </div>
+            </div>
+
             <!-- 设备类型控制（子组件） -->
             <PanelAcControls v-if="device?.type === 'ac' && !!localStatus" :value="localValue" :mode="localMode" :fanSpeed="localFanSpeed" @update:value="v => { localValue = v; emitUpdate() }" @update:mode="v => { localMode = v; emitUpdate() }" @update:fanSpeed="v => { localFanSpeed = v; emitUpdate() }" />
             <PanelLightControls v-else-if="device?.type === 'light' && !!localStatus" :value="localValue" @update:value="v => { localValue = v; emitUpdate() }" @update:status="v => { localStatus = v; emitUpdate() }" />
@@ -89,6 +98,7 @@ const localValue = ref(null)
 const localStatus = ref(null)
 const localMode = ref(null)
 const localFanSpeed = ref(null)
+const localDoor = ref(false)
 
 watch(() => props.device, (d) => {
   if (!d) return
@@ -96,6 +106,7 @@ watch(() => props.device, (d) => {
   localStatus.value = d.status ?? false
   localMode.value = d.mode ?? 'cool'
   localFanSpeed.value = d.fanSpeed ?? 'auto'
+  localDoor.value = !!d.doorOpen
 }, { immediate: true, deep: true })
 
 const deviceIcon = computed(() => ({ ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀', washer:'🍽️', washing:'🧺', speaker:'🔊', heater:'🚿' }[props.device?.type] || '📱'))
@@ -130,7 +141,8 @@ const deviceTips = computed(() => ({
 }[props.device?.type] || '定期检查设备状态，如有异常请及时联系售后服务。'))
 
 function togglePower() { localStatus.value = !localStatus.value; emitUpdate() }
-function emitUpdate() { emit('update', { ...readonly(props.device), status: localStatus.value, value: localValue.value, mode: localMode.value, fanSpeed: localFanSpeed.value }) }
+function toggleDoor() { localDoor.value = !localDoor.value; emitUpdate() }
+function emitUpdate() { emit('update', { ...readonly(props.device), status: localStatus.value, value: localValue.value, mode: localMode.value, fanSpeed: localFanSpeed.value, doorOpen: localDoor.value }) }
 function close() { emit('close') }
 </script>
 
@@ -161,6 +173,9 @@ function close() { emit('close') }
 .dcp-toggle-track.on { background: rgba(0,212,170,0.25); }
 .dcp-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #64748b; border-radius: 50%; transition: all 0.3s; }
 .dcp-toggle-track.on .dcp-toggle-thumb { left: 25px; background: #00d4aa; box-shadow: 0 0 10px rgba(0,212,170,0.5); }
+.dcp-door-btn { padding: 7px 18px; border-radius: 999px; border: 1px solid rgba(0,212,170,0.3); background: rgba(0,212,170,0.08); color: #00d4aa; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.dcp-door-btn:hover { background: rgba(0,212,170,0.16); }
+.dcp-door-btn.on { background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.35); color: #fb923c; }
 .slide-panel-enter-active, .slide-panel-leave-active { transition: opacity 0.25s ease; }
 .slide-panel-enter-active .dcp-panel, .slide-panel-leave-active .dcp-panel { transition: transform 0.25s ease; }
 .slide-panel-enter-from, .slide-panel-leave-to { opacity: 0; }
