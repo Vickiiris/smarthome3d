@@ -23,6 +23,20 @@
               </div>
               <span class="mv" :class="{ active: localStatus }">{{ localStatus ? '开启' : '关闭' }}</span>
             </div>
+            <!-- 供电插座断电提示：插座不开，设备开不了机 -->
+            <div class="power-warn" v-if="power && power.kind === 'device' && !power.outletOn">
+              ⚠️ 供电插座「{{ power.outletName }}」未通电，请先接通插座再开机
+            </div>
+            <!-- 供电设备清单：插座专用，展示这台插座给哪些设备供电 -->
+            <div class="power-list" v-if="power && power.kind === 'outlet'">
+              <div class="power-list-title">🔌 供电设备</div>
+              <div class="power-list-items">
+                <span class="power-chip" v-for="d in power.powered" :key="d.name" :class="{ on: d.on }">
+                  {{ d.icon }} {{ d.name }} · {{ d.on ? '运行中' : '已关闭' }}
+                </span>
+              </div>
+              <p class="power-list-note">关闭本插座将联动关闭以上设备。</p>
+            </div>
 
             <LightControls v-if="device?.type === 'light'" :value="device?.value" @update="(v) => emit('update', { ...device, value: v })" />
             <AcControls v-if="device?.type === 'ac'" :value="device?.value" :mode="device?.mode" :fanSpeed="device?.fanSpeed" @update="(v) => emit('update', { ...device, ...v })" />
@@ -56,6 +70,7 @@ import EnergyDetail from './controls/EnergyDetail.vue'
 const props = defineProps({
   visible: Boolean,
   device: Object,
+  power: Object,
   chartData: Object,
   energyLiveData: Object
 })
@@ -143,6 +158,24 @@ function toggleStatus() {
   box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 .btoggle.on .bt-dot { left: calc(100% - 21px); background: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+
+/* 供电插座断电提示 */
+.power-warn {
+  font-size: 12px; line-height: 1.6; color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px; padding: 10px 12px;
+}
+
+/* 插座的供电设备清单 */
+.power-list { display: flex; flex-direction: column; gap: 8px; }
+.power-list-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+.power-list-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.power-chip {
+  font-size: 12px; padding: 6px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-3);
+}
+.power-chip.on { color: var(--primary); border-color: rgba(0, 212, 170, 0.35); background: rgba(0, 212, 170, 0.06); }
+.power-list-note { font-size: 11px; color: var(--text-3); margin: 0; }
 
 /* 弹窗过渡动画 */
 .modal-anim-enter-active { animation: fadeIn 0.22s ease; }

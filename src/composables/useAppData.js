@@ -35,6 +35,20 @@ export function useAppData() {
 
   const GATEWAY_TYPES = new Set(['sensor', 'security', 'light', 'outlet'])
 
+  // ===== 插座供电关系 =====
+  // key = 插座设备 id，value = 该插座供电的设备 id 列表。
+  // 联动规则（见 useDeviceControl）：
+  //   1. 插座断电时，受电设备无法开机（提示先接通插座）且视为离线；
+  //   2. 插座被关闭时，正在运行的受电设备级联关闭；
+  //   3. 场景模式要把受电设备开机时，自动先接通其插座（见 useSceneModes）。
+  // 不在表里的设备（灯具、传感器、热水器、洗衣机等）默认为总线直连/无需插座供电。
+  // 插座 → 受电设备。只有主卧/次卧两台空调走插座供电；
+  // 客厅空调、电视、音箱、洗碗机、抽油烟机等其余电器均为总线直连，不受插座约束。
+  const POWER_MAP = {
+    dev11: ['dev7'],  // 空调插座A（主卧）→ 主卧空调
+    dev13: ['dev8'],  // 空调插座B（次卧）→ 次卧空调
+  }
+
   // ===== 健康数据 =====
   const healthItems = ref([
     { icon: '❤',  label: '心率',   value: '72次/分',   trend: 2,   color: '#ff6b6b', range: '正常: 60-100次/分',   pct: 72,  raw: 72 },
@@ -180,7 +194,7 @@ export function useAppData() {
   ]
 
   return {
-    deviceList, GATEWAY_TYPES,
+    deviceList, GATEWAY_TYPES, POWER_MAP,
     healthItems, heartRateData, bpWeekData, spo2TrendData, temperatureTrendData, stepsTrendData, sleepData,
     allAlarms, strategies, products,
     navItems, rooms,

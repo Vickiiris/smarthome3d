@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export function useSceneModes(deviceList, threeScene, homeStore) {
+export function useSceneModes(deviceList, threeScene, homeStore, POWER_MAP) {
   const activeSceneMode = ref('')
 
   const sceneModes = [
@@ -61,9 +61,30 @@ export function useSceneModes(deviceList, threeScene, homeStore) {
     deviceList.value.forEach(syncDeviceLight)
   }
 
+  // ===== 插座供电联动 =====
+  // 反向表：设备 id → 供电插座 id（与 useDeviceControl 的拦截规则互补：
+  // 手动开机被拦截，但场景属于自动化，要「想办法做到」——先自动接通插座）
+  const POWERED_BY = {}
+  Object.entries(POWER_MAP || {}).forEach(([outletId, ids]) => {
+    ids.forEach(id => { POWERED_BY[id] = outletId })
+  })
+
   function applySceneMode(mode) {
     activeSceneMode.value = mode.id
     let changed = 0
+    // 场景要把设备开机时，先自动接通其供电插座（插座断电会导致设备无法开机）
+    const poweredOutlets = []
+    mode.actions.filter(a => a.status).forEach(action => {
+      const device = deviceList.value.find(d => d.name === action.name)
+      if (!device) return
+      const outletId = POWERED_BY[device.id]
+      if (!outletId) return
+      const oidx = deviceList.value.findIndex(d => d.id === outletId)
+      if (oidx !== -1 && !deviceList.value[oidx].status) {
+        deviceList.value[oidx] = { ...deviceList.value[oidx], status: true, online: deviceList.value[oidx].online ?? true }
+        poweredOutlets.push(deviceList.value[oidx].name)
+      }
+    })
     mode.actions.forEach(action => {
       const idx = deviceList.value.findIndex(d => d.name === action.name)
       if (idx !== -1) {
@@ -78,9 +99,13 @@ export function useSceneModes(deviceList, threeScene, homeStore) {
     })
     syncAllLights()
     // 明亮模式的文案针对性更强：用户关心的是「灯是不是全亮了」
-    const message = mode.id === 'bright'
-      ? (changed > 0 ? `☀️ 明亮模式已启用，全屋 ${mode.actions.length} 盏灯已点亮` : '☀️ 全屋灯光已经是全亮状态')
-      : `${mode.icon} ${mode.label}已启用，共调整 ${changed} 个设备`
+    let message
+    if (mode.id === 'bright') {
+      message = changed > 0 ? `☀️ 明亮模式已启用，全屋 ${mode.actions.length} 盏灯已点亮` : '☀️ 全屋灯光已经是全亮状态'
+    } else {
+      message = `${mode.icon} ${mode.label}已启用，共调整 ${changed} 个设备`
+    }
+    if (poweredOutlets.length) message += `，已自动接通插座：${poweredOutlets.join('、')}`
     homeStore.addToast({ message, type: 'success' })
   }
 

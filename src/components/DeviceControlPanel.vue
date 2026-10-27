@@ -34,6 +34,23 @@
                   <div class="dcp-toggle-track" :class="{ on: !!localStatus }"><div class="dcp-toggle-thumb"></div></div>
                 </div>
               </div>
+              <!-- 供电插座断电提示：插座不开，设备开不了机 -->
+              <div class="dcp-power-warn" v-if="power && power.kind === 'device' && !power.outletOn">
+                ⚠️ 供电插座「{{ power.outletName }}」未通电，请先接通插座再开机
+              </div>
+            </div>
+
+            <!-- 供电设备：插座专用，展示这台插座给哪些设备供电 -->
+            <div class="dcp-section" v-if="device?.type === 'outlet' && power?.kind === 'outlet'">
+              <div class="dcp-section-title">🔌 供电设备</div>
+              <div class="dcp-powered-list">
+                <div class="dcp-powered-item" v-for="d in power.powered" :key="d.name">
+                  <span class="dcp-powered-icon">{{ d.icon }}</span>
+                  <span class="dcp-powered-name">{{ d.name }}</span>
+                  <span class="dcp-powered-state" :class="{ on: d.on }">● {{ d.on ? '运行中' : '已关闭' }}</span>
+                </div>
+              </div>
+              <p class="dcp-desc">关闭本插座将联动关闭以上设备。</p>
             </div>
 
             <!-- 门：洗衣机 / 洗碗机 -->
@@ -91,7 +108,7 @@ import PanelHeaterControls from './panel/PanelHeaterControls.vue'
 import PanelSecurityControls from './panel/PanelSecurityControls.vue'
 import PanelEnergyContent from './panel/PanelEnergyContent.vue'
 
-const props = defineProps({ visible: Boolean, device: Object })
+const props = defineProps({ visible: Boolean, device: Object, power: Object })
 const emit = defineEmits(['close', 'update'])
 
 const localValue = ref(null)
@@ -167,6 +184,21 @@ function close() { emit('close') }
 .dcp-tips { background: rgba(0,212,170,0.05); border-color: rgba(0,212,170,0.15); }
 .dcp-desc { font-size: 12px; color: var(--text-2, #94a3b8); line-height: 1.7; margin: 0; }
 .dcp-switch-row { display: flex; align-items: center; justify-content: space-between; }
+
+/* 供电插座断电提示 */
+.dcp-power-warn {
+  margin-top: 10px; font-size: 12px; line-height: 1.6; color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px; padding: 10px 12px;
+}
+
+/* 插座的供电设备清单 */
+.dcp-powered-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.dcp-powered-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 8px; }
+.dcp-powered-icon { font-size: 14px; }
+.dcp-powered-name { flex: 1; font-size: 12px; color: var(--text-2, #e2e8f0); }
+.dcp-powered-state { font-size: 11px; font-weight: 700; color: #64748b; }
+.dcp-powered-state.on { color: #22c55e; }
 .dcp-switch-label { font-size: 13px; color: var(--text-2, #e2e8f0); }
 .dcp-toggle { cursor: pointer; }
 .dcp-toggle-track { width: 48px; height: 26px; background: rgba(255,255,255,0.1); border-radius: 13px; position: relative; transition: background 0.3s; }

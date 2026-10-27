@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 
-export function useDeviceControl(deviceList, GATEWAY_TYPES) {
+export function useDeviceControl(deviceList, GATEWAY_TYPES, POWER_MAP, homeStore) {
   const showControlPanel = ref(false)
   const selectedDevice = ref(null)
   const showSlidePanel = ref(false)
@@ -16,9 +16,68 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
     sensor: '📡', outlet: '🔌',
   }
 
+  // ===== 插座供电关系 =====
+  // 反向表：设备 id → 供电插座 id
+  const POWERED_BY = {}
+  Object.entries(POWER_MAP || {}).forEach(([outletId, ids]) => {
+    ids.forEach(id => { POWERED_BY[id] = outletId })
+  })
+
+  const findDev = id => deviceList.value.find(d => d.id === id)
+  const getOutlet = deviceId => (POWERED_BY[deviceId] ? findDev(POWERED_BY[deviceId]) : null)
+  const getPoweredDevices = outletId => (POWER_MAP?.[outletId] || []).map(findDev).filter(Boolean)
+
+  /** 供 UI 展示的供电关系（HomeView 传给控制弹窗/抽屉） */
+  function powerInfoOf(device) {
+    if (!device) return null
+    if (device.type === 'outlet') {
+      const powered = getPoweredDevices(device.id)
+      if (!powered.length) return null
+      return { kind: 'outlet', powered: powered.map(d => ({ name: d.name, icon: d.icon || iconMap[d.type] || '📱', on: !!d.status })) }
+    }
+    const outlet = getOutlet(device.id)
+    if (!outlet) return null
+    return { kind: 'device', outletName: outlet.name, outletOn: !!outlet.status }
+  }
+
+  /** 插座断电时，级联关闭其供电的设备（并提示） */
+  function cascadeOutletPower(outlet) {
+    const turnedOff = []
+    getPoweredDevices(outlet.id).forEach(d => {
+      if (!d.status) return
+      const i = deviceList.value.findIndex(x => x.id === d.id)
+      if (i !== -1) {
+        deviceList.value[i] = { ...deviceList.value[i], status: false, online: false }
+        turnedOff.push(deviceList.value[i].name)
+      }
+    })
+    if (turnedOff.length && homeStore) {
+      homeStore.addToast({ message: `🔌 「${outlet.name}」已断电，已联动关闭：${turnedOff.join('、')}`, type: 'warning' })
+    }
+    // 若弹窗/抽屉正展示其中一台受电设备，刷新其状态，避免面板停留在旧的「开启」
+    const poweredIds = POWER_MAP?.[outlet.id] || []
+    if (selectedHotspotDevice.value && poweredIds.includes(selectedHotspotDevice.value.id)) {
+      selectedHotspotDevice.value = findDev(selectedHotspotDevice.value.id)
+    }
+    if (selectedDevice.value && poweredIds.includes(selectedDevice.value.id)) {
+      selectedDevice.value = findDev(selectedDevice.value.id)
+    }
+  }
+
+  /** 「关 → 开」时的供电检查：插座断电则拒绝开机（返回 true 表示已拦截） */
+  function powerBlockedOn(device) {
+    const outlet = getOutlet(device.id)
+    if (!outlet || outlet.status) return false
+    homeStore?.addToast({ message: `⚠️ 「${device.name}」供电插座「${outlet.name}」未通电，请先接通插座再开机`, type: 'warning', duration: 4000 })
+    return true
+  }
+
   function deviceOnline(device) {
     if (!device) return false
     if (GATEWAY_TYPES.has(device.type)) return true
+    // 供电插座断电时，受电设备视为离线（即使状态位还是开的）
+    const outlet = getOutlet(device.id)
+    if (outlet && !outlet.status) return false
     return device.status
   }
 
@@ -26,6 +85,13 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
     const idx = deviceList.value.findIndex(d => d.name === device.name || d.id === device.id)
     if (idx !== -1) {
       const cur = deviceList.value[idx]
+      // 供电检查：插座断电时拒绝「关 → 开」
+      if (!cur.status && !!device.status && powerBlockedOn(cur)) {
+        // 把弹窗/抽屉的本地状态拉回真实值（被拒绝的开关会弹回）
+        selectedHotspotDevice.value = { ...cur }
+        selectedDevice.value = { ...cur }
+        return
+      }
       // 只在「关 → 开」这一下补亮度；开着时把亮度拖到 0 必须保持 0，
       // 否则松手就会被写回 100%，看起来像亮度调节失效
       const turningOn = !cur.status && !!device.status
@@ -40,6 +106,8 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
         doorOpen: device.doorOpen ?? deviceList.value[idx].doorOpen,
         online: GATEWAY_TYPES.has(deviceList.value[idx].type) ? (deviceList.value[idx].online ?? true) : device.status,
       }
+      // 插座被关闭时，级联关闭其供电的设备
+      if (cur.type === 'outlet' && !device.status) cascadeOutletPower(cur)
       selectedHotspotDevice.value = deviceList.value[idx]
       selectedDevice.value = deviceList.value[idx]
     }
@@ -50,6 +118,8 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
     if (idx !== -1) {
       const cur = deviceList.value[idx]
       const newStatus = !cur.status
+      // 供电检查：插座断电时禁止开机
+      if (newStatus && powerBlockedOn(cur)) return
       // 开灯时若亮度还是 0（开关类灯具的初始值），补成满亮，否则「开了但没光」
       const value = newStatus && cur.type === 'light' && !(cur.value > 0) ? 100 : cur.value
       deviceList.value[idx] = {
@@ -58,6 +128,8 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
         value,
         online: GATEWAY_TYPES.has(cur.type) ? (cur.online ?? true) : newStatus,
       }
+      // 插座被关闭时，级联关闭其供电的设备
+      if (cur.type === 'outlet' && !newStatus) cascadeOutletPower(cur)
     }
   }
 
@@ -194,6 +266,7 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
     deviceSearch, activeDeviceTab, deviceRoomFilter, deviceTypeFilter, devicePage, DEVICE_PAGE_SIZE,
     allDevices, envDevices, entertainmentDevices, filteredDevices, deviceTotalPages, pagedDevices,
     deviceOnline, onDeviceUpdate, toggleDevice, openDeviceControl, openDeviceControlFromTable,
+    powerInfoOf, getOutlet, getPoweredDevices,
     openSecurityControl, toggleSelectedDevice, openDeviceDetail, closeDeviceDetail,
     getDeviceColor, deviceTypeLabel, deviceTypeDesc, deviceTypeTips, deviceUsageTime, devicePowerStats,
     addDeviceVisible, addStep, addFormError, successMsg, roomOptions, deviceTypeOptions, newDevice,

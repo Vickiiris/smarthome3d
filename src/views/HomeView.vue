@@ -226,6 +226,7 @@
   <DeviceControlModal
     :visible="showControlPanel"
     :device="selectedDevice"
+    :power="powerInfoOf(selectedDevice)"
     :chartData="chartData"
     :energyLiveData="energyLiveData"
     @close="showControlPanel = false"
@@ -237,6 +238,7 @@
   <DeviceControlPanel
     :visible="showSlidePanel"
     :device="selectedHotspotDevice"
+    :power="powerInfoOf(selectedHotspotDevice)"
     @close="closeSlidePanel"
     @update="onDeviceUpdate"
   />
@@ -273,7 +275,7 @@ const homeStore = useHomeStore()
 
 // ===== Composables =====
 const {
-  deviceList, GATEWAY_TYPES,
+  deviceList, GATEWAY_TYPES, POWER_MAP,
   healthItems, heartRateData, bpWeekData, spo2TrendData, temperatureTrendData, stepsTrendData, sleepData,
   allAlarms, strategies, products,
   navItems, rooms,
@@ -292,13 +294,14 @@ const {
   deviceSearch, activeDeviceTab, deviceRoomFilter, deviceTypeFilter, devicePage, DEVICE_PAGE_SIZE,
   allDevices, envDevices, entertainmentDevices, filteredDevices, deviceTotalPages, pagedDevices,
   deviceOnline, onDeviceUpdate, toggleDevice, openDeviceControl, openDeviceControlFromTable,
+  powerInfoOf, getOutlet, getPoweredDevices,
   openSecurityControl, toggleSelectedDevice, openDeviceDetail, closeDeviceDetail,
   getDeviceColor, deviceTypeLabel, deviceTypeDesc, deviceTypeTips, deviceUsageTime, devicePowerStats,
   addDeviceVisible, addStep, addFormError, successMsg, roomOptions, deviceTypeOptions, newDevice,
   openAddDevice, closeAddDevice, submitManualAdd,
   scanning, scanProgress, scanStatus, scanResults, scanSelected,
   startScan, toggleScanSelect, submitScanAdd,
-} = useDeviceControl(deviceList, GATEWAY_TYPES)
+} = useDeviceControl(deviceList, GATEWAY_TYPES, POWER_MAP, homeStore)
 
 const {
   chartData, energyLiveData,
@@ -340,7 +343,7 @@ const { flyToRoom, resetView, onHotspotClick, activeRoomId } = threeScene
 // threeScene.setLightStatus 会拿到 null 并抛异常（曾导致模式只执行一半、无提示）
 const {
   activeSceneMode, sceneModes, applySceneMode, getLightIdForDevice, syncAllLights,
-} = useSceneModes(deviceList, threeScene, homeStore)
+} = useSceneModes(deviceList, threeScene, homeStore, POWER_MAP)
 
 // 灯光联动：任何来源（3D 热区面板 / 设备卡片 / 设备列表 / 场景模式）改了灯具状态，
 // 都通过 deviceList 这一个出口同步到 3D 场景
