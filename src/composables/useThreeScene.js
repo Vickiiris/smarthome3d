@@ -567,7 +567,9 @@ export function useThreeScene(canvasRef) {
       'bedroom2': [-1.430, 1.726, 0.678, -1.096, -0.167, -0.709],
       'kitchen': [-0.636, 1.403, 1.985, 1.006, -0.248, 1.884],
       'bathroom': [0.420, 1.213, 1.488, 1.161, -0.122, 0.495],
-      'balcony': [0.980, 1.760, 0.320, 0.600, 0.040, -2.100],
+      // 阳台是屋子最里侧的一条窄间（洗衣机、灯开关、温湿度传感器都在这里），
+      // 原来的机位落在卧室上空，看到的是两张床，等于没对准
+      'balcony': [1.300, 1.560, -1.330, 1.420, -0.120, -2.590],
     }
     const t = map[roomId]
     if (t) flyTo(new THREE.Vector3(t[0], t[1], t[2]), new THREE.Vector3(t[3], t[4], t[5]))
@@ -814,13 +816,13 @@ const HOTSPOTS = [
     cameraPos: new THREE.Vector3(1.570, 0.470, 1.911),
   },
   {
-    id: 'bedroom-washer',
+    id: 'balcony-washer',
     name: '洗衣机',
     icon: '🧺',
-    type: 'washer',
-    room: '主卧',
+    type: 'washing',
+    room: '阳台',
     position: new THREE.Vector3(1.469, -0.097, -2.541),
-    cameraPos: new THREE.Vector3(0.281, 0.419, -2.563),
+    cameraPos: new THREE.Vector3(1.300, 0.850, -1.450),
   },
   {
     id: 'kitchen-range-hood',

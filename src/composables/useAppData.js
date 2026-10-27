@@ -30,6 +30,7 @@ export function useAppData() {
     { id: 'dev26', name: '阳台灯开关',         icon: '🌿',  room: '阳台',   vendor: '小米',    ip: '192.168.1.58', online: true,  status: false, type: 'light',    value: 0  },
     { id: 'dev27', name: '温湿度/光照传感器', icon: '🌡️', room: '阳台',   vendor: '小米',    ip: '192.168.1.76', online: true,  status: true,  type: 'sensor',   value: 0  },
     { id: 'dev28', name: '抽油烟机',          icon: '🌀',  room: '厨房',   vendor: '欧派',    ip: '192.168.1.142',online: true,  status: false, type: 'ventil',   value: 0  },
+    { id: 'dev29', name: '洗衣机',            icon: '🧺',  room: '阳台',   vendor: '小天鹅',  ip: '192.168.1.66', online: true,  status: false, type: 'washing',  value: 0  },
   ])
 
   const GATEWAY_TYPES = new Set(['sensor', 'security', 'light', 'outlet'])

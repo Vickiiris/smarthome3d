@@ -1,114 +1,35 @@
 <script setup>
 /**
- * 统一图标组件
+ * 图标组件
  *
- * 站点原来用 emoji 当图标（💡🔌❄️…），在 Windows / macOS / Android 上字形完全不同，
- * 有的还会渲染成黑白线框或方框。这里统一映射到 lucide 的线性图标，
- * 未收录的 emoji 仍按原样输出，避免出现「图标消失」。
+ * 全站统一用 emoji（💡🔌❄️…）作为设备/功能图标：数据层（deviceList、navItems、
+ * 健康指标…）里存的就是 emoji 字符，这里只负责按 size 控制字号、并保持基线对齐。
+ * 保留成组件是为了让 20 多处调用点有个统一入口——将来若再换图标体系，改这一个文件即可。
  */
-import {
-  Zap, Snowflake, Heart, Lightbulb, Droplet, Droplets, Wind, Lock, Flame,
-  Thermometer, Fan, DoorClosed, Tv, Volume2, Utensils, House, Video, Moon,
-  MoonStar, Leaf, Bot, RadioTower, AppWindow, Bell, BedDouble, CloudFog,
-  CloudSun, CookingPot, Footprints, KeyRound, Rainbow, Square, Wifi, User,
-  Brush, Smartphone, Package, Sun, WashingMachine, PersonStanding, Apple,
-  RefreshCw, Siren, Wallet, Play, Clock, TriangleAlert, Info, Hourglass, CircleCheck, Gauge, Signal, ShieldCheck, Power, Link,
-} from 'lucide-vue-next'
 import { computed } from 'vue'
-
-const MAP = {
-  '⚡': Zap,
-  '❄️': Snowflake,
-  '❤️': Heart,
-  '❤': Heart,
-  '💡': Lightbulb,
-  '💧': Droplet,
-  '🚿': Droplets,
-  '💨': Wind,
-  '🌬️': Wind,
-  '🫁': Wind,
-  '🔒': Lock,
-  '🔐': KeyRound,
-  '🔥': Flame,
-  '🌡': Thermometer,
-  '🌡️': Thermometer,
-  '🌀': Fan,
-  '🚪': DoorClosed,
-  '📺': Tv,
-  '🔊': Volume2,
-  '🍽️': Utensils,
-  '🏠': House,
-  '📹': Video,
-  '🌙': Moon,
-  '😴': MoonStar,
-  '🌿': Leaf,
-
-  '🤖': Bot,
-  '📡': RadioTower,
-  '🪟': AppWindow,
-  '🔔': Bell,
-  '🛏️': BedDouble,
-  '🌫️': CloudFog,
-  '🌫': CloudFog,
-  '🌤': CloudSun,
-  '☀️': Sun,
-  '🍳': CookingPot,
-  '👟': Footprints,
-  '🏃': PersonStanding,
-  '🌈': Rainbow,
-  '🔲': Square,
-  '📶': Wifi,
-  '👤': User,
-  '🧹': Brush,
-  '📱': Smartphone,
-  '📦': Package,
-  '🧺': WashingMachine,
-  '🍎': Apple,
-  '🔄': RefreshCw,
-  '🚨': Siren,
-  '💰': Wallet,
-  '🩸': Droplet,
-  '▶': Play,
-  '⏰': Clock,
-  '⚠️': TriangleAlert,
-  'ℹ️': Info,
-  '⏳': Hourglass,
-  '✅': CircleCheck,
-  '🛡️': ShieldCheck,
-  '📊': Gauge,
-  '🔗': Link,
-  '🔗': Link,
-  '🤖': Bot,
-}
 
 const props = defineProps({
   icon: { type: String, default: '' },
   size: { type: [Number, String], default: 16 },
-  strokeWidth: { type: [Number, String], default: 1.8 },
 })
 
-const comp = computed(() => MAP[props.icon] || null)
+const fontSize = computed(() => `${Number(props.size) * 0.95}px`)
 </script>
 
 <template>
-  <component
-    :is="comp"
-    v-if="comp"
-    class="app-icon"
-    :size="size"
-    :stroke-width="strokeWidth"
-    aria-hidden="true"
-  />
-  <span v-else class="app-icon-emoji" :style="{ fontSize: Number(size) * 0.95 + 'px' }">{{ icon }}</span>
+  <span class="app-icon" :style="{ fontSize }" aria-hidden="true">{{ icon }}</span>
 </template>
 
 <style>
 .app-icon {
+  display: inline-block;
   flex: none;
-  vertical-align: -0.15em;
-}
-.app-icon-emoji {
   line-height: 1;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', sans-serif;
+  font-style: normal;
   vertical-align: -0.1em;
+  /* emoji 字形比线性图标宽，给个最小宽度避免挤压后面的文字 */
+  min-width: 1.1em;
+  text-align: center;
 }
 </style>

@@ -30,7 +30,7 @@
             <TvControls v-if="device?.type === 'tv'" :value="device?.value" :mode="device?.mode" @update="(v) => emit('update', { ...device, ...v })" />
             <SpeakerControls v-if="device?.type === 'speaker'" :value="device?.value" @update="(v) => emit('update', { ...device, value: v })" />
             <VentilControls v-if="device?.type === 'ventil'" :value="device?.value" :mode="device?.mode" @update="(v) => emit('update', { ...device, ...v })" />
-            <WasherControls v-if="device?.type === 'washer'" :status="localStatus" :mode="device?.mode" @update="(v) => emit('update', { ...device, mode: v })" />
+            <WasherControls v-if="device?.type === 'washer' || device?.type === 'washing'" :kind="device?.type === 'washing' ? 'laundry' : 'dish'" :status="localStatus" :mode="device?.mode" @update="(v) => emit('update', { ...device, mode: v })" />
             <HeaterControls v-if="device?.type === 'heater'" :value="device?.value" :mode="device?.mode" @update="(v) => emit('update', { ...device, ...v })" />
             <EnergyDetail v-if="device?.type === 'energy'" :device="device" :chartData="chartData" :energyLiveData="energyLiveData" />
           </div>

@@ -1,25 +1,36 @@
 <template>
   <div class="sensor-status">
     <div class="ss-item">
-      <span class="ss-icon">🍽️</span>
+      <span class="ss-icon">{{ isLaundry ? '🧺' : '🍽️' }}</span>
       <span class="ss-val" :class="status ? 'ok' : ''">{{ status ? '运行中' : '待机' }}</span>
       <span class="ss-label">状态</span>
     </div>
     <div class="ss-item">
       <span class="ss-icon">⏱️</span>
-      <span class="ss-val ok">45 min</span>
+      <span class="ss-val ok">{{ isLaundry ? '62 min' : '45 min' }}</span>
       <span class="ss-label">剩余时间</span>
     </div>
   </div>
   <div class="modes">
-    <button v-for="m in ['标准洗', '快速洗', '强力洗', '消毒']" :key="m" class="mode-btn" :class="{ act: washerMode === m }" @click="washerMode = m">{{ m }}</button>
+    <button v-for="m in modes" :key="m" class="mode-btn" :class="{ act: washerMode === m }" @click="washerMode = m">{{ m }}</button>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-const props = defineProps({ status: Boolean, mode: String })
+import { computed, ref, watch } from 'vue'
+const props = defineProps({
+  status: Boolean,
+  mode: String,
+  // dish = 洗碗机（默认）；laundry = 洗衣机
+  kind: { type: String, default: 'dish' },
+})
 const emit = defineEmits(['update'])
+
+const isLaundry = computed(() => props.kind === 'laundry')
+const modes = computed(() => (isLaundry.value
+  ? ['标准洗', '快洗', '羊毛', '脱水']
+  : ['标准洗', '快速洗', '强力洗', '消毒']))
+
 const washerMode = ref(props.mode ?? '标准洗')
 watch(() => props.mode, (v) => { if (v) washerMode.value = v })
 watch(washerMode, (v) => emit('update', v))

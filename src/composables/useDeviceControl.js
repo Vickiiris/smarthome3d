@@ -109,7 +109,7 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
   const entertainmentDevices = computed(() => deviceList.value.filter(d => ['tv', 'speaker'].includes(d.type)))
 
   const filteredDevices = computed(() => {
-    const typeGroupMap = { ac: ['ac', 'ventil'], light: ['light'], outlet: ['outlet'], sensor: ['sensor', 'security'], appliance: ['tv', 'speaker', 'washer', 'heater'] }
+    const typeGroupMap = { ac: ['ac', 'ventil'], light: ['light'], outlet: ['outlet'], sensor: ['sensor', 'security'], appliance: ['tv', 'speaker', 'washer', 'washing', 'heater'] }
     let list = deviceList.value.filter(d => {
       const matchSearch = !deviceSearch.value || d.name.includes(deviceSearch.value)
       const matchRoom = !deviceRoomFilter.value || d.room === deviceRoomFilter.value
@@ -134,12 +134,12 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
     return 'rgba(255,255,255,0.04)'
   }
 
-  function deviceTypeLabel(type) { return { ac: '空调', light: '照明', tv: '电视', speaker: '音箱', security: '安防', ventil: '新风系统', washer: '洗碗机', heater: '热水器' }[type] || '智能设备' }
-  function deviceTypeDesc(type) { return { ac: '变频空调，支持制冷/制热/送风多种模式。', light: '智能照明设备，支持亮度调节与场景联动。', tv: '智能电视，支持 4K 超高清显示。', speaker: '智能音箱，支持语音控制全屋设备。', security: '安防设备，实时监测门窗状态。', ventil: '新风系统，持续引入室外新鲜空气。', washer: '智能洗碗机，支持多种洗涤程序。', heater: '燃气热水器，即开即热。' }[type] || '智能家居设备。' }
-  function deviceTypeTips(type) { return { ac: '建议夏季设定 26°C，冬季 20°C。', light: '建议根据时段设置不同亮度场景。', tv: '建议开启护眼模式。', speaker: '可设置唤醒词快速控制设备。', security: '建议定期检查设备电量。', ventil: '建议全天候开启低速模式。', washer: '建议使用专用洗碗机洗涤剂。', heater: '建议设定 50-55°C。' }[type] || '定期检查设备状态。' }
+  function deviceTypeLabel(type) { return { ac: '空调', light: '照明', tv: '电视', speaker: '音箱', security: '安防', ventil: '新风系统', washer: '洗碗机', washing: '洗衣机', heater: '热水器' }[type] || '智能设备' }
+  function deviceTypeDesc(type) { return { ac: '变频空调，支持制冷/制热/送风多种模式。', light: '智能照明设备，支持亮度调节与场景联动。', tv: '智能电视，支持 4K 超高清显示。', speaker: '智能音箱，支持语音控制全屋设备。', security: '安防设备，实时监测门窗状态。', ventil: '新风系统，持续引入室外新鲜空气。', washer: '智能洗碗机，支持多种洗涤程序。', washing: '滚筒洗衣机，支持标准/快洗/羊毛/脱水等程序。', heater: '燃气热水器，即开即热。' }[type] || '智能家居设备。' }
+  function deviceTypeTips(type) { return { ac: '建议夏季设定 26°C，冬季 20°C。', light: '建议根据时段设置不同亮度场景。', tv: '建议开启护眼模式。', speaker: '可设置唤醒词快速控制设备。', security: '建议定期检查设备电量。', ventil: '建议全天候开启低速模式。', washer: '建议使用专用洗碗机洗涤剂。', washing: '建议按面料选择程序，羊毛制品用冷水洗涤。', heater: '建议设定 50-55°C。' }[type] || '定期检查设备状态。' }
 
   function deviceUsageTime(device) { if (!device) return '0小时'; const seed = device.id?.charCodeAt(device.id.length - 1) || 0; const hours = (seed % 500) + 50; const days = Math.floor(hours / 24); return days > 0 ? `${days}天 ${hours % 24}小时` : `${hours}小时` }
-  function devicePowerStats(device) { if (!device) return { day: 0, week: 0, month: 0 }; const seed = device.id?.charCodeAt(device.id.length - 1) || 0; const mult = { ac: 3.5, outlet: 0.8, light: 0.3, tv: 1.2, sensor: 0.05, security: 0.1, ventil: 1.5, speaker: 0.2, washer: 2.0, heater: 4.0 }[device.type] || 0.5; const base = (seed % 10) + 1; return { day: (base * mult * 0.1).toFixed(2), week: (base * mult * 0.7).toFixed(2), month: (base * mult * 3).toFixed(2) } }
+  function devicePowerStats(device) { if (!device) return { day: 0, week: 0, month: 0 }; const seed = device.id?.charCodeAt(device.id.length - 1) || 0; const mult = { ac: 3.5, outlet: 0.8, light: 0.3, tv: 1.2, sensor: 0.05, security: 0.1, ventil: 1.5, speaker: 0.2, washer: 2.0, washing: 1.8, heater: 4.0 }[device.type] || 0.5; const base = (seed % 10) + 1; return { day: (base * mult * 0.1).toFixed(2), week: (base * mult * 0.7).toFixed(2), month: (base * mult * 3).toFixed(2) } }
 
   // 新增设备
   const addDeviceVisible = ref(false)
@@ -147,7 +147,7 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
   const addFormError = ref('')
   const successMsg = ref('')
   const roomOptions = ['客厅', '主卧', '次卧', '厨房', '卫生间', '阳台', '玄关', '全屋']
-  const deviceTypeOptions = [{ value: 'ac', label: '空调' }, { value: 'light', label: '照明' }, { value: 'tv', label: '电视' }, { value: 'speaker', label: '音箱' }, { value: 'ventil', label: '新风系统' }, { value: 'washer', label: '洗碗机' }, { value: 'heater', label: '热水器' }, { value: 'security', label: '安防设备' }]
+  const deviceTypeOptions = [{ value: 'ac', label: '空调' }, { value: 'light', label: '照明' }, { value: 'tv', label: '电视' }, { value: 'speaker', label: '音箱' }, { value: 'ventil', label: '新风系统' }, { value: 'washer', label: '洗碗机' }, { value: 'washing', label: '洗衣机' }, { value: 'heater', label: '热水器' }, { value: 'security', label: '安防设备' }]
   const newDevice = ref({ name: '', room: '', vendor: '', type: '', ip: '', status: false })
 
   function openAddDevice() { addStep.value = 'choose'; addFormError.value = ''; newDevice.value = { name: '', room: '', vendor: '', type: '', ip: '', status: false }; addDeviceVisible.value = true }

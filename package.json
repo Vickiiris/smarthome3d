@@ -11,7 +11,6 @@
   "dependencies": {
     "echarts": "^6.0.0",
     "gsap": "^3.12.5",
-    "lucide-vue-next": "^1.0.0",
     "pinia": "^2.1.7",
     "three": "^0.162.0",
     "vue": "^3.4.21",

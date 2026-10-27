@@ -465,7 +465,7 @@ defineEmits([
 function deviceTypeLabel(type) {
   const map = {
     ac: '空调', light: '照明', tv: '电视', speaker: '音箱',
-    security: '安防', ventil: '新风系统', washer: '洗碗机', heater: '热水器',
+    security: '安防', ventil: '新风系统', washer: '洗碗机', washing: '洗衣机', heater: '热水器',
   }
   return map[type] || '智能设备'
 }

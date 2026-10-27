@@ -43,7 +43,7 @@
             <PanelTvControls v-else-if="device?.type === 'tv' && !!localStatus" :value="localValue" :mode="localMode" @update:value="v => { localValue = v; emitUpdate() }" @update:mode="v => { localMode = v; emitUpdate() }" />
             <PanelSpeakerControls v-else-if="device?.type === 'speaker' && !!localStatus" :value="localValue" @update:value="v => { localValue = v; emitUpdate() }" />
             <PanelVentilControls v-else-if="device?.type === 'ventil' && !!localStatus" :value="localValue" @update:value="v => { localValue = v; emitUpdate() }" />
-            <PanelWasherControls v-else-if="device?.type === 'washer' && !!localStatus" :mode="localMode" @update:mode="v => { localMode = v; emitUpdate() }" />
+            <PanelWasherControls v-else-if="(device?.type === 'washer' || device?.type === 'washing') && !!localStatus" :kind="device?.type === 'washing' ? 'laundry' : 'dish'" :mode="localMode" @update:mode="v => { localMode = v; emitUpdate() }" />
             <PanelHeaterControls v-else-if="device?.type === 'heater' && !!localStatus" :value="localValue" @update:value="v => { localValue = v; emitUpdate() }" />
             <PanelSecurityControls v-else-if="device?.type === 'security' && !!localStatus" :value="localValue" @update:value="v => { localValue = v; emitUpdate() }" />
 
@@ -98,8 +98,8 @@ watch(() => props.device, (d) => {
   localFanSpeed.value = d.fanSpeed ?? 'auto'
 }, { immediate: true, deep: true })
 
-const deviceIcon = computed(() => ({ ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀', washer:'🍽️', speaker:'🔊', heater:'🚿' }[props.device?.type] || '📱'))
-const deviceTypeLabel = computed(() => ({ ac:'空调', light:'照明', tv:'电视', outlet:'插座', sensor:'传感器', security:'安防', ventil:'抽油烟机', washer:'洗碗机', speaker:'音箱', heater:'热水器' }[props.device?.type] || '智能设备'))
+const deviceIcon = computed(() => ({ ac:'❄️', light:'💡', tv:'📺', outlet:'🔌', sensor:'📡', security:'🔒', ventil:'🌀', washer:'🍽️', washing:'🧺', speaker:'🔊', heater:'🚿' }[props.device?.type] || '📱'))
+const deviceTypeLabel = computed(() => ({ ac:'空调', light:'照明', tv:'电视', outlet:'插座', sensor:'传感器', security:'安防', ventil:'抽油烟机', washer:'洗碗机', washing:'洗衣机', speaker:'音箱', heater:'热水器' }[props.device?.type] || '智能设备'))
 
 const deviceDesc = computed(() => ({
   ac: '变频空调，支持制冷/制热/送风多种模式，可精确调节室内温度。',
@@ -109,6 +109,7 @@ const deviceDesc = computed(() => ({
   sensor: '智能传感器设备，支持实时状态监测和异常告警。',
   ventil: '抽油烟机，支持多档位调节。',
   washer: '智能洗碗机，支持多种洗涤模式。',
+  washing: '滚筒洗衣机，支持标准/快洗/羊毛/脱水等程序。',
   speaker: '智能音箱，支持语音控制、蓝牙连接。',
   heater: '燃气热水器，支持精确水温调节。',
   security: '门禁控制器，支持指纹、密码、卡片多种开锁方式。',
@@ -122,6 +123,7 @@ const deviceTips = computed(() => ({
   sensor: '建议定期检查设备电量，确保传感器正常工作。',
   ventil: '建议每次烹饪后保持运行 3-5 分钟。',
   washer: '建议根据餐具数量选择合适模式。',
+  washing: '建议按面料选择程序；羊毛、真丝用冷水，避免高温缩水。',
   speaker: '建议避免长时间高音量播放。',
   heater: '建议设定温度 50-55°C 既舒适又节能。',
   security: '建议定期更换密码；保持电量充足。',
