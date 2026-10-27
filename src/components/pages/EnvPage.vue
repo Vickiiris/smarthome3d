@@ -23,7 +23,7 @@
     </div>
     <div class="env-grid">
       <div v-for="item in envItems" :key="item.label" class="env-card" :style="{ '--accent': item.color }" @click="$emit('showEnvDetail', item)">
-        <div class="env-icon">{{ item.icon }}</div>
+        <div class="env-icon"><AppIcon :icon="item.icon" :size="18" /></div>
         <div class="env-info">
           <span class="env-value" v-html="formatMetricValue(item.value)"></span>
           <span class="env-label">{{ item.label }}</span>
@@ -46,7 +46,7 @@
         <!-- 照明/空调设备列表 -->
         <div class="device-list" v-if="activeDeviceTab !== 'entertainment'">
           <div v-for="device in envDevices" :key="device.id" class="device-item" @click="$emit('flyToDeviceRoom', device)">
-            <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
+            <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }"><AppIcon :icon="device.icon" :size="15" /></div>
             <div class="device-info">
               <span class="d-name">{{ device.name }}</span>
               <span class="d-room">{{ device.room }}</span>
@@ -64,7 +64,7 @@
         <!-- 娱乐设备列表 -->
         <div class="device-list" v-if="activeDeviceTab === 'entertainment'">
           <div v-for="device in entertainmentDevices" :key="device.id" class="device-item" @click="$emit('flyToDeviceRoom', device)">
-            <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }">{{ device.icon }}</div>
+            <div class="device-icon" :style="{ background: getDeviceColor(device) }" :class="{ 'is-on': device.status }"><AppIcon :icon="device.icon" :size="15" /></div>
             <div class="device-info">
               <span class="d-name">{{ device.name }}</span>
               <span class="d-room">{{ device.room }}</span>
@@ -89,7 +89,7 @@
         </div>
         <div class="security-grid">
           <div v-for="item in linkedSecurityItems" :key="item.label" class="security-item" :style="{ '--accent': item.color }" @click="$emit('openSecurityControl', item)">
-            <div class="s-icon" :style="{ color: item.color }">{{ item.icon }}</div>
+            <div class="s-icon" :style="{ color: item.color }"><AppIcon :icon="item.icon" :size="16" /></div>
             <div class="s-info">
               <span class="s-label">{{ item.label }}</span>
               <span class="s-val" :style="{ color: item.color }">{{ item.value }}</span>

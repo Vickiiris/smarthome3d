@@ -25,10 +25,16 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
   function onDeviceUpdate(device) {
     const idx = deviceList.value.findIndex(d => d.name === device.name || d.id === device.id)
     if (idx !== -1) {
+      const cur = deviceList.value[idx]
+      // 只在「关 → 开」这一下补亮度；开着时把亮度拖到 0 必须保持 0，
+      // 否则松手就会被写回 100%，看起来像亮度调节失效
+      const turningOn = !cur.status && !!device.status
+      const rawNext = device.value ?? cur.value
+      const nextValue = turningOn && cur.type === 'light' && !(rawNext > 0) ? 100 : rawNext
       deviceList.value[idx] = {
-        ...deviceList.value[idx],
+        ...cur,
         status: device.status,
-        value: device.value ?? deviceList.value[idx].value,
+        value: nextValue,
         mode: device.mode ?? deviceList.value[idx].mode,
         fanSpeed: device.fanSpeed ?? deviceList.value[idx].fanSpeed,
         online: GATEWAY_TYPES.has(deviceList.value[idx].type) ? (deviceList.value[idx].online ?? true) : device.status,
@@ -41,8 +47,16 @@ export function useDeviceControl(deviceList, GATEWAY_TYPES) {
   function toggleDevice(device) {
     const idx = deviceList.value.findIndex(d => d.id === device.id || d.name === device.name)
     if (idx !== -1) {
-      const newStatus = !deviceList.value[idx].status
-      deviceList.value[idx] = { ...deviceList.value[idx], status: newStatus, online: GATEWAY_TYPES.has(deviceList.value[idx].type) ? (deviceList.value[idx].online ?? true) : newStatus }
+      const cur = deviceList.value[idx]
+      const newStatus = !cur.status
+      // 开灯时若亮度还是 0（开关类灯具的初始值），补成满亮，否则「开了但没光」
+      const value = newStatus && cur.type === 'light' && !(cur.value > 0) ? 100 : cur.value
+      deviceList.value[idx] = {
+        ...cur,
+        status: newStatus,
+        value,
+        online: GATEWAY_TYPES.has(cur.type) ? (cur.online ?? true) : newStatus,
+      }
     }
   }
 

@@ -11,3 +11,4 @@
 @import './partitions/10-modal.css';       /* 公共弹窗组件 */
 @import './partitions/11-energy-modal.css';/* 能源详情弹窗 */
 @import './partitions/12-energy-comp.css'; /* 能源组件 + 场景模式 + Toast */
+@import './partitions/13-responsive.css'; /* 响应式：平板 / 手机 */

@@ -14,7 +14,7 @@
     </div>
     <nav class="nav-list">
       <div v-for="item in navItems" :key="item.id" class="nav-item" :class="{ active: currentPage === item.id }" @click="$emit('switchPage', item.id)">
-        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-icon"><AppIcon :icon="item.icon" :size="17" /></span>
         <span class="nav-label">{{ item.name }}</span>
       </div>
     </nav>
@@ -22,7 +22,7 @@
     <div class="scene-modes">
       <div class="scene-modes-title">场景模式</div>
       <button v-for="mode in sceneModes" :key="mode.id" class="scene-mode-btn" :class="{ active: activeSceneMode === mode.id }" @click="$emit('applySceneMode', mode)">
-        <span class="sm-icon">{{ mode.icon }}</span>
+        <span class="sm-icon"><AppIcon :icon="mode.icon" :size="15" /></span>
         <span class="sm-label">{{ mode.label }}</span>
       </button>
     </div>

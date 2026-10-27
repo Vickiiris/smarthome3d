@@ -29,7 +29,7 @@
               <div class="preview-meta">
                 <span class="preview-source">{{ alarm.source }}</span>
                 <span class="level-tag" :class="'tag-' + alarm.level">{{ alarm.levelText || alarm.level }}</span>
-                <span class="preview-time">{{ alarm.time }}</span>
+                <span class="preview-time" :title="alarmTime(alarm.time).title">{{ alarmTime(alarm.time).label }}</span>
               </div>
             </div>
           </div>
@@ -53,6 +53,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { alarmTimeLabel } from '@/utils/time'
+
+const alarmTime = (v) => alarmTimeLabel(v)
 
 const props = defineProps({
   allAlarms: { type: Array, default: () => [] },

@@ -40,27 +40,27 @@
       <!-- 统计概览 -->
       <div class="alarm-stats-row">
         <div class="panel-card alarm-stat-card danger" @click="$emit('update:alarmLevelFilter', 'danger'); $emit('update:alarmStatusFilter', '')">
-          <div class="asc-icon">🚨</div>
+          <div class="asc-icon"><AppIcon icon="🚨" :size="20" /></div>
           <div class="asc-num">{{ dangerCount }}</div>
           <div class="asc-label">严重告警</div>
         </div>
         <div class="panel-card alarm-stat-card warn" @click="$emit('update:alarmLevelFilter', 'warn'); $emit('update:alarmStatusFilter', '')">
-          <div class="asc-icon">⚠️</div>
+          <div class="asc-icon"><AppIcon icon="⚠️" :size="20" /></div>
           <div class="asc-num">{{ warnCount }}</div>
           <div class="asc-label">警告</div>
         </div>
         <div class="panel-card alarm-stat-card info" @click="$emit('update:alarmLevelFilter', 'info'); $emit('update:alarmStatusFilter', '')">
-          <div class="asc-icon">ℹ️</div>
+          <div class="asc-icon"><AppIcon icon="ℹ️" :size="20" /></div>
           <div class="asc-num">{{ infoCount }}</div>
           <div class="asc-label">提示</div>
         </div>
         <div class="panel-card alarm-stat-card pending" @click="$emit('update:alarmStatusFilter', 'pending'); $emit('update:alarmLevelFilter', '')">
-          <div class="asc-icon">⏳</div>
+          <div class="asc-icon"><AppIcon icon="⏳" :size="20" /></div>
           <div class="asc-num">{{ pendingCount }}</div>
           <div class="asc-label">待处理</div>
         </div>
         <div class="panel-card alarm-stat-card done" @click="$emit('update:alarmStatusFilter', 'done'); $emit('update:alarmLevelFilter', '')">
-          <div class="asc-icon">✅</div>
+          <div class="asc-icon"><AppIcon icon="✅" :size="20" /></div>
           <div class="asc-num">{{ doneCount }}</div>
           <div class="asc-label">已处理</div>
         </div>
@@ -92,12 +92,12 @@
             <div class="alarm-item-left">
               <div class="alarm-level-bar" :class="a.level"></div>
               <div class="alarm-item-icon-wrap" :class="a.level">
-                <span>{{ a.level === 'danger' ? '🚨' : a.level === 'warn' ? '⚠️' : 'ℹ️' }}</span>
+                <span><AppIcon :icon="a.level === 'danger' ? '🚨' : a.level === 'warn' ? '⚠️' : 'ℹ️'" :size="14" /></span>
               </div>
               <div class="alarm-item-body">
                 <div class="alarm-item-top">
                   <span class="alarm-item-source">
-                    <span class="source-icon">{{ a.icon }}</span>
+                    <span class="source-icon"><AppIcon :icon="a.icon" :size="17" /></span>
                     {{ a.source }}
                   </span>
                   <span class="alarm-item-tag" :class="a.level">{{ a.levelText }}</span>
@@ -105,7 +105,7 @@
                 </div>
                 <div class="alarm-item-content">{{ a.content }}</div>
                 <div class="alarm-item-meta">
-                  <span class="alarm-item-time">📅 {{ a.time }}</span>
+                  <span class="alarm-item-time" :title="alarmTime(a.time).title"><AppIcon icon="⏰" :size="12" /> {{ alarmTime(a.time).label }}</span>
                   <span v-if="a.suggestion" class="alarm-item-suggestion">💡 {{ a.suggestion }}</span>
                 </div>
               </div>
@@ -149,7 +149,7 @@
         >
           <div class="strategy-card-header">
             <div class="strategy-icon-wrap" :class="s.type">
-              <span>{{ s.type === 'auto' ? '🤖' : s.type === 'timer' ? '⏰' : s.type === 'threshold' ? '📊' : '🔗' }}</span>
+              <span><AppIcon :icon="s.type === 'auto' ? '🤖' : s.type === 'timer' ? '⏰' : s.type === 'threshold' ? '📊' : '🔗'" :size="14" /></span>
             </div>
             <div class="strategy-info">
               <div class="strategy-name">{{ s.name }}</div>
@@ -208,7 +208,7 @@
         <div class="env-detail-header">
           <div class="detail-title-row">
             <div class="strategy-icon-wrap large" :class="selectedStrategy?.type">
-              <span>{{ selectedStrategy?.type === 'auto' ? '🤖' : selectedStrategy?.type === 'timer' ? '⏰' : selectedStrategy?.type === 'threshold' ? '📊' : '🔗' }}</span>
+              <span><AppIcon :icon="selectedStrategy?.type === 'auto' ? '🤖' : selectedStrategy?.type === 'timer' ? '⏰' : selectedStrategy?.type === 'threshold' ? '📊' : '🔗'" :size="18" /></span>
             </div>
             <div>
               <h2 class="detail-title">{{ selectedStrategy?.name }}</h2>
@@ -287,6 +287,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { alarmTimeLabel } from '@/utils/time'
+
+// 统一时间展示：相对时间（12 分钟前 / 昨天 21:40），hover 看绝对时间
+const alarmTime = (v) => alarmTimeLabel(v)
 
 const props = defineProps({
   visible: { type: Boolean, required: true },

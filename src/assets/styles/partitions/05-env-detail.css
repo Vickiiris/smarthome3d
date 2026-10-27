@@ -589,6 +589,13 @@
   font-size: 12px;
 }
 
+/* 表格容器：窄屏下允许横向滚动，避免 IP / 操作列被裁掉 */
+.table-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
 .data-table thead {
   background: rgba(0, 212, 170, 0.03);
   border-bottom: 1px solid var(--border);

@@ -1,0 +1,399 @@
+/* ============================================================
+   13-responsive.css —— 平板 / 手机适配
+   断点：1180px（小笔记本）、900px（平板/横屏手机）、760px（手机）
+   ============================================================ */
+
+/* ---------- 小笔记本 / 竖屏平板 ---------- */
+@media (max-width: 1180px) {
+  .bottom-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+  }
+
+  .charts-row,
+  .energy-tips-row,
+  .energy-bottom-row,
+  .energy-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .energy-overview-row,
+  .energy-cost-detail-row,
+  .cdc-items {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .alarm-stats-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .strategy-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 平板 / 手机（侧边栏变底部 Tab 栏） ---------- */
+@media (max-width: 900px) {
+  .app {
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  /* 侧边栏 → 底部导航 */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: 0;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    background: rgba(5, 13, 24, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 200;
+  }
+
+  .sidebar-logo,
+  .scene-modes,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .nav-list {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+
+  .nav-item {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 2px;
+    border: none;
+    border-radius: 10px;
+  }
+
+  .nav-item:hover,
+  .nav-item.active {
+    background: transparent;
+    border: none;
+  }
+
+  .nav-item.active {
+    color: var(--primary);
+  }
+
+  .nav-item .nav-icon {
+    font-size: 17px;
+    min-width: auto;
+    line-height: 1;
+  }
+
+  .nav-item .nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .main {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .content {
+    padding: 12px 12px calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .top-bar {
+    height: 48px;
+    min-height: 48px;
+    padding: 0 12px;
+  }
+
+  .page-title {
+    font-size: 16px;
+  }
+
+  .time-display {
+    padding: 4px 8px;
+  }
+
+  .time-display .time-main {
+    font-size: 13px;
+  }
+
+  .time-display .time-sub {
+    font-size: 9px;
+  }
+
+  /* 3D 场景卡片 */
+  .scene-card,
+  .scene-card:not(.fullscreen) {
+    height: clamp(200px, 32vh, 280px);
+    margin-bottom: 14px;
+  }
+
+  .scene-card.fullscreen {
+    top: 48px;
+    left: 0;
+    width: 100vw;
+    height: calc(100dvh - 48px);
+  }
+
+  .scene-overlay {
+    padding: 8px 10px;
+  }
+
+  /* 房间变多后（含阳台共 6 个），横向滚动容易让人漏掉最后一项，窄屏改成换行 */
+  .room-tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: calc(100% - 44px);
+  }
+
+  .room-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* 环境卡片 */
+  .env-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .env-card {
+    padding: 12px;
+  }
+
+  .env-card .env-value {
+    font-size: 16px;
+  }
+
+  .bottom-grid {
+    gap: 14px;
+  }
+
+  .panel-card {
+    padding: 14px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+
+  .security-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .filter-bar .filter-in {
+    flex: 1 1 100%;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* 表格横向滚动，避免挤压变形 */
+  .data-table {
+    min-width: 620px;
+  }
+
+  /* 右侧设备控制面板 → 底部抽屉 */
+  .dcp-wrap {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .dcp-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 78dvh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .slide-panel-enter-from .dcp-panel,
+  .slide-panel-leave-to .dcp-panel {
+    transform: translateY(100%);
+  }
+
+  /* 弹窗铺满宽度 */
+  .modal-overlay,
+  .env-detail-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .ctrl-modal,
+  .env-detail-modal,
+  .device-detail-modal,
+  .product-detail-modal,
+  .add-device-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+}
+
+/* ---------- 手机 ---------- */
+@media (max-width: 760px) {
+  .top-bar .time-display {
+    display: none;
+  }
+
+  .content {
+    padding: 10px 10px calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .section-title {
+    font-size: 14px;
+  }
+
+  .env-grid {
+    gap: 8px;
+  }
+
+  .env-card .env-label {
+    font-size: 10px;
+  }
+
+  .panel-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .panel-tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .device-item {
+    padding: 10px 8px;
+  }
+
+  .security-grid {
+    gap: 8px;
+  }
+
+  .alarm-stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-row {
+    gap: 12px;
+  }
+
+  .chart-box {
+    height: 180px !important;
+  }
+
+  /* 弹窗内的双栏一律改单栏 */
+  .cdc-main,
+  .cdc-items,
+  .energy-overview-row,
+  .energy-cost-detail-row,
+  .energy-cost-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .toast-container {
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+
+  .toast-item {
+    width: 100%;
+  }
+}
+
+/* ---------- 横屏手机：压低 3D 卡片，保证首屏能看到指标 ---------- */
+@media (max-height: 520px) and (orientation: landscape) {
+  .scene-card,
+  .scene-card:not(.fullscreen) {
+    height: 180px;
+  }
+}
+
+/* ---------- 矮屏侧边栏：场景模式多了一个「明亮模式」后，700px 以下要收紧 ---------- */
+@media (min-width: 1025px) and (max-height: 760px) {
+  .sidebar {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  .sidebar-logo {
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+  }
+  .nav-list {
+    padding: 4px 0;
+  }
+  .nav-item {
+    padding: 7px 12px;
+  }
+  .scene-modes {
+    padding: 8px 0;
+    margin-top: 4px;
+  }
+  .scene-modes-title {
+    margin-bottom: 4px;
+  }
+  .scene-mode-btn {
+    padding: 6px 12px;
+    margin-bottom: 2px;
+  }
+  .sidebar-footer {
+    padding-top: 10px;
+  }
+}
+
+/* 兜底：内容仍超出时侧栏自身滚动，而不是把底部用户信息顶出视口 */
+@media (min-width: 1025px) {
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 170, 0.28) transparent;
+  }
+  .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 170, 0.28);
+    border-radius: 3px;
+  }
+  .sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

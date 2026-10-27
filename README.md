@@ -20,7 +20,7 @@
 | 📱 **设备管理** | 26 台设备管控、9 类设备控制组件、扫码/手动添加、网关/Mesh 在线区分 |
 | ❤️ **健康监测** | 6 项核心指标、实时步数模拟、心率/血压/血氧图表、睡眠分析、健康评分 |
 | 🔔 **策略告警** | 设备/健康告警分级、12 条自动化策略、多维度筛选分页 |
-| 🏠 **场景模式** | 回家/离家/睡眠一键切换、3D 灯光实时联动 |
+| 🏠 **场景模式** | 明亮/回家/离家/睡眠一键切换、3D 灯光实时联动 |
 
 ---
 
@@ -30,13 +30,12 @@
 |------|------|------|
 | 框架 | Vue 3 (Composition API) | 3.5 |
 | 构建工具 | Vite | 5 |
-| 3D 渲染 | Three.js + DRACO 解码器 | 0.162 |
-| 3D 集成 | TresJS Core + Cientos | 4.x |
+| 3D 渲染 | Three.js（GLTFLoader / DRACOLoader / CSS2DRenderer / OrbitControls，原生集成） | 0.162 |
 | 状态管理 | Pinia | 2 |
 | 路由 | Vue Router | 4 |
 | 动画 | GSAP | 3 |
 | 图表 | ECharts | 6 |
-| UI 组件 | Element Plus | 2 |
+| 图标 | lucide-vue-next | 1 |
 | 包管理 | pnpm | 10 |
 | 样式 | 原生 CSS（CSS 变量主题系统） | — |
 | 字体 | JetBrains Mono + Orbitron | — |
@@ -70,7 +69,7 @@ pnpm build
 pnpm preview
 ```
 
-> ⚠️ 项目使用 `shamefully-hoist=true`（`.npmrc`），因为 Vite + Element Plus 自动导入插件需要依赖提升。请勿删除此配置。
+> ℹ️ `.npmrc` 里的 `shamefully-hoist=true` 是历史遗留（原为 Element Plus 自动导入准备），现在只装了 `unplugin-auto-import`，保留它不影响运行。
 
 ---
 
@@ -83,11 +82,14 @@ smarthome3d/
 ├── vite.config.js                    # Vite 配置（自动导入、路径别名）
 ├── .npmrc                            # pnpm 配置（shamefully-hoist）
 ├── public/
-│   ├── models/model.glb              # 3D 房屋 GLB 模型（DRACO 压缩）
+│   ├── models/model.glb              # 3D 房屋 GLB 模型（DRACO 压缩 + 贴图重编码）
 │   ├── texture/                      # HDR 环境贴图、热区图标
 │   ├── draco/                        # DRACO 压缩模型解码器
 │   ├── fonts/                        # JetBrains Mono + Orbitron 字体
+│   ├── _headers                      # Cloudflare Pages 缓存策略
+│   ├── og-cover.png                  # 分享封面（1200×630）
 │   └── favicon.svg
+├── tools/                            # 资源优化脚本（GLB 贴图、HDR 重编码）
 └── src/
     ├── main.js                       # 应用入口
     ├── App.vue                       # 根组件
@@ -193,11 +195,12 @@ smarthome3d/
 
 ### 🏠 场景模式
 
+- 明亮模式：全屋 6 盏灯全开、亮度 100%（打扫 / 待客 / 看书）
 - 回家模式：打开客厅灯 + 空调 26°C + 热水器
 - 离家模式：关闭所有灯/空调/家电，锁定门禁
 - 睡眠模式：关灯 + 空调 26°C + 客厅留夜灯 10%
 - 一键切换，自动调整设备状态
-- 3D 场景灯光实时联动（6 盏灯独立控制）
+- 3D 场景灯光实时联动（6 盏灯独立控制，亮度 / 开关 / 色温随设备状态变化）
 
 ---
 
@@ -283,10 +286,24 @@ HomeView.vue (主视图)
 
 ### 自动导入
 
-项目配置了 `unplugin-auto-import` 和 `unplugin-vue-components`：
+项目配置了 `unplugin-auto-import`：
 
 - Vue / Vue Router / Pinia API 自动导入，无需手动 `import { ref } from 'vue'`
-- Element Plus 组件按需自动导入
+- 图标统一走全局组件 `AppIcon`（emoji → lucide 线性图标映射，未收录的 emoji 原样回退）
+
+### 3D 资源管线
+
+`public/models/model.glb` 由 `tools/optimize-glb.py` 等脚本产出，重建步骤（需要 `@gltf-transform/cli`）：
+
+```bash
+gltf-transform weld  model.original.glb w.glb         # 焊接重复顶点（不动法线 / UV）
+gltf-transform join  w.glb j.glb                      # 合并同材质 primitive，减少 draw call
+gltf-transform draco j.glb d.glb \
+  --quantize-position 13 --quantize-normal 10 --quantize-texcoord 12
+python tools/optimize-glb.py d.glb public/models/model.glb
+```
+
+> 不要对整体几何做 `simplify`：墙体接缝会被压塌成 1px 黑缝，薄壳物体（灯罩/纱帘）会翻面消失。
 
 ---
 

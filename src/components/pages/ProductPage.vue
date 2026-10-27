@@ -1,21 +1,5 @@
 <template>
   <div v-show="visible" class="page">
-    <div ref="sceneCardRef" class="scene-card" :class="{ fullscreen: isFullscreen }">
-      <div class="scene-overlay">
-        <div class="room-tabs">
-          <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="$emit('switchRoom', 'all')">全景</button>
-          <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="$emit('switchRoom', room.id)">{{ room.name }}</button>
-        </div>
-        <div class="overlay-right">
-          <button v-if="isFullscreen" class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="退出全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-          </button>
-          <button v-else class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
     <div class="filter-bar">
       <select class="filter-sel" :value="productSubFilter" @change="$emit('update:productSubFilter', $event.target.value)">
         <option value="">全部产品</option>
@@ -35,9 +19,17 @@
       <button class="btn btn-primary">查询</button>
       <button class="btn btn-ghost" @click="$emit('resetProductFilters')">重置</button>
     </div>
-    <div class="product-grid">
+    <div v-if="!pagedProducts.length" class="panel-card">
+      <EmptyState
+        title="没有匹配的产品"
+        hint="换个分类或标签试试，也可以点「重置」清空筛选条件。"
+        action-text="重置筛选"
+        @action="$emit('resetProductFilters')"
+      />
+    </div>
+    <div v-else class="product-grid">
       <div v-for="p in pagedProducts" :key="p.id" class="product-card">
-        <div class="product-icon">{{ p.icon }}</div>
+        <div class="product-icon"><AppIcon :icon="p.icon" :size="26" /></div>
         <div class="product-info">
           <h4 class="product-name">{{ p.name }}</h4>
           <p class="product-meta">{{ p.sub }} · {{ p.vendor }}</p>
@@ -65,11 +57,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
-const sceneCardRef = ref(null)
 
-defineExpose({ sceneCardRef })
+
 
 defineProps({
   visible: { type: Boolean, required: true },

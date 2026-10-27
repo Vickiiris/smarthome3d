@@ -1,21 +1,5 @@
 <template>
   <div v-show="visible" class="page">
-    <div ref="sceneCardRef" class="scene-card" :class="{ fullscreen: isFullscreen }">
-      <div class="scene-overlay">
-        <div class="room-tabs">
-          <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="$emit('switchRoom', 'all')">全景</button>
-          <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="$emit('switchRoom', room.id)">{{ room.name }}</button>
-        </div>
-        <div class="overlay-right">
-          <button v-if="isFullscreen" class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="退出全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-          </button>
-          <button v-else class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- 第一行：核心指标卡片 -->
     <div class="energy-overview-row">
@@ -237,7 +221,7 @@
         <div class="rank-list">
           <div v-for="(item, i) in currentRankList" :key="item.name" class="rank-item" @click="$emit('openEnergyDetail', rankTab + '-rank', item)">
             <div class="rank-num" :class="['g','s','b'][i] || ''">{{ i + 1 }}</div>
-            <div class="rank-icon">{{ item.icon }}</div>
+            <div class="rank-icon"><AppIcon :icon="item.icon" :size="16" /></div>
             <div class="rank-info">
               <span class="rank-name">{{ item.name }}</span>
               <div class="rank-bar-w"><div class="rank-bar" :style="{ width: item.pct + '%', background: item.color }"></div></div>
@@ -292,7 +276,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const sceneCardRef = ref(null)
 const lineChartRef = ref(null)
 const pieChartRef = ref(null)
 const waterChartRef = ref(null)
@@ -301,7 +284,6 @@ const waterPieChartRef = ref(null)
 const gasPieChartRef = ref(null)
 
 defineExpose({ 
-  sceneCardRef,
   lineChartRef,
   pieChartRef,
   waterChartRef,

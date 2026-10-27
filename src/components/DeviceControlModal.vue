@@ -4,7 +4,7 @@
       <div v-if="visible" class="modal-overlay" @click.self="$emit('close')">
         <div class="ctrl-modal" :class="{ 'ctrl-modal--wide': energy.isWideModal.value }">
           <div class="modal-top" :style="{ background: iconBg }">
-            <div class="m-icon">{{ device?.icon }}</div>
+            <div class="m-icon"><AppIcon :icon="device?.icon" :size="22" /></div>
             <div class="m-info">
               <h3 class="m-name">{{ device?.name }}</h3>
               <p class="m-meta">{{ device?.room }}</p>

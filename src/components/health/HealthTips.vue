@@ -1,7 +1,7 @@
 <template>
   <div class="health-tips-grid">
     <div v-for="tip in tips" :key="tip.title" class="htip-card">
-      <div class="htip-icon">{{ tip.icon }}</div>
+      <div class="htip-icon"><AppIcon :icon="tip.icon" :size="18" /></div>
       <div class="htip-body">
         <div class="htip-title">{{ tip.title }}</div>
         <div class="htip-desc">{{ tip.desc }}</div>

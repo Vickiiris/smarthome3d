@@ -3,8 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/og-cover.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>智能家居3D可视化</title>
+    <title>SmartHome3D · 智能家居 3D 可视化平台</title>
+
+    <meta name="description" content="基于 Vue 3 + Three.js 的智能家居 3D 可视化平台：在浏览器里漫游 3D 户型，点击热区控制设备，实时查看环境、能源与健康数据。" />
+    <meta name="theme-color" content="#050d18" />
+    <meta name="author" content="Vickiiris" />
+    <link rel="canonical" href="https://home3d.site/" />
+
+    <!-- 社交分享卡片 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SmartHome3D" />
+    <meta property="og:title" content="SmartHome3D · 在浏览器里漫游你的家" />
+    <meta property="og:description" content="3D 房屋漫游 · 点灯即亮。设备控制、环境监测、能源分析与健康数据一屏掌握。" />
+    <meta property="og:url" content="https://home3d.site/" />
+    <meta property="og:image" content="https://home3d.site/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SmartHome3D · 在浏览器里漫游你的家" />
+    <meta name="twitter:description" content="3D 房屋漫游 · 点灯即亮。设备控制、环境监测、能源分析与健康数据一屏掌握。" />
+    <meta name="twitter:image" content="https://home3d.site/og-cover.png" />
     <style>
       /* ===== 加载动画 ===== */
       #app-loader {
@@ -361,6 +382,39 @@
       fill.style.width = '0%'
       pct.textContent = '0%'
       status.textContent = '正在初始化系统...'
+      // ===== 超时兜底 =====
+      // 说明：模型加载失败时 useThreeScene 会派发 __modelLoaded，正常不会走到这里；
+      //      这里只处理「请求挂住 / JS 异常」导致永远停在加载页的极端情况。
+      function forceFinish(text) {
+        if (loaderHidden) return
+        loaderHidden = true
+        status.textContent = text
+        fill.style.width = '100%'
+        pct.textContent = '100%'
+        loader.classList.add('hidden')
+        setTimeout(function () { if (loader.parentNode) loader.remove() }, 800)
+      }
+
+      // Vue 已就绪但模型长时间未完成 → 放行进入应用，3D 区域会显示降级面板
+      setTimeout(function () {
+        if (vueReady && !modelLoaded) forceFinish('资源加载超时，已跳过 3D 场景')
+      }, 18000)
+
+      // 连 Vue 都没起来（脚本报错 / 网络中断）→ 给出可重试的提示
+      setTimeout(function () {
+        if (vueReady || loaderHidden) return
+        status.textContent = '加载失败，请检查网络后重试'
+        pct.textContent = ''
+        if (document.getElementById('loader-retry')) return
+        var btn = document.createElement('button')
+        btn.id = 'loader-retry'
+        btn.textContent = '重新加载'
+        btn.style.cssText = 'margin-top:20px;padding:8px 22px;border-radius:8px;' +
+          'border:1px solid #00d4aa;background:rgba(0,212,170,.12);color:#00d4aa;' +
+          'font-size:13px;cursor:pointer;font-family:inherit'
+        btn.addEventListener('click', function () { window.location.reload() })
+        loader.appendChild(btn)
+      }, 30000)
 
     </script>
   </body>

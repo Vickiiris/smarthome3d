@@ -237,7 +237,7 @@
   <DeviceControlPanel
     :visible="showSlidePanel"
     :device="selectedHotspotDevice"
-    @close="showSlidePanel = false"
+    @close="closeSlidePanel"
     @update="onDeviceUpdate"
   />
 
@@ -320,10 +320,6 @@ const {
 } = useEnergyChart(deviceList)
 
 const {
-  activeSceneMode, sceneModes, applySceneMode, getLightIdForDevice,
-} = useSceneModes(deviceList, null, homeStore) // threeScene set below
-
-const {
   alarmTab, alarmSearch, alarmLevelFilter, alarmStatusFilter,
   alarmPage, strategyPage, PAGE_SIZE, STRATEGY_PAGE_SIZE,
   strategyDetailVisible, selectedStrategy,
@@ -340,13 +336,28 @@ const canvasRef = ref(null)
 const threeScene = useThreeScene(canvasRef)
 const { flyToRoom, resetView, onHotspotClick, activeRoomId } = threeScene
 
-// Patch sceneModes with real threeScene
-const sceneModesData = useSceneModes(deviceList, threeScene, homeStore)
+// 场景模式：必须在 threeScene 创建之后初始化，否则 applySceneMode 里的
+// threeScene.setLightStatus 会拿到 null 并抛异常（曾导致模式只执行一半、无提示）
+const {
+  activeSceneMode, sceneModes, applySceneMode, getLightIdForDevice, syncAllLights,
+} = useSceneModes(deviceList, threeScene, homeStore)
+
+// 灯光联动：任何来源（3D 热区面板 / 设备卡片 / 设备列表 / 场景模式）改了灯具状态，
+// 都通过 deviceList 这一个出口同步到 3D 场景
+watch(deviceList, () => syncAllLights(), { deep: true })
 
 watch(activeRoomId, (id) => { activeRoom.value = id })
 
+// 点热区：先进入全屏，再弹出控制面板。
+// 这样面板是叠在 3D 画面上的（沉浸式），而不是浮在普通页面布局之上——
+// 原来的做法在非全屏时会盖住下面的指标卡/图表，看着像弹错了层。
 onHotspotClick.value = (hotspot) => {
-  if (!isFullscreen.value) return
+  if (!isFullscreen.value) {
+    isFullscreen.value = true
+    autoFullscreen = true
+    // 布局切换有过渡，等容器尺寸稳定后再重算画布，否则 3D 会被拉伸
+    setTimeout(() => threeScene.resize(), 220)
+  }
   const matched = deviceList.value.find(d => d.name === hotspot.name)
   selectedHotspotDevice.value = {
     id: hotspot.id, name: hotspot.name, type: hotspot.type || 'ac', room: hotspot.room || '主卧',
@@ -361,24 +372,15 @@ onHotspotClick.value = (hotspot) => {
 const envPageRef = ref(null), energyPageRef = ref(null), devicePageRef = ref(null), productPageRef = ref(null)
 let canvasPage = ''
 
-function mountCanvas(targetPage) {
-  if (targetPage === canvasPage) {
-    if (!canvasRef.value?.parentElement) {
-      const canvas = canvasRef.value; if (!canvas) return
-      const targets = { env: envPageRef.value?.sceneCardRef, energy: energyPageRef.value?.sceneCardRef, device: devicePageRef.value?.sceneCardRef, product: productPageRef.value?.sceneCardRef }
-      const target = targets[targetPage]; if (!target) return
-      if (canvas.parentElement) canvas.parentElement.removeChild(canvas)
-      target.appendChild(canvas); canvas.style.display = ''; canvasPage = targetPage
-    }
-    return
-  }
-  const canvas = canvasRef.value; if (!canvas) return
-  const targets = { env: envPageRef.value?.sceneCardRef, energy: energyPageRef.value?.sceneCardRef, device: devicePageRef.value?.sceneCardRef, product: productPageRef.value?.sceneCardRef }
-  const target = targets[targetPage]
-  if (!target) { setTimeout(() => mountCanvas(targetPage), 100); return }
-  if (canvas.parentElement) canvas.parentElement.removeChild(canvas)
-  target.appendChild(canvas); canvas.style.display = ''; canvasPage = targetPage
-  setTimeout(() => { threeScene.initScene(); window.dispatchEvent(new Event('resize')) }, 50)
+// 3D 画布只在「环境总览」页存在（其他页面的顶部卡片会白占一屏高度，把图表挤下去）
+function mountCanvas() {
+  const canvas = canvasRef.value
+  const target = envPageRef.value?.sceneCardRef
+  if (!canvas || !target) { setTimeout(mountCanvas, 100); return }
+  if (canvas.parentElement !== target) target.appendChild(canvas)
+  canvas.style.display = ''
+  canvasPage = 'env'
+  setTimeout(() => { threeScene.initScene(); threeScene.resize() }, 50)
 }
 
 const currentTime = ref(''), currentDate = ref('')
@@ -388,17 +390,34 @@ function updateTime() { const n = new Date(); currentTime.value = n.toLocaleTime
 const currentTitle = computed(() => navItems.find(n => n.id === currentPage.value)?.name ?? '')
 
 function switchPage(id) {
+  autoFullscreen = false
   if (isFullscreen.value || activeRoom.value !== 'all') {
     isFullscreen.value = false; closeAllPanels(); resetView(); activeRoom.value = 'all'; activeRoomId.value = 'all'
     setTimeout(() => threeScene.resize(), 150)
   }
   currentPage.value = id
-  if (id !== 'health') nextTick(() => mountCanvas(id))
+  // 回到环境页时画布尺寸可能已变化（离开期间页面是 v-show 隐藏的），补一次重排
+  if (id === 'env') nextTick(() => { mountCanvas(); setTimeout(() => threeScene.resize(), 120) })
   if (id === 'energy') setTimeout(() => initCharts(), 100)
 }
 
 function navigateToAlarm() {
   switchPage('alarm')
+}
+
+// 是否由「点热区」自动进入的全屏：为 true 时关闭面板要一并退出全屏，
+// 否则用户会停在全屏 3D 里，只能去点右上角那个小按钮才能回去
+let autoFullscreen = false
+
+function closeSlidePanel() {
+  showSlidePanel.value = false
+  if (!autoFullscreen) return
+  autoFullscreen = false
+  isFullscreen.value = false
+  activeRoom.value = 'all'
+  activeRoomId.value = 'all'
+  resetView()
+  setTimeout(() => threeScene.resize(), 200)
 }
 
 function closeAllPanels() {
@@ -409,6 +428,7 @@ function closeAllPanels() {
 function switchRoom(roomId) { activeRoom.value = roomId; activeRoomId.value = roomId; if (roomId === 'all') resetView(); else flyToRoom(roomId) }
 function flyToDeviceRoom(device) { const map = { '客厅': 'living-room', '主卧': 'bedroom', '次卧': 'bedroom2', '厨房': 'kitchen', '卫生间': 'bathroom' }; const id = map[device.room]; if (id) switchRoom(id) }
 function toggleFullscreen() {
+  autoFullscreen = false
   const was = isFullscreen.value; isFullscreen.value = !isFullscreen.value
   if (was) { closeAllPanels(); resetView(); activeRoom.value = 'all'; activeRoomId.value = 'all' }
   setTimeout(() => threeScene.resize(), 200)
@@ -549,41 +569,50 @@ function openCostTotalDetail() {
 }
 
 // ===== Timers =====
+// 后台标签页（document.hidden）时跳过所有模拟计算，回前台自动恢复
+function tick(fn) { return () => { if (document.hidden) return; fn() } }
+
+function handleResizeCharts() { lineChart?.resize(); pieChart?.resize(); waterChart?.resize(); gasChart?.resize(); waterPieChart?.resize(); gasPieChart?.resize() }
 onMounted(() => {
-  updateTime(); timeTimer = setInterval(updateTime, 1000)
-  nextTick(() => mountCanvas('env'))
-  window.addEventListener('resize', () => { lineChart?.resize(); pieChart?.resize(); waterChart?.resize(); gasChart?.resize(); waterPieChart?.resize(); gasPieChart?.resize() })
+  updateTime(); timeTimer = setInterval(tick(updateTime), 1000)
+  nextTick(() => mountCanvas())
+  // 场景灯光在 initScene → setupLights 里创建，稍后把当前灯具状态同步一次，
+  // 避免首屏沿用写死的默认亮度（与设备列表显示不一致）
+  setTimeout(() => syncAllLights(), 400)
+  window.addEventListener('resize', handleResizeCharts)
 
   initStepsSimulation(healthItems, stepsTrendData)
-  stepsTimer = setInterval(() => simulateStepsPerTick(healthItems, stepsTrendData), 4000)
+  stepsTimer = setInterval(tick(() => simulateStepsPerTick(healthItems, stepsTrendData)), 4000)
 
-  envTimer = setInterval(() => { const { alerts } = homeStore.simulateEnvData(1); alerts.forEach(a => { if (a.type === 'danger') homeStore.addToast({ message: a.msg, type: a.type, duration: 5000 }) }) }, 3000)
+  envTimer = setInterval(tick(() => { const { alerts } = homeStore.simulateEnvData(1); alerts.forEach(a => { if (a.type === 'danger') homeStore.addToast({ message: a.msg, type: a.type, duration: 5000 }) }) }), 3000)
 
   let _prevHeart = 72, _prevSpo2 = 98, _prevTemp = 36.5
-  healthTimer = setInterval(() => {
+  healthTimer = setInterval(tick(() => {
     const items = healthItems.value
     const hr = Math.round(items[0].raw + (Math.random() - 0.5) * 6); items[0].raw = Math.max(55, Math.min(110, hr)); items[0].value = items[0].raw + '次/分'; items[0].pct = Math.min(100, Math.max(0, ((items[0].raw - 40) / 80) * 100)); items[0].trend = items[0].raw - _prevHeart; _prevHeart = items[0].raw
     const sys = Math.round(items[1].raw + (Math.random() - 0.5) * 6); const dia = Math.round(sys * 0.64 + (Math.random() - 0.5) * 4); items[1].raw = Math.max(90, Math.min(145, sys)); items[1].value = items[1].raw + '/' + Math.max(55, Math.min(95, dia)) + 'mmHg'; items[1].pct = Math.min(100, Math.max(0, ((items[1].raw - 80) / 80) * 100)); items[1].trend = 0
     const temp = Math.round((items[2].raw + (Math.random() - 0.5) * 0.2) * 10) / 10; items[2].raw = Math.max(35.5, Math.min(38.0, temp)); items[2].value = items[2].raw + '°C'; items[2].pct = Math.min(100, Math.max(0, ((items[2].raw - 35) / 4) * 100)); items[2].trend = Math.round((items[2].raw - _prevTemp) * 10) / 10; _prevTemp = items[2].raw
     const spo2 = Math.round(items[3].raw + (Math.random() - 0.5) * 2); items[3].raw = Math.max(92, Math.min(100, spo2)); items[3].value = items[3].raw + '%'; items[3].pct = items[3].raw; items[3].trend = items[3].raw - _prevSpo2; _prevSpo2 = items[3].raw
     const stepsIdx = stepsTrendData.value.length - 1; stepsTrendData.value = stepsTrendData.value.map((item, i) => i === stepsIdx ? { ...item, value: stepsSim.accumulated } : item)
-  }, 4000)
+  }), 4000)
 
-  energyTimer = setInterval(() => {
+  energyTimer = setInterval(tick(() => {
     const cd = chartData.value; const hour = getCurrentHour(); const now = new Date()
-    if (hour === 0 && cd.energyLine[23] > 0) { cd.energyLine = Array.from({length:24},()=>0); cd.waterBar = Array.from({length:24},()=>0); cd.gasLine = Array.from({length:24},()=>0); resetDailyR1(); resetHourlyR2(); initCharts() }
-    if (electricPeriod.value === '日') { const m = now.getMinutes()+now.getSeconds()/60; const nl = [...cd.energyLine]; nl[hour] = Math.round(calcEnergyAt(DAILY_BASE_ELECTRIC, dailyR1_Electric_fn(), ENERGY_KH[hour], hourlyR2_Electric_fn()[hour], m)*10000)/10000; cd.energyLine = nl; lineChart?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.energyLine.slice(0,hour+1)}]}) }
-    if (electricPeriod.value === '日' && now.getSeconds()%5===0) { const acOn=deviceList.value.filter(d=>d.type==='ac'&&d.status).length; const lightOn=deviceList.value.filter(d=>d.type==='light'&&d.status).length; const rs=()=>(Math.random()-0.5)*4; const np=cd.energyPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(20,Math.min(50,35+acOn*6+rs()))};if(i===1)return{...it,value:Math.max(15,Math.min(40,25+lightOn*4+rs()))};if(i===2)return{...it,value:Math.max(10,Math.min(35,20+Math.min(8,acOn+lightOn)*2+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.energyPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));pieChart?.setOption({series:[{data:cd.energyPie}]}) }
-    if (waterPeriod.value === '日') { const m=now.getMinutes()+now.getSeconds()/60;const nl=[...cd.waterBar];nl[hour]=Math.round(calcEnergyAt(DAILY_BASE_WATER,dailyR1_Water_fn(),WATER_KH[hour],hourlyR2_Water_fn()[hour],m)*10000)/10000;cd.waterBar=nl;waterChart?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.waterBar.slice(0,hour+1)}]}) }
-    if (waterPeriod.value==='日'&&now.getSeconds()%5===0){const rs=()=>(Math.random()-0.5)*4;const np=cd.waterPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(25,Math.min(55,40+rs()))};if(i===1)return{...it,value:Math.max(15,Math.min(35,25+rs()))};if(i===2)return{...it,value:Math.max(10,Math.min(30,20+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.waterPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));waterPieChart?.setOption({series:[{data:cd.waterPie}]}) }
-    if (gasPeriod.value === '日') { const m=now.getMinutes()+now.getSeconds()/60;const nl=[...cd.gasLine];nl[hour]=Math.round(calcEnergyAt(DAILY_BASE_GAS,dailyR1_Gas_fn(),GAS_KH[hour],hourlyR2_Gas_fn()[hour],m)*10000)/10000;cd.gasLine=nl;gasChart?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.gasLine.slice(0,hour+1)}]}) }
-    if (gasPeriod.value==='日'&&now.getSeconds()%5===0){const rs=()=>(Math.random()-0.5)*4;const np=cd.gasPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(35,Math.min(65,50+rs()))};if(i===1)return{...it,value:Math.max(20,Math.min(45,35+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.gasPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));gasPieChart?.setOption({series:[{data:cd.gasPie}]}) }
+    // 图表只在能源页可见时重绘，其他页面仅推进数据模型
+    const energyVisible = currentPage.value === 'energy'
+    if (hour === 0 && cd.energyLine[23] > 0) { cd.energyLine = Array.from({length:24},()=>0); cd.waterBar = Array.from({length:24},()=>0); cd.gasLine = Array.from({length:24},()=>0); resetDailyR1(); resetHourlyR2(); if (energyVisible) initCharts() }
+    if (electricPeriod.value === '日') { const m = now.getMinutes()+now.getSeconds()/60; const nl = [...cd.energyLine]; nl[hour] = Math.round(calcEnergyAt(DAILY_BASE_ELECTRIC, dailyR1_Electric_fn(), ENERGY_KH[hour], hourlyR2_Electric_fn()[hour], m)*10000)/10000; cd.energyLine = nl; (energyVisible ? lineChart : null)?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.energyLine.slice(0,hour+1)}]}) }
+    if (electricPeriod.value === '日' && now.getSeconds()%5===0) { const acOn=deviceList.value.filter(d=>d.type==='ac'&&d.status).length; const lightOn=deviceList.value.filter(d=>d.type==='light'&&d.status).length; const rs=()=>(Math.random()-0.5)*4; const np=cd.energyPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(20,Math.min(50,35+acOn*6+rs()))};if(i===1)return{...it,value:Math.max(15,Math.min(40,25+lightOn*4+rs()))};if(i===2)return{...it,value:Math.max(10,Math.min(35,20+Math.min(8,acOn+lightOn)*2+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.energyPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));(energyVisible ? pieChart : null)?.setOption({series:[{data:cd.energyPie}]}) }
+    if (waterPeriod.value === '日') { const m=now.getMinutes()+now.getSeconds()/60;const nl=[...cd.waterBar];nl[hour]=Math.round(calcEnergyAt(DAILY_BASE_WATER,dailyR1_Water_fn(),WATER_KH[hour],hourlyR2_Water_fn()[hour],m)*10000)/10000;cd.waterBar=nl;(energyVisible ? waterChart : null)?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.waterBar.slice(0,hour+1)}]}) }
+    if (waterPeriod.value==='日'&&now.getSeconds()%5===0){const rs=()=>(Math.random()-0.5)*4;const np=cd.waterPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(25,Math.min(55,40+rs()))};if(i===1)return{...it,value:Math.max(15,Math.min(35,25+rs()))};if(i===2)return{...it,value:Math.max(10,Math.min(30,20+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.waterPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));(energyVisible ? waterPieChart : null)?.setOption({series:[{data:cd.waterPie}]}) }
+    if (gasPeriod.value === '日') { const m=now.getMinutes()+now.getSeconds()/60;const nl=[...cd.gasLine];nl[hour]=Math.round(calcEnergyAt(DAILY_BASE_GAS,dailyR1_Gas_fn(),GAS_KH[hour],hourlyR2_Gas_fn()[hour],m)*10000)/10000;cd.gasLine=nl;(energyVisible ? gasChart : null)?.setOption({xAxis:{data:hourLabels.slice(0,hour+1)},series:[{data:cd.gasLine.slice(0,hour+1)}]}) }
+    if (gasPeriod.value==='日'&&now.getSeconds()%5===0){const rs=()=>(Math.random()-0.5)*4;const np=cd.gasPie.map((it,i)=>{if(i===0)return{...it,value:Math.max(35,Math.min(65,50+rs()))};if(i===1)return{...it,value:Math.max(20,Math.min(45,35+rs()))};return{...it,value:Math.max(5,Math.min(20,10+rs()))}});const s=np.reduce((a,b)=>a+b.value,0);cd.gasPie=np.map(it=>({...it,value:Math.round(it.value/s*100)}));(energyVisible ? gasPieChart : null)?.setOption({series:[{data:cd.gasPie}]}) }
     const eld=energyLiveData.value;eld.savingRate=Math.max(10,Math.min(28,eld.savingRate+Math.round((Math.random()-0.45)*3)));eld.totalEnergy=Math.max(100,Math.round(eld.totalEnergy+(Math.random()-0.3)*0.5));eld.carbonReduction=Math.max(5,Math.round((eld.carbonReduction+(Math.random()-0.4)*0.3)*10)/10)
     if(now.getSeconds()===0){const t=calculateTrends(hour);electricTrend.value=t.electric;waterTrend.value=t.water;gasTrend.value=t.gas;costTrend.value=t.cost}
     if(showControlPanel.value&&selectedDevice.value?._rankType){const rt=selectedDevice.value._rankType;const rn=selectedDevice.value._rankItemName;const src=rt==='water'?waterRank.value:rt==='gas'?gasRank.value:energyRank.value;const ri=src.find(r=>r.name===rn);if(ri)selectedDevice.value={...selectedDevice.value,value:ri.val,periods:computeRankPeriods(rt,ri.val)}}
-  }, 1000)
+  }), 1000)
 })
 
-onUnmounted(() => { clearInterval(timeTimer);clearInterval(envTimer);clearInterval(healthTimer);clearInterval(energyTimer);clearInterval(stepsTimer);lineChart?.dispose();pieChart?.dispose();waterChart?.dispose();gasChart?.dispose();waterPieChart?.dispose();gasPieChart?.dispose() })
+onUnmounted(() => { window.removeEventListener('resize', handleResizeCharts); clearInterval(timeTimer);clearInterval(envTimer);clearInterval(healthTimer);clearInterval(energyTimer);clearInterval(stepsTimer);lineChart?.dispose();pieChart?.dispose();waterChart?.dispose();gasChart?.dispose();waterPieChart?.dispose();gasPieChart?.dispose() })
 
 </script>

@@ -1,21 +1,5 @@
 <template>
   <div v-show="visible" class="page">
-    <div ref="sceneCardRef" class="scene-card" :class="{ fullscreen: isFullscreen }">
-      <div class="scene-overlay">
-        <div class="room-tabs">
-          <button class="room-tab" :class="{ active: activeRoom === 'all' }" @click="$emit('switchRoom', 'all')">全景</button>
-          <button v-for="room in rooms" :key="room.id" class="room-tab" :class="{ active: activeRoom === room.id }" @click="$emit('switchRoom', room.id)">{{ room.name }}</button>
-        </div>
-        <div class="overlay-right">
-          <button v-if="isFullscreen" class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="退出全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-          </button>
-          <button v-else class="fullscreen-btn" @click="$emit('toggleFullscreen')" title="全屏">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div class="filter-bar">
       <input class="filter-in" :value="deviceSearch" @input="$emit('update:deviceSearch', $event.target.value)" placeholder="搜索设备名称…" />
@@ -43,7 +27,7 @@
     </div>
     <div class="panel-card" style="height: 740px; display: flex; flex-direction: column;">
       <div class="panel-header"><h3 class="panel-title">设备列表</h3><span class="panel-count">{{ filteredDevices.length }} 台</span></div>
-      <div style="flex: 1; overflow-y: auto; min-height: 0;">
+      <div class="table-scroll" style="flex: 1; min-height: 0;">
         <table class="data-table">
           <thead><tr><th>#</th><th>设备名</th><th>位置</th><th>厂商</th><th>IP</th><th>状态</th><th>操作</th></tr></thead>
           <tbody>
@@ -57,6 +41,16 @@
               <td>
                 <button class="btn btn-sm btn-primary" @click="$emit('openDeviceControlFromTable', d)">控制</button>
                 <button class="btn btn-sm btn-ghost" @click="$emit('openDeviceDetail', d)">详情</button>
+              </td>
+            </tr>
+            <tr v-if="!pagedDevices.length">
+              <td colspan="7">
+                <EmptyState
+                  title="没有找到设备"
+                  hint="试试其它关键词，或者清空类型 / 房间筛选。"
+                  action-text="重置筛选"
+                  @action="$emit('resetFilters')"
+                />
               </td>
             </tr>
           </tbody>
@@ -78,13 +72,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+
 
 const DEVICE_PAGE_SIZE = 10
 
-const sceneCardRef = ref(null)
 
-defineExpose({ sceneCardRef })
 
 defineProps({
   visible: { type: Boolean, required: true },

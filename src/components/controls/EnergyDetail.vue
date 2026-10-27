@@ -56,7 +56,7 @@
             <template v-if="device.energyType === 'electricCost'">
               <div class="cdc-section-title">📊 各电器明细</div>
               <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ item.val.toFixed(2) }} kWh · ¥{{ (item.val * ELECTRIC_RATE).toFixed(3) }}</span>
               </div>
@@ -64,7 +64,7 @@
             <template v-if="device.energyType === 'waterCost'">
               <div class="cdc-section-title">📊 各用途明细</div>
               <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ item.val.toFixed(3) }} m³ · ¥{{ (item.val * WATER_RATE).toFixed(3) }}</span>
               </div>
@@ -72,7 +72,7 @@
             <template v-if="device.energyType === 'gasCost'">
               <div class="cdc-section-title">📊 各设备明细</div>
               <div v-for="item in device._rankList" :key="item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ item.val.toFixed(3) }} m³ · ¥{{ (item.val * GAS_RATE).toFixed(3) }}</span>
               </div>
@@ -86,7 +86,7 @@
             <template v-if="device.energyType === 'electricCost'">
               <div class="cdc-section-title">📊 各电器明细</div>
               <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ (item.val * 30).toFixed(2) }} kWh · ¥{{ (item.val * 30 * ELECTRIC_RATE).toFixed(3) }}</span>
               </div>
@@ -94,7 +94,7 @@
             <template v-if="device.energyType === 'waterCost'">
               <div class="cdc-section-title">📊 各用途明细</div>
               <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ (item.val * 30).toFixed(3) }} m³ · ¥{{ (item.val * 30 * WATER_RATE).toFixed(3) }}</span>
               </div>
@@ -102,7 +102,7 @@
             <template v-if="device.energyType === 'gasCost'">
               <div class="cdc-section-title">📊 各设备明细</div>
               <div v-for="item in device._rankList" :key="'m-'+item.name" class="cdc-device-row">
-                <span class="cdc-device-name">{{ item.icon }} {{ item.name }}</span>
+                <span class="cdc-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
                 <div class="cdc-device-bar"><div class="cdc-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
                 <span class="cdc-device-val">{{ (item.val * 30).toFixed(3) }} m³ · ¥{{ (item.val * 30 * GAS_RATE).toFixed(3) }}</span>
               </div>
@@ -149,7 +149,7 @@
       <div class="ed-section-title">🔌 各电器用电明细</div>
       <div class="ed-device-list">
         <div v-for="item in device._rankList" :key="item.name" class="ed-device-item">
-          <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+          <span class="ed-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
           <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
           <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
         </div>
@@ -161,7 +161,7 @@
       <div class="ed-section-title">🚿 用水明细</div>
       <div class="ed-device-list">
         <div v-for="item in device._rankList" :key="item.name" class="ed-device-item">
-          <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+          <span class="ed-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
           <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
           <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
         </div>
@@ -173,7 +173,7 @@
       <div class="ed-section-title">🔥 燃气使用明细</div>
       <div class="ed-device-list">
         <div v-for="item in device._rankList" :key="item.name" class="ed-device-item">
-          <span class="ed-device-name">{{ item.icon }} {{ item.name }}</span>
+          <span class="ed-device-name"><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span>
           <div class="ed-device-bar"><div class="ed-device-fill" :style="{ width: item.pct + '%', background: item.color }"></div></div>
           <span class="ed-device-val">{{ item.val }} {{ item.unit }}</span>
         </div>
@@ -204,19 +204,19 @@
         </div>
         <div class="ed-cost-item" v-if="device.id?.includes('electricCost')">
           <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
-            <span>{{ item.icon }} {{ item.name }}</span><span>¥{{ (item.val * 0.558).toFixed(3) }}</span>
+            <span><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span><span>¥{{ (item.val * 0.558).toFixed(3) }}</span>
           </div>
           <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
         </div>
         <div class="ed-cost-item" v-if="device.id?.includes('waterCost')">
           <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
-            <span>{{ item.icon }} {{ item.name }}</span><span>¥{{ (item.val * 2.47).toFixed(3) }}</span>
+            <span><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span><span>¥{{ (item.val * 2.47).toFixed(3) }}</span>
           </div>
           <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
         </div>
         <div class="ed-cost-item" v-if="device.id?.includes('gasCost')">
           <div v-for="item in device._rankList" :key="item.name" class="ed-cost-row">
-            <span>{{ item.icon }} {{ item.name }}</span><span>¥{{ (item.val * 2.53).toFixed(3) }}</span>
+            <span><AppIcon :icon="item.icon" :size="14" /> {{ item.name }}</span><span>¥{{ (item.val * 2.53).toFixed(3) }}</span>
           </div>
           <div class="ed-cost-row total"><span>合计</span><span>¥{{ liveEnergyValue }}</span></div>
         </div>

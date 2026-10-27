@@ -5,7 +5,7 @@
          :style="{ borderTopColor: item.color }"
          @click="$emit('openHealthDetail', item)">
       <div class="hmetric-top">
-        <span class="hmetric-icon">{{ item.icon }}</span>
+        <span class="hmetric-icon"><AppIcon :icon="item.icon" :size="17" /></span>
         <span class="hmetric-label">{{ item.label }}</span>
         <span class="hmetric-badge" :class="getStatus(item)">{{ getStatusText(item) }}</span>
       </div>
@@ -17,8 +17,9 @@
       </div>
       <div class="hmetric-footer">
         <span class="hmetric-range" :style="{ color: item.color }" v-html="formatMetricValue(item.range)"></span>
-        <span class="hmetric-trend" :class="item.trend === 0 ? 'zero' : item.trend > 0 ? 'up' : 'dn'">
-          {{ item.trend === 0 ? '—' : item.trend > 0 ? '↑' : '↓' }}{{ item.trend === 0 ? '' : Math.abs(item.trend) }}
+        <span class="hmetric-trend" :class="trendClass(item)">
+          <template v-if="!item.trend">—</template>
+          <template v-else>{{ item.trend > 0 ? '▲' : '▼' }} {{ Math.abs(item.trend) }}{{ unitOf(item) }}</template>
         </span>
       </div>
     </div>
@@ -33,6 +34,19 @@ const props = defineProps({
   getSpo2Status: Function, getTempStatus: Function, getStepsStatus: Function,
 })
 defineEmits(['openHealthDetail'])
+
+// 涨跌角标：补上单位，并按「该指标涨是好还是坏」着色
+// 例：步数、血氧、睡眠上升是好事（绿），心率、体温、血压上升是坏事（红）
+const UNITS = { 心率: '次', 血压: '', 体温: '°C', 血氧: '%', 睡眠: 'h', 步数: '步' }
+const UP_IS_GOOD = new Set(['步数', '血氧', '睡眠'])
+
+function unitOf(item) { return UNITS[item.label] ?? '' }
+function trendClass(item) {
+  if (!item.trend) return 'zero'
+  const up = item.trend > 0
+  const good = UP_IS_GOOD.has(item.label) ? up : !up
+  return good ? 'good' : 'bad'
+}
 
 function getStatus(item) {
   if (item.label === '心率') return props.getHeartStatus(item.raw).class
@@ -74,7 +88,7 @@ function getStatusText(item) {
 .hmetric-range { font-size: 10px; color: var(--text-3); }
 .hmetric-range :deep(.num) { font-family: var(--font-mono); font-size: 10px; }
 .hmetric-trend { font-size: 11px; font-weight: 600; }
-.hmetric-trend.up { color: #ef4444; }
-.hmetric-trend.dn { color: #22c55e; }
+.hmetric-trend.good { color: #22c55e; }
+.hmetric-trend.bad { color: #ef4444; }
 .hmetric-trend.zero { color: var(--text-3); }
 </style>

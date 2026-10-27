@@ -1,0 +1,21 @@
+# Cloudflare Pages 缓存策略
+# /assets/* 带 content hash，可永久缓存；/models /texture /draco 文件名无 hash，用 30 天。
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/models/*
+  Cache-Control: public, max-age=2592000
+
+/texture/*
+  Cache-Control: public, max-age=2592000
+
+/draco/*
+  Cache-Control: public, max-age=2592000
+
+/fonts/*
+  Cache-Control: public, max-age=2592000
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

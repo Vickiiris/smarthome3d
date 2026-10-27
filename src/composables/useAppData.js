@@ -175,6 +175,7 @@ export function useAppData() {
     { id: 'bedroom2',   name: '次卧' },
     { id: 'kitchen',    name: '厨房' },
     { id: 'bathroom',   name: '卫生间' },
+    { id: 'balcony',    name: '阳台' },
   ]
 
   return {
