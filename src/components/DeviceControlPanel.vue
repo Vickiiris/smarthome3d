@@ -6,9 +6,6 @@
         <div class="dcp-backdrop" @click="close"></div>
         <div class="dcp-panel" @click.stop>
 
-          <!-- 手机端下拉条提示（桌面隐藏） -->
-          <div class="dcp-grab"><span></span></div>
-
           <!-- 头部 -->
           <div class="dcp-header">
             <div class="dcp-header-icon">{{ deviceIcon }}</div>
@@ -172,7 +169,6 @@ function close() { emit('close') }
 .dcp-wrap { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; }
 /* 遮罩与下拉条只在手机端启用（见 13-responsive.css） */
 .dcp-backdrop { display: none; }
-.dcp-grab { display: none; }
 .dcp-panel { width: 320px; max-height: 80vh; background: rgba(10, 18, 35, 0.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04); pointer-events: auto; overflow: hidden; }
 .dcp-header { display: flex; align-items: center; gap: 14px; padding: 20px; background: linear-gradient(135deg, rgba(5,13,24,0.9), rgba(10,18,35,0.8)); border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); flex-shrink: 0; }
 .dcp-header-icon { font-size: 36px; }
@@ -183,8 +179,16 @@ function close() { emit('close') }
 .dcp-close:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #ef4444; }
 .dcp-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
-/* 手机竖屏：改成半高抽屉，别整屏盖住 3D 场景 */
+/* 手机竖屏：改成底部悬浮卡片，别整屏盖住 3D 场景 */
 @media (max-width: 760px) {
+  /* 对齐也必须在组件内声明：scoped 选择器优先级高于 13-responsive 里的同名类，
+     否则仍是桌面端的「垂直居中 + 靠右」，看起来就像铺满整屏的弹层 */
+  .dcp-wrap {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+
   .dcp-backdrop {
     display: block;
     position: absolute;
@@ -193,23 +197,42 @@ function close() { emit('close') }
     pointer-events: auto;
   }
 
-  .dcp-grab {
-    display: flex;
-    justify-content: center;
-    padding: 8px 0 4px;
-    flex-shrink: 0;
-  }
-
-  .dcp-grab span {
-    width: 38px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.22);
-  }
-
   .dcp-panel {
-    max-height: 58dvh;
-    border-radius: 18px 18px 0 0;
+    /* 两侧留白 + 四角圆角 = 明确的悬浮卡片，而不是铺满全屏的底板 */
+    width: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+    /* 老浏览器 / 内嵌 WebView 不认 dvh 时用 vh 回落（否则会退回桌面端的 80vh，看起来就是全屏） */
+    max-height: 46vh;
+    max-height: 46dvh;
+    margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    border-radius: 16px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  /* 信息四宫格压缩，给下面的控制项腾出高度 */
+  .dcp-grid {
+    gap: 6px;
+  }
+
+  .dcp-dd-item {
+    padding: 8px 10px;
+    gap: 3px;
+  }
+
+  .dcp-dd-label {
+    font-size: 10px;
+  }
+
+  .dcp-dd-value {
+    font-size: 12px;
+  }
+
+  .dcp-section {
+    padding: 10px 12px;
+  }
+
+  .dcp-section-title {
+    margin-bottom: 8px;
   }
 
   .dcp-header {

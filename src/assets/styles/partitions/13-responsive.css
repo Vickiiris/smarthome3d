@@ -242,10 +242,8 @@
     padding: 0 !important;
   }
 
-  .dcp-panel {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
+  /* 面板宽度/高度/圆角由组件内 scoped 的 ≤760 规则统一控制，
+     这里只负责把抽屉吸附到底部（否则全局 !important 会顶掉组件规则） */
 
   .slide-panel-enter-from .dcp-panel,
   .slide-panel-leave-to .dcp-panel {
@@ -686,8 +684,8 @@
 
   /* 热点抽屉：还原为右侧浮动卡片，不再铺满底部 */
   .dcp-wrap {
-    align-items: center;
-    justify-content: flex-end;
+    align-items: center !important;
+    justify-content: flex-end !important;
     padding: 0 10px !important;
   }
 
@@ -696,10 +694,11 @@
     max-width: 46vw !important;
     max-height: 86dvh !important;
     border-radius: 14px !important;
+    /* 竖屏那条 margin-bottom 在这里不能生效，否则右侧卡片会被顶高 */
+    margin-bottom: 0 !important;
   }
 
-  .dcp-backdrop,
-  .dcp-grab {
+  .dcp-backdrop {
     display: none !important;
   }
 
@@ -777,15 +776,63 @@
   /* 横屏垂直空间紧张，3D 场景压低一点，保证下方指标可见 */
   .scene-card,
   .scene-card:not(.fullscreen) {
-    height: 240px;
+    height: 200px;
+  }
+
+  /* ---------- 内容结构按桌面还原 ---------- */
+  /* 环境指标回到 4 列：900 断点把它压成 2 列，8 张卡要滚 4 行（485px） */
+  .env-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .env-card {
+    padding: 10px 12px;
+  }
+
+  .env-card .env-value {
+    font-size: 17px;
+  }
+
+  /* 底部「设备控制 / 安防监控」回归左右并排（桌面结构），不再上下堆叠成 965px */
+  .bottom-grid {
+    grid-template-columns: 1fr 1fr;
+    height: auto;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .panel-card {
+    margin-bottom: 12px;
+  }
+
+  /* 顶栏压到 44px，把高度让给内容 */
+  .top-bar {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  /* 场景条在横屏任何宽度都要显示：
+     926px 这种宽机型不满足 ≤900 断点，原本场景模式会失去入口 */
+  .mobile-scene-bar {
+    display: flex;
+    gap: 6px;
+    padding: 0 10px 6px;
+  }
+
+  .msb-btn {
+    padding: 4px 10px;
+    font-size: 11px;
   }
 
   /* 全屏：从右侧内容区开始，别被侧栏压住 */
   .scene-card.fullscreen {
-    top: 56px !important;
+    top: 44px !important;
     left: 152px !important;
     width: calc(100vw - 152px) !important;
-    height: calc(100dvh - 56px) !important;
+    height: calc(100dvh - 44px) !important;
     z-index: 210 !important;
   }
 }
