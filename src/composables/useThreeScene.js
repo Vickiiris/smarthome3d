@@ -221,6 +221,12 @@ export function useThreeScene(canvasRef) {
     _controls.addEventListener('start', () => { userMovedCamera = true })
     controls.value = _controls
 
+    // 手机上竖向滑动优先滚动页面。
+    // OrbitControls 会把 canvas 的 touch-action 设成 none，3D 卡片在横屏里几乎占满可视区时，
+    // 手指一划就被控制器接管旋转模型，整页根本滑不动。改成 pan-y 后：
+    // 竖向滑动 = 滚页面，横向拖动 = 旋转模型，双指仍有缩放。
+    if (canvasRef.value) canvasRef.value.style.touchAction = 'pan-y'
+
     setupLights(_scene, _renderer)
     loadModel(_scene)
     animate()

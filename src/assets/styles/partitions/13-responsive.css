@@ -663,7 +663,10 @@
     font-size: 15px;
   }
 
+  /* 05-env-detail 的 ≤768 矮屏规则把导航文字 display:none 了，
+     横屏按桌面还原时必须显式恢复，否则成了「又宽又空」的图标栏 */
   .nav-item .nav-label {
+    display: inline;
     font-size: 12px;
   }
 
