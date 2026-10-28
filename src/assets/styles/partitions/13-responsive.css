@@ -3,6 +3,11 @@
    断点：1180px（小笔记本）、900px（平板/横屏手机）、760px（手机）
    ============================================================ */
 
+/* 手机场景条：仅手机显示（在 ≤900px 媒体查询里打开） */
+.mobile-scene-bar {
+  display: none;
+}
+
 /* ---------- 小笔记本 / 竖屏平板 ---------- */
 @media (max-width: 1180px) {
   .bottom-grid {
@@ -144,11 +149,15 @@
     margin-bottom: 14px;
   }
 
+  /* 全屏：基准样式里 top/left/width/height 都是 !important（按 260px 桌面侧栏算），
+     这里必须同样 !important 才能覆盖，否则手机上会缩成右下角一条 130px 的窄条 */
   .scene-card.fullscreen {
-    top: 48px;
-    left: 0;
-    width: 100vw;
-    height: calc(100dvh - 48px);
+    top: 48px !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: calc(100dvh - 48px) !important;
+    /* 底部导航 z-index 是 200，全屏时要盖住它，否则场景底部被切掉 */
+    z-index: 210 !important;
   }
 
   .scene-overlay {
@@ -221,6 +230,9 @@
   .dcp-wrap {
     align-items: flex-end;
     justify-content: center;
+    /* 组件内是 scoped 样式（.dcp-wrap[data-v-x] 优先级更高），
+       这里必须 !important 才能去掉桌面端预留的 20px 右边距 */
+    padding: 0 !important;
   }
 
   .dcp-panel {
@@ -252,6 +264,46 @@
     max-height: 92dvh !important;
     margin: 0 !important;
     border-radius: 16px 16px 0 0 !important;
+  }
+
+  /* 手机端场景条：侧栏隐藏后场景模式的唯一入口（仅家居总览页渲染） */
+  .mobile-scene-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 12px 8px;
+  }
+
+  .msb-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    padding: 6px 12px;
+    background: rgba(0, 212, 170, 0.1);
+    border: 1px solid rgba(0, 212, 170, 0.18);
+    border-radius: 20px;
+    color: var(--text-2);
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .msb-btn:active {
+    transform: scale(0.97);
+  }
+
+  .msb-btn.active {
+    background: var(--primary-dim);
+    border-color: rgba(0, 212, 170, 0.45);
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .msb-icon {
+    font-size: 13px;
+    line-height: 1;
   }
 }
 
@@ -301,7 +353,8 @@
   }
 
   .product-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .charts-row {
@@ -335,6 +388,141 @@
 
   .toast-item {
     width: 100%;
+  }
+
+  /* ---------- 告警页：tab 两列排布，筛选控件允许收缩 ---------- */
+  /* 根因：filter-in 180px + 两个 filter-sel 各 130px = 460px min-content，
+     在没有 min-width:0 的 flex 容器里会被撑到 462px，被 content 裁掉右侧 */
+  .alarm-tabs {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .alarm-tab {
+    flex: 0 1 calc(50% - 4px);
+    min-width: 0;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  /* 统计卡：5 张两列排布时，最后一张独占整行，避免右侧留大空洞 */
+  .alarm-stats-row .alarm-stat-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .alarm-stat-card {
+    padding: 10px 8px;
+    gap: 5px;
+  }
+
+  .alarm-stat-card .asc-icon {
+    font-size: 16px;
+  }
+
+  .alarm-stat-card .asc-num {
+    font-size: 22px;
+  }
+
+  .alarm-controls {
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .alarm-controls .filter-in {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .alarm-controls .filter-sel {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+  }
+
+  /* ---------- 设备表：隐藏厂商/IP，取消 620px 强制横向滚动 ---------- */
+  .data-table {
+    min-width: 0;
+  }
+
+  .data-table .col-vendor,
+  .data-table .col-ip {
+    display: none;
+  }
+
+  .data-table thead th,
+  .data-table td {
+    padding: 9px 5px;
+    font-size: 12px;
+  }
+
+  /* 位置 / 状态 不允许折字；操作按钮并排且收紧 */
+  .data-table .td-room,
+  .data-table .td-status,
+  .data-table .td-ops {
+    white-space: nowrap;
+  }
+
+  .data-table .td-status .stag {
+    display: inline-block;
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+
+  .data-table .td-ops .btn-sm {
+    padding: 3px 7px;
+    font-size: 11px;
+  }
+
+  .data-table .td-ops .btn-sm + .btn-sm {
+    margin-left: 4px;
+  }
+
+  /* ---------- 产品卡：两列更紧凑，减少一屏一卡 ---------- */
+  .product-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .product-card .product-icon {
+    padding: 8px 0;
+  }
+
+  .product-card .product-name {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  /* ---------- 能源概览：2×2 紧凑卡，把图表提回首屏 ---------- */
+  .energy-overview-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+  }
+
+  .energy-metric-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .em-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    flex: 0 0 34px;
+  }
+
+  .em-label {
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+
+  .em-value {
+    font-size: 18px;
+  }
+
+  .em-unit {
+    font-size: 10px;
   }
 }
 

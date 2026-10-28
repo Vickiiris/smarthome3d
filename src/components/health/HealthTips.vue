@@ -24,4 +24,12 @@ defineProps({ tips: { type: Array, default: () => [] } })
 .htip-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .htip-desc { font-size: 11px; color: var(--text-2); line-height: 1.5; }
 .htip-tag { font-size: 10px; padding: 3px 8px; border-radius: 20px; align-self: flex-start; white-space: nowrap; border: 1px solid; }
+
+/* 超窄屏（≤380）：两列时每列被内容撑到 158px，会顶出屏幕，改单列 */
+@media (max-width: 380px) {
+  .health-tips-grid { grid-template-columns: 1fr; }
+  .htip-card { padding: 12px; gap: 10px; }
+  .htip-icon { font-size: 18px; min-width: 22px; }
+}
+
 </style>

@@ -74,7 +74,7 @@ defineProps({
 .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #00d4aa; box-shadow: 0 0 6px #00d4aa; animation: pulse-dot 1.5s ease-in-out infinite; }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .health-hero-detail-row { display: flex; gap: 16px; font-size: 12px; color: var(--text-2); }
-.hhdr-item { display: flex; align-items: center; gap: 5px; }
+.hhdr-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .hhdr-dot { width: 7px; height: 7px; border-radius: 50%; }
 .health-score-ring { text-align: center; flex-shrink: 0; }
 .hsr-svg-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto; }
@@ -85,4 +85,20 @@ defineProps({
 .hsr-val { font-size: 28px; font-weight: 800; color: #00d4aa; font-family: var(--font-mono); line-height: 1; }
 .hsr-label { font-size: 10px; color: var(--text-3); margin-top: 2px; }
 .hsr-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+/* 手机：缩小头像与健康分环，避免信息区被压窄导致指标竖排 */
+@media (max-width: 760px) {
+  .health-hero-inner { gap: 12px; padding: 14px; }
+  .health-avatar { width: 48px; height: 48px; font-size: 18px; }
+  .health-hero-name { font-size: 16px; margin-bottom: 5px; }
+  .health-hero-age { font-size: 12px; margin-left: 6px; }
+  .health-hero-badges { gap: 5px; margin-bottom: 6px; }
+  .hbadge { font-size: 10px; padding: 2px 8px; }
+  .health-hero-detail-row { flex-wrap: wrap; gap: 6px 12px; font-size: 11px; }
+  .hsr-svg-wrap { width: 64px; height: 64px; }
+  .hsr-val { font-size: 21px; }
+  .hsr-label { font-size: 9px; }
+  .hsr-sub { font-size: 10px; }
+}
+
 </style>

@@ -21,10 +21,10 @@ export function useEnvDetail(homeStore) {
   const envItems = computed(() => {
     const v = homeStore.stats
     return [
-      { icon: '🌡', label: '室外温度', value: `${v.outdoorTemp ?? 38}°C`, pct: Math.min(100, Math.max(0, v.outdoorTemp ?? 38)), color: getEnvColor('室外温度', v.outdoorTemp ?? 38), raw: v.outdoorTemp ?? 38 },
+      { icon: '🌡️', label: '室外温度', value: `${v.outdoorTemp ?? 38}°C`, pct: Math.min(100, Math.max(0, v.outdoorTemp ?? 38)), color: getEnvColor('室外温度', v.outdoorTemp ?? 38), raw: v.outdoorTemp ?? 38 },
       { icon: '💧', label: '室外湿度', value: `${v.outdoorHumidity ?? 40}%`, pct: Math.min(100, Math.max(0, v.outdoorHumidity ?? 40)), color: getEnvColor('室外湿度', v.outdoorHumidity ?? 40), raw: v.outdoorHumidity ?? 40 },
       { icon: '🏠', label: '室内温度', value: `${v.temperature ?? 24}°C`, pct: Math.min(100, Math.max(0, v.temperature ?? 24)), color: getEnvColor('室内温度', v.temperature ?? 24), raw: v.temperature ?? 24 },
-      { icon: '🌫', label: '室内湿度', value: `${v.humidity ?? 50}%`, pct: Math.min(100, Math.max(0, v.humidity ?? 50)), color: getEnvColor('室内湿度', v.humidity ?? 50), raw: v.humidity ?? 50 },
+      { icon: '💦', label: '室内湿度', value: `${v.humidity ?? 50}%`, pct: Math.min(100, Math.max(0, v.humidity ?? 50)), color: getEnvColor('室内湿度', v.humidity ?? 50), raw: v.humidity ?? 50 },
       { icon: '🫁', label: 'CO₂浓度', value: `${v.co2 ?? 450}ppm`, pct: Math.min(100, Math.max(0, (v.co2 ?? 450) / 20)), color: getEnvColor('CO₂浓度', v.co2 ?? 450), raw: v.co2 ?? 450 },
       { icon: '🌿', label: 'PM2.5', value: `${v.pm25 ?? 12}μg/m³`, pct: Math.min(100, Math.max(0, (v.pm25 ?? 12) * 2)), color: getEnvColor('PM2.5', v.pm25 ?? 12), raw: v.pm25 ?? 12 },
       { icon: '☀️', label: '光照', value: `${v.light ?? 320}lux`, pct: Math.min(100, Math.max(0, (v.light ?? 320) / 5)), color: getEnvColor('光照', v.light ?? 320), raw: v.light ?? 320 },

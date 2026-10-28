@@ -76,8 +76,8 @@ function getStatusText(item) {
 .hmetric-card:hover { background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 .hmetric-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .hmetric-icon { font-size: 16px; }
-.hmetric-label { font-size: 12px; color: var(--text-2); flex: 1; }
-.hmetric-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.hmetric-label { font-size: 12px; color: var(--text-2); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hmetric-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); flex-shrink: 0; white-space: nowrap; }
 .hmetric-badge.warning { background: rgba(245,158,11,0.1); color: #f59e0b; border-color: rgba(245,158,11,0.2); }
 .hmetric-badge.danger { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.2); }
 .hmetric-value { font-size: 22px; margin-bottom: 8px; line-height: 1; }
@@ -91,4 +91,19 @@ function getStatusText(item) {
 .hmetric-trend.good { color: #22c55e; }
 .hmetric-trend.bad { color: #ef4444; }
 .hmetric-trend.zero { color: var(--text-3); }
+
+/* 手机：3 列会把标签挤成竖排单字，改 2 列 */
+@media (max-width: 760px) {
+  .health-metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hmetric-card { padding: 11px 12px; }
+  .hmetric-top { gap: 5px; margin-bottom: 6px; }
+  .hmetric-icon { font-size: 14px; }
+  .hmetric-label { font-size: 11px; }
+  .hmetric-badge { font-size: 9px; padding: 1px 6px; }
+  .hmetric-value { font-size: 19px; margin-bottom: 6px; }
+  .hmetric-value :deep(.num) { font-size: 19px; }
+  .hmetric-range { font-size: 9px; line-height: 1.45; }
+  .hmetric-range :deep(.num) { font-size: 9px; }
+  .hmetric-trend { font-size: 10px; }
+}
 </style>

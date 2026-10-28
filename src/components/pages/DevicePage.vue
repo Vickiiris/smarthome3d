@@ -29,16 +29,16 @@
       <div class="panel-header"><h3 class="panel-title">设备列表</h3><span class="panel-count">{{ filteredDevices.length }} 台</span></div>
       <div class="table-scroll" style="flex: 1; min-height: 0;">
         <table class="data-table">
-          <thead><tr><th>#</th><th>设备名</th><th>位置</th><th>厂商</th><th>IP</th><th>状态</th><th>操作</th></tr></thead>
+          <thead><tr><th>#</th><th>设备名</th><th>位置</th><th class="col-vendor">厂商</th><th class="col-ip">IP</th><th>状态</th><th>操作</th></tr></thead>
           <tbody>
             <tr v-for="(d, i) in pagedDevices" :key="d.id">
               <td class="num">{{ (devicePage - 1) * DEVICE_PAGE_SIZE + i + 1 }}</td>
               <td><span class="dot" :class="deviceOnline(d) ? 'on' : 'off'"></span> {{ d.name }}</td>
-              <td>{{ d.room }}</td>
-              <td>{{ d.vendor }}</td>
-              <td class="ip">{{ d.ip }}</td>
-              <td><span class="stag" :class="deviceOnline(d) ? 'on' : 'off'">{{ deviceOnline(d) ? '在线' : '离线' }}</span></td>
-              <td>
+              <td class="td-room">{{ d.room }}</td>
+              <td class="col-vendor">{{ d.vendor }}</td>
+              <td class="ip col-ip">{{ d.ip }}</td>
+              <td class="td-status"><span class="stag" :class="deviceOnline(d) ? 'on' : 'off'">{{ deviceOnline(d) ? '在线' : '离线' }}</span></td>
+              <td class="td-ops">
                 <button class="btn btn-sm btn-primary" @click="$emit('openDeviceControlFromTable', d)">控制</button>
                 <button class="btn btn-sm btn-ghost" @click="$emit('openDeviceDetail', d)">详情</button>
               </td>

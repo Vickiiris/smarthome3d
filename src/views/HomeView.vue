@@ -12,6 +12,20 @@
     <main class="main">
       <TopBar :currentTitle="currentTitle" :currentTime="currentTime" :currentDate="currentDate" :allAlarms="allAlarms" @navigateToAlarm="navigateToAlarm" />
 
+      <!-- 手机端：侧栏场景模式被底部导航取代，这里补一条场景条（仅家居总览页） -->
+      <div class="mobile-scene-bar" v-if="currentPage === 'env'">
+        <button
+          v-for="mode in sceneModes"
+          :key="mode.id"
+          class="msb-btn"
+          :class="{ active: activeSceneMode === mode.id }"
+          @click="applySceneMode(mode)"
+        >
+          <span class="msb-icon">{{ mode.icon }}</span>
+          <span class="msb-label">{{ mode.label }}</span>
+        </button>
+      </div>
+
       <div class="content">
 
         <!-- 共享 3D Canvas（由 mountCanvas 在页面间移动） -->
