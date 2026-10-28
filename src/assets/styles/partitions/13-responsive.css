@@ -158,6 +158,13 @@
     height: calc(100dvh - 48px) !important;
     /* 底部导航 z-index 是 200，全屏时要盖住它，否则场景底部被切掉 */
     z-index: 210 !important;
+    /* 半透明背景会让下方场景条透上来 */
+    background: #050d18 !important;
+  }
+
+  /* 全屏时收起手机场景条，避免它透到全屏场景上方 */
+  .main:has(.scene-card.fullscreen) .mobile-scene-bar {
+    display: none;
   }
 
   .scene-overlay {
@@ -238,8 +245,6 @@
   .dcp-panel {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 78dvh;
-    border-radius: 16px 16px 0 0;
   }
 
   .slide-panel-enter-from .dcp-panel,
@@ -583,5 +588,204 @@
   }
   .sidebar::-webkit-scrollbar-track {
     background: transparent;
+  }
+}
+
+/* ============================================================
+   横屏手机（高度 ≤ 520px）：回到桌面布局
+   —— 竖屏那套「底部导航 + 全屏抽屉」在横屏里体验很差，
+      横屏时按桌面端的方式排：左侧导航栏 + 右侧内容 + 右侧浮层
+   ============================================================ */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app {
+    flex-direction: row;
+  }
+
+  /* 侧栏：从底部导航还原为左侧竖栏（窄版，省出内容宽度） */
+  .sidebar {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 152px;
+    min-width: 152px;
+    height: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    gap: 8px;
+    padding: 2px 4px 8px;
+  }
+
+  .logo-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .logo-name {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  .logo-sub {
+    display: none;
+  }
+
+  .nav-list {
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+  }
+
+  .nav-item {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+  }
+
+  .nav-item.active {
+    background: var(--primary-dim);
+    border-color: rgba(0, 212, 170, 0.25);
+  }
+
+  .nav-item .nav-icon {
+    font-size: 15px;
+  }
+
+  .nav-item .nav-label {
+    font-size: 12px;
+  }
+
+  /* 场景模式由顶部场景条承担，避免侧栏过高要滚动 */
+  .scene-modes,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .main {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .content {
+    padding: 8px 10px 10px;
+  }
+
+  /* 热点抽屉：还原为右侧浮动卡片，不再铺满底部 */
+  .dcp-wrap {
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 10px !important;
+  }
+
+  .dcp-panel {
+    width: 330px !important;
+    max-width: 46vw !important;
+    max-height: 86dvh !important;
+    border-radius: 14px !important;
+  }
+
+  .dcp-backdrop,
+  .dcp-grab {
+    display: none !important;
+  }
+
+  .dcp-header {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .dcp-header-icon {
+    font-size: 26px !important;
+  }
+
+  .dcp-body {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  /* 弹窗：从底部抽屉还原为居中卡片 */
+  .modal-overlay,
+  .env-detail-overlay {
+    align-items: center !important;
+    padding: 10px !important;
+  }
+
+  .ctrl-modal,
+  .env-detail-modal,
+  .device-detail-modal,
+  .product-detail-modal,
+  .add-device-modal {
+    width: auto !important;
+    max-width: 94vw !important;
+    max-height: 94dvh !important;
+    margin: auto !important;
+    border-radius: 14px !important;
+  }
+
+  /* 栅格恢复多列：按同等宽度下的桌面规则来，别硬塞 4 列（内容区只有 690px） */
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .health-metrics-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .energy-overview-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .energy-cost-detail-row,
+  .energy-cost-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* 告警：tab 与筛选回到单行 */
+  .alarm-tabs,
+  .alarm-controls {
+    width: auto;
+  }
+
+  .alarm-tab {
+    flex: 0 1 auto;
+  }
+
+  /* 表格恢复厂商 / IP 列（超出宽度可横向滚动） */
+  .data-table {
+    min-width: 600px;
+  }
+
+  .data-table .col-vendor,
+  .data-table .col-ip {
+    display: table-cell;
+  }
+
+  /* 横屏垂直空间紧张，3D 场景压低一点，保证下方指标可见 */
+  .scene-card,
+  .scene-card:not(.fullscreen) {
+    height: 240px;
+  }
+
+  /* 全屏：从右侧内容区开始，别被侧栏压住 */
+  .scene-card.fullscreen {
+    top: 56px !important;
+    left: 152px !important;
+    width: calc(100vw - 152px) !important;
+    height: calc(100dvh - 56px) !important;
+    z-index: 210 !important;
   }
 }

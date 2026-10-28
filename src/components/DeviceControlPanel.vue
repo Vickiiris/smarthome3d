@@ -2,7 +2,12 @@
   <Teleport to="body">
     <Transition name="slide-panel">
       <div v-if="visible" class="dcp-wrap">
+        <!-- 手机端遮罩：点空白处关闭，避免抽屉像整页一样无处可退 -->
+        <div class="dcp-backdrop" @click="close"></div>
         <div class="dcp-panel" @click.stop>
+
+          <!-- 手机端下拉条提示（桌面隐藏） -->
+          <div class="dcp-grab"><span></span></div>
 
           <!-- 头部 -->
           <div class="dcp-header">
@@ -165,6 +170,9 @@ function close() { emit('close') }
 
 <style scoped>
 .dcp-wrap { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; }
+/* 遮罩与下拉条只在手机端启用（见 13-responsive.css） */
+.dcp-backdrop { display: none; }
+.dcp-grab { display: none; }
 .dcp-panel { width: 320px; max-height: 80vh; background: rgba(10, 18, 35, 0.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04); pointer-events: auto; overflow: hidden; }
 .dcp-header { display: flex; align-items: center; gap: 14px; padding: 20px; background: linear-gradient(135deg, rgba(5,13,24,0.9), rgba(10,18,35,0.8)); border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); flex-shrink: 0; }
 .dcp-header-icon { font-size: 36px; }
@@ -174,6 +182,63 @@ function close() { emit('close') }
 .dcp-close { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 50%; color: var(--text-2, #e2e8f0); cursor: pointer; font-size: 12px; transition: all 0.2s; }
 .dcp-close:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #ef4444; }
 .dcp-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* 手机竖屏：改成半高抽屉，别整屏盖住 3D 场景 */
+@media (max-width: 760px) {
+  .dcp-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 14, 0.52);
+    pointer-events: auto;
+  }
+
+  .dcp-grab {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+    flex-shrink: 0;
+  }
+
+  .dcp-grab span {
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .dcp-panel {
+    max-height: 58dvh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .dcp-header {
+    padding: 8px 14px 12px;
+    gap: 10px;
+  }
+
+  .dcp-header-icon {
+    font-size: 26px;
+  }
+
+  .dcp-name {
+    font-size: 15px;
+  }
+
+  .dcp-online {
+    font-size: 11px;
+  }
+
+  .dcp-close {
+    width: 30px;
+    height: 30px;
+  }
+
+  .dcp-body {
+    padding: 10px 14px 14px;
+    gap: 10px;
+  }
+}
 .dcp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .dcp-dd-item { padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
 .dcp-dd-label { font-size: 11px; font-weight: 700; color: var(--primary, #00d4aa); text-transform: uppercase; letter-spacing: 0.5px; }
