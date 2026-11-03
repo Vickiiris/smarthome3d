@@ -250,10 +250,12 @@
     transform: translateY(100%);
   }
 
-  /* 弹窗铺满宽度 */
+  /* 弹窗：四周留白的浮动卡片。
+     之前是 width:100% + 贴底 + 只有上半圆角，视觉上就是一整页，
+     底部的卡片被屏幕边缘切断，看不出「这里还能滚」。 */
   .modal-overlay,
   .env-detail-overlay {
-    padding: 0 !important;
+    padding: 14px 12px !important;
     align-items: flex-end !important;
   }
 
@@ -264,9 +266,54 @@
   .add-device-modal {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 92dvh !important;
+    max-height: 78dvh !important;
     margin: 0 !important;
-    border-radius: 16px 16px 0 0 !important;
+    border-radius: 18px !important;
+  }
+
+  /* 这几个弹窗原本 overflow:hidden 且没有内部滚动区，
+     内容一超过高度就被整块裁掉，用户既看不到也滚不动 */
+  .env-detail-modal,
+  .device-detail-modal,
+  .product-detail-modal,
+  .add-device-modal {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* 容器整体滚动时头部吸附，关闭按钮不会跟着滑走 */
+  .env-detail-modal > .env-detail-header {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  /* 设备详情内容偏多，两列改三列并收紧间距，让一屏能看完不用来回滚 */
+  .device-detail-modal .device-detail-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .device-detail-modal .dd-item {
+    padding: 7px 9px !important;
+  }
+
+  .device-detail-modal .dd-label {
+    font-size: 10px !important;
+  }
+
+  .device-detail-modal .dd-value {
+    font-size: 12px !important;
+    overflow-wrap: break-word;
+  }
+
+  .device-detail-modal .env-detail-body {
+    padding: 12px !important;
+  }
+
+  .device-detail-modal .env-detail-section {
+    margin-bottom: 10px !important;
   }
 
   /* 手机端场景条：侧栏隐藏后场景模式的唯一入口（仅家居总览页渲染） */
@@ -837,5 +884,19 @@
     width: calc(100vw - 152px) !important;
     height: calc(100dvh - 44px) !important;
     z-index: 210 !important;
+  }
+}
+
+/* ============================================================
+   极窄屏（≤360px）：设备详情三列会把 "192.168.1.47" 和 "3.50 kWh"
+   拆成两行，退回两列并收一点字号
+   ============================================================ */
+@media (max-width: 360px) {
+  .device-detail-modal .device-detail-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .device-detail-modal .dd-value {
+    font-size: 11px !important;
   }
 }
